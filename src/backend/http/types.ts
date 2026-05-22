@@ -3,6 +3,9 @@ export interface HandlerEvent {
   headers: Record<string, string | undefined>;
   body: string | null;
   pathParameters?: Record<string, string | undefined> | null;
+  path?: string;
+  rawUrl?: string;
+  rawPath?: string;
 }
 
 export interface HandlerResponse {

@@ -30,10 +30,40 @@ export function parseBody<T>(event: HandlerEvent, schema: ZodSchema<T>): T {
   return schema.parse(body);
 }
 
+function findPathValue(event: HandlerEvent, segmentName: string): string | null {
+  const rawPath =
+    event.path ??
+    event.rawPath ??
+    (event.rawUrl ? new URL(event.rawUrl).pathname : undefined);
+  if (!rawPath) {
+    return null;
+  }
+
+  const segments = rawPath.split("/").filter(Boolean);
+  const markerIndex = segments.findIndex((segment) => segment === segmentName);
+  if (markerIndex === -1 || markerIndex + 1 >= segments.length) {
+    return null;
+  }
+
+  return segments[markerIndex + 1] ?? null;
+}
+
 export function pathParam(event: HandlerEvent, name: string): string {
   const value = event.pathParameters?.[name];
-  if (!value) {
+  if (value) {
+    return value;
+  }
+
+  const fallback =
+    name === "repoId"
+      ? findPathValue(event, "repos")
+      : name === "id"
+        ? findPathValue(event, "jobs")
+        : null;
+
+  if (!fallback) {
     throw new Error(`Missing path parameter: ${name}`);
   }
-  return value;
+
+  return fallback;
 }
