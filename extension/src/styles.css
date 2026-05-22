@@ -244,6 +244,15 @@ ul {
   color: var(--wf-app-text);
 }
 
+.wf-tertiary {
+  width: auto;
+  min-width: 0;
+  padding: 8px 10px;
+  background: transparent;
+  border-color: var(--wf-app-border);
+  color: var(--wf-app-text-subtle);
+}
+
 .wf-inline-controls {
   display: flex;
   gap: 8px;
@@ -382,6 +391,33 @@ ul {
   border: 1px solid var(--wf-app-border);
   border-radius: 10px;
   background: var(--wf-app-surface-2);
+}
+
+.wf-review-inline-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.wf-review-hint {
+  margin: 0;
+  color: var(--wf-app-text-subtle);
+  font-size: 12px;
+}
+
+.wf-skeleton-editor {
+  width: 100%;
+  min-height: 220px;
+  resize: vertical;
+  border: 1px solid var(--wf-app-border);
+  border-radius: 10px;
+  background: var(--wf-app-surface);
+  color: var(--wf-app-text);
+  padding: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .wf-current-section-grid {

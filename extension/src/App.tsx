@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  BuildNode,
   PageMappingsUpsertInput,
   SectionAnalysis,
   SectionVerification,
@@ -119,6 +120,88 @@ function modeLabel(mode: WorkflowMode) {
   }
 }
 
+function inferNodeType(tag: string): BuildNode["type"] {
+  if (tag === "img") return "image";
+  if (tag === "button" || tag === "a") return "button";
+  if (tag === "ul" || tag === "ol") return "list";
+  if (tag === "li") return "listItem";
+  if (/^h[1-6]$/i.test(tag)) return "heading";
+  if (tag === "p" || tag === "span" || tag === "label") return "text";
+  return "box";
+}
+
+function parseSkeletonTreeText(plan: SkeletonPlan, treeText: string): SkeletonPlan {
+  const lines = treeText
+    .split("\n")
+    .map((line) => line.replace(/\t/g, "  "))
+    .filter((line) => line.trim().length > 0);
+
+  if (!lines.length) {
+    throw new Error("Skeleton is empty.");
+  }
+
+  const stack: Array<{ depth: number; node: BuildNode }> = [];
+  let root: BuildNode | null = null;
+
+  lines.forEach((rawLine, index) => {
+    const indentSource = rawLine.replace(/[│├└─]/g, " ");
+    const depth = Math.floor((indentSource.match(/^ */)?.[0].length ?? 0) / 2);
+    let content = indentSource.trim();
+
+    const textMatch = content.match(/\s+"([^"]*)"$/);
+    const textContent = textMatch?.[1];
+    if (textMatch?.index !== undefined) {
+      content = content.slice(0, textMatch.index).trim();
+    }
+
+    const structureToken = content.split(/\s+/)[0];
+    if (!structureToken) {
+      throw new Error(`Invalid skeleton line ${index + 1}.`);
+    }
+
+    const parts = structureToken.split(".").filter(Boolean);
+    const tag = parts[0];
+    const classNames = parts.slice(1);
+    if (!tag) {
+      throw new Error(`Missing element tag on line ${index + 1}.`);
+    }
+
+    const node: BuildNode = {
+      id: `${plan.sectionMetadata.sectionId}-edited-${index}`,
+      type: inferNodeType(tag),
+      tag,
+      classNames,
+      textContent,
+      children: []
+    };
+
+    while (stack.length > 0 && stack[stack.length - 1].depth >= depth) {
+      stack.pop();
+    }
+
+    if (!stack.length) {
+      if (root) {
+        throw new Error("Skeleton must contain a single root node.");
+      }
+      root = node;
+    } else {
+      stack[stack.length - 1].node.children.push(node);
+    }
+
+    stack.push({ depth, node });
+  });
+
+  if (!root) {
+    throw new Error("Skeleton root is missing.");
+  }
+
+  return {
+    ...plan,
+    treeText,
+    elementTree: root
+  };
+}
+
 function statusLabel(value: string | null | undefined) {
   return value ? value.replace(/_/g, " ") : "—";
 }
@@ -198,6 +281,7 @@ export default function App() {
   const [placementMode, setPlacementMode] = useState<"append" | "afterSelected">("append");
   const [analysis, setAnalysis] = useState<SectionAnalysis | null>(null);
   const [skeleton, setSkeleton] = useState<SkeletonPlan | null>(null);
+  const [skeletonDraft, setSkeletonDraft] = useState("");
   const [styling, setStyling] = useState<StylingPlan | null>(null);
   const [verification, setVerification] = useState<SectionVerification | null>(null);
   const [lastExecution, setLastExecution] = useState<ExecutionSummary | null>(null);
@@ -232,6 +316,10 @@ export default function App() {
     Boolean(analysis || skeleton || styling || verification || lastExecution);
   const analysisComplete = Boolean(analysis);
   const skeletonComplete = Boolean(skeleton);
+  const skeletonEdited =
+    Boolean(skeleton?.treeText) &&
+    skeletonDraft.trim() !== "" &&
+    skeletonDraft !== skeleton?.treeText;
   const insertionComplete = Boolean(currentTargetNodeId);
   const stylingComplete = Boolean(styling);
   const verificationComplete = Boolean(verification?.readyForApproval);
@@ -377,6 +465,14 @@ export default function App() {
       cancelled = true;
     };
   }, [repoId, designerContext?.siteId, sharedStyleSummary]);
+
+  useEffect(() => {
+    if (skeleton) {
+      setSkeletonDraft(skeleton.treeText);
+    } else {
+      setSkeletonDraft("");
+    }
+  }, [skeleton]);
 
   useEffect(() => {
     if (hasBootstrappedRepo || repoId) {
@@ -647,16 +743,21 @@ export default function App() {
     setLoading("Inserting skeleton");
     setError(null);
     try {
+      const editableSkeleton = parseSkeletonTreeText(
+        skeleton,
+        skeletonDraft || skeleton.treeText
+      );
       const context = await bridge.getContext();
       const placementTarget =
         placementMode === "afterSelected" ? context.selectedElementId : null;
       const result = await executeSkeletonPlan({
         bridge,
         context,
-        plan: skeleton,
+        plan: editableSkeleton,
         placementMode,
         placementTarget
       });
+      setSkeleton(editableSkeleton);
       setLastExecution(result);
       setCurrentTargetNodeId(result.rootNodeId ?? null);
     } catch (err) {
@@ -683,7 +784,9 @@ export default function App() {
 
       let targetNodeId = currentTargetNodeId ?? context.selectedElementId;
       if (workflowMode === "fullAssist" && !targetNodeId) {
-        const nextSkeleton = skeleton ?? (await backend.generateSkeleton(request));
+        const nextSkeleton = skeleton
+          ? parseSkeletonTreeText(skeleton, skeletonDraft || skeleton.treeText)
+          : await backend.generateSkeleton(request);
         setSkeleton(nextSkeleton);
         const skeletonExecution = await executeSkeletonPlan({
           bridge,
@@ -1251,7 +1354,25 @@ export default function App() {
                   <h3>Skeleton</h3>
                   {skeleton ? (
                     <>
-                      <pre>{skeleton.treeText}</pre>
+                      <div className="wf-review-inline-actions">
+                        <p className="wf-review-hint">
+                          Edit the skeleton before insertion if you want to correct the structure or class names yourself.
+                        </p>
+                        <button
+                          type="button"
+                          className="wf-tertiary"
+                          disabled={!skeletonEdited}
+                          onClick={() => setSkeletonDraft(skeleton.treeText)}
+                        >
+                          Reset edits
+                        </button>
+                      </div>
+                      <textarea
+                        className="wf-skeleton-editor"
+                        value={skeletonDraft}
+                        onChange={(event) => setSkeletonDraft(event.target.value)}
+                        spellCheck={false}
+                      />
                       {skeleton.warnings.length ? <ul>{warningList(skeleton.warnings)}</ul> : null}
                     </>
                   ) : (
