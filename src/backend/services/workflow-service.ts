@@ -1,10 +1,12 @@
 import {
+  BuildNode,
   pageMappingsUpsertInputSchema,
   PageMappingsUpsertInput,
   PlannerWarning,
   sectionAnalysisSchema,
   SectionAnalysis,
   SectionMetadata,
+  SectionContext,
   sectionVerificationSchema,
   SectionVerification,
   SectionWorkflowState,
@@ -26,6 +28,7 @@ import {
 import { BlobStore } from "../blob/blob-store.js";
 import { MisRepoExtractor } from "../extractor/mis-extractor.js";
 import { RepositorySnapshot } from "../github/client.js";
+import { HeuristicBuildPlanner } from "../planner/heuristic-planner.js";
 import { PlanningProvider, providerWarning } from "../planner/planning-provider.js";
 import { serializeSectionContext } from "../planner/section-serializer.js";
 import { AppRepository } from "../repositories/app-repository.js";
@@ -161,6 +164,44 @@ function deterministicAnalysis(input: {
     reusableClasses,
     suggestedNewClasses,
     warnings
+  });
+}
+
+function describeNodeTree(
+  node: BuildNode,
+  depth = 0
+): string[] {
+  const indent = "  ".repeat(depth);
+  const classSuffix = node.classNames.length ? `.${node.classNames.join(".")}` : "";
+  const labelSuffix = node.textContent ? ` "${node.textContent}"` : "";
+  const current = `${indent}${node.tag}${classSuffix}${labelSuffix}`;
+  return [current, ...node.children.flatMap((child) => describeNodeTree(child, depth + 1))];
+}
+
+function deterministicSkeleton(input: {
+  metadata: SectionMetadata;
+  sectionContext: SectionContext;
+  sharedStyleContext: SharedStyleContext;
+}): SkeletonPlan {
+  const planner = new HeuristicBuildPlanner();
+  const plan = planner.plan({
+    pageId: input.metadata.pageId,
+    sectionId: input.metadata.sectionId,
+    sectionContext: input.sectionContext,
+    projectContext: createProjectContext(input.sharedStyleContext),
+    sharedStyleContext: input.sharedStyleContext
+  });
+
+  const reused = dedupe(plan.classAssignments.flatMap((assignment) => assignment.reused));
+  const created = dedupe(plan.classAssignments.flatMap((assignment) => assignment.created));
+
+  return skeletonPlanSchema.parse({
+    sectionMetadata: input.metadata,
+    treeText: describeNodeTree(plan.elementTree).join("\n"),
+    elementTree: plan.elementTree,
+    reusableClasses: reused,
+    suggestedNewClasses: created,
+    warnings: plan.warnings
   });
 }
 
@@ -481,17 +522,11 @@ export class WorkflowService {
 
   async generateSkeleton(request: WorkflowSectionRequest): Promise<SkeletonPlan> {
     const context = await this.getSectionStateContext(request);
-    const skeleton = skeletonPlanSchema.parse(
-      await this.planningProvider.generateSkeleton({
-        metadata: context.metadata,
-        mode: request.mode,
-        sectionContext: context.sectionContext,
-        serializedSection: context.serializedSection,
-        projectContext: context.projectContext,
-        sharedStyleContext: context.sharedStyleContext,
-        selectedElementId: request.selectedElementId ?? null
-      })
-    );
+    const skeleton = deterministicSkeleton({
+      metadata: context.metadata,
+      sectionContext: context.sectionContext,
+      sharedStyleContext: context.sharedStyleContext
+    });
     const runId = await this.persistRun(
       request,
       context.queue.repoPage!.id,
