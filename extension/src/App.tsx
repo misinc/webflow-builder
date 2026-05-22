@@ -198,7 +198,7 @@ export default function App() {
     }
     if (!analysis) {
       return {
-        label: "Analyze section",
+        label: "Analyze source section",
         action: analyzeCurrentSection
       };
     }
@@ -1129,7 +1129,7 @@ export default function App() {
               <div className="wf-panel-header">
                 <div>
                   <h2>Review</h2>
-                  <p>Analysis and output stay visible while you work.</p>
+                  <p>Analysis explains the source structure, recommends the next mode, and prepares the rest of the workflow.</p>
                 </div>
               </div>
 

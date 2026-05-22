@@ -4,6 +4,7 @@ import {
   PlannerWarning,
   sectionAnalysisSchema,
   SectionAnalysis,
+  SectionMetadata,
   sectionVerificationSchema,
   SectionVerification,
   SectionWorkflowState,
@@ -25,9 +26,10 @@ import {
 import { BlobStore } from "../blob/blob-store.js";
 import { MisRepoExtractor } from "../extractor/mis-extractor.js";
 import { RepositorySnapshot } from "../github/client.js";
-import { PlanningProvider } from "../planner/planning-provider.js";
+import { PlanningProvider, providerWarning } from "../planner/planning-provider.js";
 import { serializeSectionContext } from "../planner/section-serializer.js";
 import { AppRepository } from "../repositories/app-repository.js";
+import { dedupe } from "../../shared/client-first.js";
 import { nowIso, stableId } from "../utils.js";
 import { createProjectContext } from "./project-context.js";
 
@@ -39,6 +41,127 @@ function emptySharedStyleContext(siteId: string): SharedStyleContext {
     variables: [],
     styleIds: []
   };
+}
+
+function titleCaseSectionKey(value: string): string {
+  return value
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function summarizeLayout(contentCount: number, layoutHints: string[]): string {
+  const hints = layoutHints.map((hint) => hint.toLowerCase());
+  const parts: string[] = [];
+  if (hints.some((hint) => hint.includes("heading"))) {
+    parts.push("a heading");
+  }
+  if (contentCount > 0) {
+    parts.push(`about ${contentCount} extracted content items`);
+  }
+  if (hints.some((hint) => hint.includes("card"))) {
+    parts.push("card-based groups");
+  }
+  if (hints.some((hint) => hint.includes("grid"))) {
+    parts.push("a grid layout");
+  }
+  if (hints.some((hint) => hint.includes("flex"))) {
+    parts.push("flex-driven layout");
+  }
+  if (hints.some((hint) => hint.includes("cta"))) {
+    parts.push("CTA affordances");
+  }
+  return parts.length ? parts.join(", ") : "custom section structure";
+}
+
+function deterministicAnalysis(input: {
+  metadata: SectionMetadata;
+  serializedSection: {
+    summary: string;
+    content: Array<{ kind: string; label: string; value: string }>;
+    layoutHints: string[];
+    sourceExcerpt: string;
+  };
+  section: { name: string; sectionKey: string };
+  sharedStyleContext: SharedStyleContext;
+}): SectionAnalysis {
+  const { metadata, serializedSection, section, sharedStyleContext } = input;
+  const lowerSource = serializedSection.sourceExcerpt.toLowerCase();
+  const content = serializedSection.content.slice(0, 12);
+  const recommendedMode =
+    section.sectionKey === "hero" ? "fullAssist" : "styleExisting";
+
+  const reusableClasses = dedupe(
+    sharedStyleContext.classes
+      .map((item) => item.name)
+      .filter((name) => {
+        const lower = name.toLowerCase();
+        return (
+          lower.includes("heading") ||
+          lower.includes("text") ||
+          lower.includes("padding") ||
+          lower.includes("margin") ||
+          lower.includes("container") ||
+          lower.includes("wrapper") ||
+          lower.includes("tag")
+        );
+      })
+  ).slice(0, 16);
+
+  const suggestedNewClasses = dedupe([
+    `section_${section.sectionKey}`,
+    `${section.sectionKey}_layout`,
+    `${section.sectionKey}_content`,
+    serializedSection.layoutHints.some((hint) => hint.includes("grid"))
+      ? `${section.sectionKey}_grid`
+      : null,
+    serializedSection.layoutHints.some((hint) => hint.includes("card"))
+      ? `${section.sectionKey}_card`
+      : null
+  ].filter((value): value is string => Boolean(value)));
+
+  const warnings = dedupe([
+    lowerSource.includes("#")
+      ? "Source includes hardcoded color values. Prefer project color variables or approved text/color classes."
+      : null,
+    /class(name)?=.*(home|page|solv-|hero-|services-)/i.test(serializedSection.sourceExcerpt)
+      ? "Source uses page- or section-scoped class patterns. Rename them to Client-First-compatible functional classes in Webflow."
+      : null,
+    lowerSource.includes("motion") || lowerSource.includes("whileinview")
+      ? "React motion settings will not transfer directly. Recreate only if needed after layout is correct."
+      : null,
+    serializedSection.layoutHints.some((hint) => hint.includes("card"))
+      ? "This section has structural card patterns, so styling an existing skeleton is likely faster than one-shot generation."
+      : null
+  ].filter((value): value is string => Boolean(value))).map((message, index) =>
+    providerWarning(`deterministic-analysis-${index}`, message)
+  );
+
+  const summary = `${titleCaseSectionKey(section.sectionKey)} section with ${summarizeLayout(
+    content.length,
+    serializedSection.layoutHints
+  )}.`;
+
+  const goals = dedupe([
+    "Preserve the section hierarchy from the repo source before styling.",
+    recommendedMode === "styleExisting"
+      ? "Use the current Webflow structure as the styling target to move faster."
+      : "Generate a lightweight skeleton only where structure is still missing.",
+    "Reuse shared typography, spacing, and utility classes where possible.",
+    "Keep new classes Client-First-compatible and section-functional."
+  ]);
+
+  return sectionAnalysisSchema.parse({
+    sectionMetadata: metadata,
+    summary,
+    goals,
+    content,
+    recommendedMode,
+    reusableClasses,
+    suggestedNewClasses,
+    warnings
+  });
 }
 
 export class WorkflowService {
@@ -336,17 +459,15 @@ export class WorkflowService {
 
   async analyzeSection(request: WorkflowSectionRequest): Promise<SectionAnalysis> {
     const context = await this.getSectionStateContext(request);
-    const analysis = sectionAnalysisSchema.parse(
-      await this.planningProvider.analyzeSection({
-        metadata: context.metadata,
-        mode: request.mode,
-        sectionContext: context.sectionContext,
-        serializedSection: context.serializedSection,
-        projectContext: context.projectContext,
-        sharedStyleContext: context.sharedStyleContext,
-        selectedElementId: request.selectedElementId ?? null
-      })
-    );
+    const analysis = deterministicAnalysis({
+      metadata: context.metadata,
+      serializedSection: context.serializedSection,
+      section: {
+        name: context.section.name,
+        sectionKey: context.section.sectionKey
+      },
+      sharedStyleContext: context.sharedStyleContext
+    });
     const runId = await this.persistRun(
       request,
       context.queue.repoPage!.id,
