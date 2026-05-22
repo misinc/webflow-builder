@@ -45,6 +45,18 @@ function sectionComponentPath(importPath: string): string | null {
   return `src/app/components/sections/${withExtension}`;
 }
 
+function isSectionsBarrelImport(importPath: string): boolean {
+  const normalized = importPath.replace(/^@\//, "src/").replace(/^\.\//, "");
+  return (
+    normalized === "src/app/components/sections" ||
+    normalized === "src/app/components/sections/index" ||
+    normalized === "src/app/components/sections/index.ts" ||
+    normalized === "src/app/components/sections/index.tsx" ||
+    normalized === "src/app/components/sections/index.js" ||
+    normalized === "src/app/components/sections/index.jsx"
+  );
+}
+
 function fileByPath(snapshot: RepositorySnapshot, filePath: string): string {
   return (
     snapshot.files.find((file) => file.path === filePath)?.content ??
@@ -58,15 +70,70 @@ function parseImports(content: string): Array<{
   componentName: string;
   importPath: string;
 }> {
-  const matches = [
+  const defaultMatches = [
     ...content.matchAll(
       /import\s+([A-Za-z0-9_]+)\s+from\s+["']([^"']*components\/sections\/[^"']+)["']/g
     )
   ];
-  return matches.map((match) => ({
+  const namedMatches = [
+    ...content.matchAll(
+      /import\s*{\s*([^}]+)\s*}\s*from\s*["']([^"']*components\/sections(?:\/index)?(?:\.[a-z]+)?)["']/gs
+    )
+  ].flatMap((match) =>
+    match[1]
+      .split(",")
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .map((specifier) => {
+        const aliasMatch = specifier.match(/^([A-Za-z0-9_]+)\s+as\s+([A-Za-z0-9_]+)$/);
+        return {
+          componentName: aliasMatch ? aliasMatch[2] : specifier,
+          importPath: match[2]
+        };
+      })
+  );
+
+  return [...defaultMatches.map((match) => ({
     componentName: match[1],
     importPath: match[2]
-  }));
+  })), ...namedMatches];
+}
+
+function resolveSectionSourceFile(
+  snapshot: RepositorySnapshot,
+  importPath: string,
+  componentName: string
+): string | null {
+  const directMatch = sectionComponentPath(importPath);
+  if (directMatch) {
+    return directMatch;
+  }
+
+  if (!isSectionsBarrelImport(importPath)) {
+    return null;
+  }
+
+  const sectionFiles = snapshot.files.filter((file) =>
+    /^src\/app\/components\/sections\/.+\.(tsx|jsx|ts|js)$/.test(file.path)
+  );
+  const exactNameMatch = sectionFiles.find((file) => {
+    const baseName = file.path.split("/").pop()?.replace(/\.(tsx|jsx|ts|js)$/, "");
+    return baseName === componentName;
+  });
+  if (exactNameMatch) {
+    return exactNameMatch.path;
+  }
+
+  const exportedSymbolMatch = sectionFiles.find((file) =>
+    new RegExp(
+      `export\\s+(?:default\\s+function|function|const)\\s+${componentName}\\b`
+    ).test(file.content)
+  );
+  if (exportedSymbolMatch) {
+    return exportedSymbolMatch.path;
+  }
+
+  return null;
 }
 
 function detectSectionOrder(
@@ -140,7 +207,11 @@ export class MisRepoExtractor {
       imports
         .map((item, importIndex) => ({
           ...item,
-          sourceFile: sectionComponentPath(item.importPath),
+          sourceFile: resolveSectionSourceFile(
+            snapshot,
+            item.importPath,
+            item.componentName
+          ),
           sortOrder: detectSectionOrder(
             pageFile.content,
             item.componentName,

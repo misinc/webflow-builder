@@ -99,4 +99,75 @@ describe("MisRepoExtractor", () => {
       "Solutions"
     ]);
   });
+
+  it("indexes named imports from the shared sections barrel", () => {
+    const extractor = new MisRepoExtractor();
+    const snapshot: RepositorySnapshot = {
+      owner: "misinc",
+      name: "misinc-2026",
+      defaultBranch: "main",
+      commitSha: "fixture-barrel-commit",
+      files: [
+        {
+          path: "src/app/pages/HomePage.tsx",
+          content: `
+            import {
+              AuthoritySection,
+              CaseStudiesSection,
+              HeroSection,
+              SolutionsSection,
+              StrategicServicesSection
+            } from "@/app/components/sections";
+
+            export default function HomePage() {
+              return (
+                <main>
+                  <HeroSection />
+                  <StrategicServicesSection />
+                  <SolutionsSection />
+                  <CaseStudiesSection />
+                  <AuthoritySection />
+                </main>
+              );
+            }
+          `
+        },
+        {
+          path: "src/app/components/sections/HeroSection.tsx",
+          content: "export function HeroSection() { return <section>Hero</section>; }"
+        },
+        {
+          path: "src/app/components/sections/StrategicServicesSection.tsx",
+          content:
+            "export function StrategicServicesSection() { return <section>Services</section>; }"
+        },
+        {
+          path: "src/app/components/sections/SolutionsSection.tsx",
+          content:
+            "export function SolutionsSection() { return <section>Solutions</section>; }"
+        },
+        {
+          path: "src/app/components/sections/index.ts",
+          content: `
+            export { HeroSection } from "./HeroSection";
+            export { StrategicServicesSection } from "./StrategicServicesSection";
+            export { SolutionsSection } from "./SolutionsSection";
+          `
+        }
+      ]
+    };
+
+    const index = extractor.extractRepoIndex("repo-1", snapshot);
+
+    expect(index.sections.map((section) => section.sectionKey)).toEqual([
+      "hero",
+      "services",
+      "solutions"
+    ]);
+    expect(index.sections.map((section) => section.sourceFile)).toEqual([
+      "src/app/components/sections/HeroSection.tsx",
+      "src/app/components/sections/StrategicServicesSection.tsx",
+      "src/app/components/sections/SolutionsSection.tsx"
+    ]);
+  });
 });
