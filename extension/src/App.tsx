@@ -16,6 +16,7 @@ import {
 const backend = new BackendClient();
 const bridge = getWebflowBridge();
 const bridgeLabel = getWebflowBridgeLabel();
+const DESIGNER_CONTEXT_POLL_MS = 1500;
 
 function usePersistentState(
   key: string,
@@ -47,10 +48,24 @@ export default function App() {
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    bridge.getContext().then(setDesignerContext).catch((err) => {
+  async function refreshDesignerContext() {
+    try {
+      const context = await bridge.getContext();
+      setDesignerContext(context);
+    } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to read Webflow context.");
-    });
+    }
+  }
+
+  useEffect(() => {
+    refreshDesignerContext();
+    const interval = window.setInterval(() => {
+      refreshDesignerContext();
+    }, DESIGNER_CONTEXT_POLL_MS);
+
+    return () => {
+      window.clearInterval(interval);
+    };
   }, []);
 
   async function connectAndSyncRepo() {
@@ -213,6 +228,9 @@ export default function App() {
             </button>
             <button type="button" className="ghost" onClick={bindCurrentSite} disabled={!repoId || Boolean(loading)}>
               Bind Active Site
+            </button>
+            <button type="button" className="ghost" onClick={refreshDesignerContext} disabled={Boolean(loading)}>
+              Refresh Designer Context
             </button>
           </div>
         </article>

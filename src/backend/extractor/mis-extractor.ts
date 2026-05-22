@@ -10,6 +10,29 @@ import { slugify, stableId } from "../utils.js";
 
 const SUPPORTED_SECTION_KEYS = new Set(["hero", "services", "solutions"]);
 
+function inferSupportedSectionKey(input: string): string | null {
+  const normalized = slugify(input);
+  for (const key of SUPPORTED_SECTION_KEYS) {
+    if (normalized === key || normalized.includes(key)) {
+      return key;
+    }
+  }
+  return null;
+}
+
+function displayNameFromSectionKey(sectionKey: string, fallback: string): string {
+  switch (sectionKey) {
+    case "hero":
+      return "Hero";
+    case "services":
+      return "Services";
+    case "solutions":
+      return "Solutions";
+    default:
+      return fallback;
+  }
+}
+
 function sectionComponentPath(importPath: string): string | null {
   const normalized = importPath.replace(/^@\//, "src/").replace(/^\.\//, "");
   const match = normalized.match(/src\/app\/components\/sections\/(.+)$/);
@@ -127,15 +150,17 @@ export class MisRepoExtractor {
         .filter((item): item is typeof item & { sourceFile: string } => Boolean(item.sourceFile))
         .sort((left, right) => left.sortOrder - right.sortOrder)
         .forEach((item, sortOrder) => {
-          const sectionKey = slugify(item.componentName);
-          if (!SUPPORTED_SECTION_KEYS.has(sectionKey)) {
+          const sectionKey =
+            inferSupportedSectionKey(item.componentName) ??
+            inferSupportedSectionKey(item.sourceFile);
+          if (!sectionKey) {
             return;
           }
           sections.push({
             id: stableId(pageId, item.componentName),
             repoId,
             pageId,
-            name: item.componentName,
+            name: displayNameFromSectionKey(sectionKey, item.componentName),
             sectionKey,
             sourceFile: item.sourceFile,
             importPath: item.importPath,

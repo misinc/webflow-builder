@@ -42,4 +42,61 @@ describe("MisRepoExtractor", () => {
     ]);
     expect(index.sections.map((section) => section.sortOrder)).toEqual([0, 1, 2]);
   });
+
+  it("infers supported section families from non-exact MIS component names", () => {
+    const extractor = new MisRepoExtractor();
+    const snapshot: RepositorySnapshot = {
+      owner: "misinc",
+      name: "misinc-2026",
+      defaultBranch: "main",
+      commitSha: "fixture-variant-commit",
+      files: [
+        {
+          path: "src/app/pages/NewHomePage.tsx",
+          content: `
+            import HomeHeroVariant from "@/app/components/sections/HomeHeroVariant";
+            import ServicesSectionVariant from "@/app/components/sections/ServicesSectionVariant";
+            import SolutionsSectionStack from "@/app/components/sections/SolutionsSectionStack";
+
+            export default function NewHomePage() {
+              return (
+                <>
+                  <HomeHeroVariant />
+                  <ServicesSectionVariant />
+                  <SolutionsSectionStack />
+                </>
+              );
+            }
+          `
+        },
+        {
+          path: "src/app/components/sections/HomeHeroVariant.tsx",
+          content: "export default function HomeHeroVariant() { return <section>Hero</section>; }"
+        },
+        {
+          path: "src/app/components/sections/ServicesSectionVariant.tsx",
+          content:
+            "export default function ServicesSectionVariant() { return <section>Services</section>; }"
+        },
+        {
+          path: "src/app/components/sections/SolutionsSectionStack.tsx",
+          content:
+            "export default function SolutionsSectionStack() { return <section>Solutions</section>; }"
+        }
+      ]
+    };
+
+    const index = extractor.extractRepoIndex("repo-1", snapshot);
+
+    expect(index.sections.map((section) => section.sectionKey)).toEqual([
+      "hero",
+      "services",
+      "solutions"
+    ]);
+    expect(index.sections.map((section) => section.name)).toEqual([
+      "Hero",
+      "Services",
+      "Solutions"
+    ]);
+  });
 });
