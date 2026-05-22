@@ -42,6 +42,15 @@ function usePersistentState(
   return [value, setValue];
 }
 
+async function computeStableRepoId(owner: string, name: string): Promise<string> {
+  const input = new TextEncoder().encode(`${owner}::${name}`);
+  const digest = await crypto.subtle.digest("SHA-1", input);
+  return Array.from(new Uint8Array(digest))
+    .map((value) => value.toString(16).padStart(2, "0"))
+    .join("")
+    .slice(0, 16);
+}
+
 function mergeMappingRows(params: {
   livePages: WebflowSitePage[];
   savedMappings: SitePageMappingRow[];
@@ -131,11 +140,12 @@ export default function App() {
     "builder-repo-url",
     "https://github.com/misinc/misinc-2026"
   );
+  const [persistedRepoId, setPersistedRepoId] = usePersistentState("builder-repo-id", "");
   const [workflowMode, setWorkflowMode] = usePersistentState(
     "builder-workflow-mode",
     "fullAssist"
   );
-  const [repoId, setRepoId] = useState<string | null>(null);
+  const [repoId, setRepoId] = useState<string | null>(persistedRepoId || null);
   const [repoTree, setRepoTree] = useState<Awaited<
     ReturnType<BackendClient["getRepoTree"]>
   > | null>(null);
@@ -328,7 +338,7 @@ export default function App() {
     if (hasBootstrappedRepo || repoId) {
       return;
     }
-    if (!repoOwner || !repoName || !repoUrl || !userId) {
+    if (!repoOwner || !repoName || !userId) {
       setHasBootstrappedRepo(true);
       return;
     }
@@ -337,6 +347,16 @@ export default function App() {
 
     async function restoreRepoSession() {
       try {
+        const derivedRepoId = persistedRepoId || (await computeStableRepoId(repoOwner, repoName));
+        if (cancelled) {
+          return;
+        }
+        setRepoId(derivedRepoId);
+        setPersistedRepoId(derivedRepoId);
+
+        if (!repoUrl) {
+          return;
+        }
         setLoading((current) => current ?? "Restoring workspace");
         const repoResponse = await backend.connectRepo({
           owner: repoOwner,
@@ -349,6 +369,7 @@ export default function App() {
           return;
         }
         setRepoId(repoResponse.repo.id);
+        setPersistedRepoId(repoResponse.repo.id);
         try {
           const nextTree = await backend.getRepoTree(repoResponse.repo.id);
           if (!cancelled) {
@@ -376,7 +397,16 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [hasBootstrappedRepo, repoId, repoOwner, repoName, repoUrl, userId]);
+  }, [
+    hasBootstrappedRepo,
+    persistedRepoId,
+    repoId,
+    repoOwner,
+    repoName,
+    repoUrl,
+    userId,
+    setPersistedRepoId
+  ]);
 
   async function connectAndSyncRepo() {
     setLoading("Connecting repo");
@@ -390,6 +420,7 @@ export default function App() {
         requestedBy: userId
       });
       setRepoId(repoResponse.repo.id);
+      setPersistedRepoId(repoResponse.repo.id);
       let nextTree = null;
       try {
         nextTree = await backend.getRepoTree(repoResponse.repo.id);
