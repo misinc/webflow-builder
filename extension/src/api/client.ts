@@ -51,17 +51,27 @@ async function request<T>(
   options: RequestInit,
   userId?: string
 ): Promise<T> {
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      "content-type": "application/json",
-      ...(userId ? { "x-user-id": userId } : {}),
-      ...(options.headers ?? {})
-    }
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers: {
+        "content-type": "application/json",
+        ...(userId ? { "x-user-id": userId } : {}),
+        ...(options.headers ?? {})
+      }
+    });
+  } catch (error) {
+    throw new Error(
+      error instanceof Error
+        ? error.message
+        : `Network request failed for ${new URL(url).pathname}`
+    );
+  }
 
   if (!response.ok) {
     const body = await response.text();
+    let message = body || `Request failed: ${response.status}`;
     try {
       const payload = JSON.parse(body) as {
         error?: string;
@@ -74,15 +84,13 @@ async function request<T>(
       const fieldError = payload.details?.fieldErrors
         ? Object.values(payload.details.fieldErrors).flat().find(Boolean)
         : null;
-      throw new Error(
+      message =
         formError ??
-          fieldError ??
-          payload.error ??
-          `Request failed: ${response.status}`
-      );
-    } catch {
-      throw new Error(body || `Request failed: ${response.status}`);
-    }
+        fieldError ??
+        payload.error ??
+        message;
+    } catch {}
+    throw new Error(message);
   }
 
   return (await response.json()) as T;

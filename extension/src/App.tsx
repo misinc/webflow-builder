@@ -543,7 +543,6 @@ export default function App() {
     requestedBy: string;
     mode: WorkflowMode;
     selectedElementId: string | null;
-    sharedStyleContext?: SharedStyleContext;
   } {
     if (!repoId || !designerContext?.siteId || !designerContext.pageId || !selectedSectionId) {
       throw new Error("Choose a mapped page and current section first.");
@@ -555,8 +554,7 @@ export default function App() {
       sectionId: selectedSectionId,
       requestedBy: userId,
       mode: workflowMode as WorkflowMode,
-      selectedElementId: designerContext.selectedElementId,
-      sharedStyleContext: sharedStyleContext ?? undefined
+      selectedElementId: designerContext.selectedElementId
     };
   }
 
@@ -564,11 +562,10 @@ export default function App() {
     setLoading("Analyzing section");
     setError(null);
     try {
-      const styles =
-        designerContext?.siteId && sharedStyleContext?.siteId !== designerContext.siteId
-          ? await captureSharedStyles(designerContext.siteId)
-          : sharedStyleContext;
-      const request = { ...currentWorkflowRequest(), sharedStyleContext: styles ?? undefined };
+      if (designerContext?.siteId && sharedStyleContext?.siteId !== designerContext.siteId) {
+        await captureSharedStyles(designerContext.siteId);
+      }
+      const request = currentWorkflowRequest();
       const nextAnalysis = await backend.analyzeSection(request);
       setAnalysis(nextAnalysis);
       setVerification(null);
@@ -584,11 +581,10 @@ export default function App() {
     setLoading("Generating skeleton");
     setError(null);
     try {
-      const styles =
-        designerContext?.siteId && sharedStyleContext?.siteId !== designerContext.siteId
-          ? await captureSharedStyles(designerContext.siteId)
-          : sharedStyleContext;
-      const request = { ...currentWorkflowRequest(), sharedStyleContext: styles ?? undefined };
+      if (designerContext?.siteId && sharedStyleContext?.siteId !== designerContext.siteId) {
+        await captureSharedStyles(designerContext.siteId);
+      }
+      const request = currentWorkflowRequest();
       const nextSkeleton = await backend.generateSkeleton(request);
       setSkeleton(nextSkeleton);
       setVerification(null);
@@ -635,11 +631,10 @@ export default function App() {
       if (!siteId) {
         throw new Error("No active Webflow site.");
       }
-      const styles = await captureSharedStyles(siteId);
+      await captureSharedStyles(siteId);
       const request = {
         ...currentWorkflowRequest(),
-        selectedElementId: currentTargetNodeId ?? context.selectedElementId,
-        sharedStyleContext: styles
+        selectedElementId: currentTargetNodeId ?? context.selectedElementId
       };
 
       let targetNodeId = currentTargetNodeId ?? context.selectedElementId;
@@ -1030,12 +1025,12 @@ export default function App() {
             </article>
           </div>
 
-          <div className="wf-panel-stack">
-            <article className="wf-panel wf-panel-sticky">
+          <div className="wf-workspace-focus">
+            <article className="wf-panel">
               <div className="wf-panel-header">
                 <div>
                   <h2>Current section</h2>
-                  <p>One clear next step, plus review beside the active work.</p>
+                  <p>One clear next step with compact controls.</p>
                 </div>
                 {currentQueueItem ? (
                   <span className="wf-status-pill">{statusLabel(currentQueueItem.status)}</span>
@@ -1121,7 +1116,7 @@ export default function App() {
                 </button>
                 <button
                   type="button"
-                  className="wf-secondary wf-action-chip"
+                  className="wf-secondary wf-action-chip is-wide"
                   onClick={markPageComplete}
                   disabled={!queue?.items.length || Boolean(loading)}
                 >
@@ -1130,11 +1125,11 @@ export default function App() {
               </div>
             </article>
 
-            <article className="wf-panel">
+            <article className="wf-panel wf-review-panel">
               <div className="wf-panel-header">
                 <div>
                   <h2>Review</h2>
-                  <p>Review stays next to the active section so errors and output are visible together.</p>
+                  <p>Analysis and output stay visible while you work.</p>
                 </div>
               </div>
 
