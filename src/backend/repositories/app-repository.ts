@@ -3,11 +3,15 @@ import {
   BuildJobRecord,
   BuildResultRecord,
   CompleteBuildJobInput,
+  PageMapping,
+  PageMappingsUpsertInput,
   RepoConnectionInput,
   RepoPageRecord,
   RepoRecord,
   RepoSectionRecord,
   RepoSyncRecord,
+  SectionRunRecord,
+  SectionWorkflowState,
   SharedStyleContext
 } from "../../shared/contracts.js";
 
@@ -43,6 +47,37 @@ export interface AppRepository {
   getSiteBinding(repoId: string, userId: string): Promise<WebflowSiteBinding | null>;
   saveSharedStyleContext(siteId: string, sharedStyleContext: SharedStyleContext): Promise<void>;
   getSharedStyleContext(siteId: string): Promise<SharedStyleContext | null>;
+  upsertPageMappings(input: PageMappingsUpsertInput): Promise<PageMapping[]>;
+  getPageMappings(
+    repoId: string,
+    webflowSiteId: string,
+    userId: string
+  ): Promise<PageMapping[]>;
+  replaceSectionWorkflowStates(
+    userId: string,
+    webflowSiteId: string,
+    webflowPageId: string,
+    repoPageId: string,
+    states: Array<{
+      repoSectionId: string;
+      sortOrder: number;
+    }>
+  ): Promise<SectionWorkflowState[]>;
+  getSectionWorkflowStates(
+    userId: string,
+    webflowSiteId: string,
+    webflowPageId: string,
+    repoPageId: string
+  ): Promise<SectionWorkflowState[]>;
+  updateSectionWorkflowState(state: SectionWorkflowState): Promise<void>;
+  saveSectionRun(run: SectionRunRecord): Promise<void>;
+  getLatestSectionRun(
+    userId: string,
+    webflowSiteId: string,
+    webflowPageId: string,
+    repoSectionId: string,
+    runType?: SectionRunRecord["runType"]
+  ): Promise<SectionRunRecord | null>;
   createBuildJob(job: BuildJobRecord): Promise<void>;
   getBuildJob(jobId: string): Promise<BuildJobRecord | null>;
   updateBuildJob(job: BuildJobRecord): Promise<void>;

@@ -4,12 +4,14 @@ import { getEnv } from "./env.js";
 import { MisRepoExtractor } from "./extractor/mis-extractor.js";
 import { createGitHubRepositoryClient } from "./github/client.js";
 import { HeuristicBuildPlanner } from "./planner/heuristic-planner.js";
+import { OpenAIPlanningProvider } from "./planner/openai-planning-provider.js";
 import { MemoryAppRepository } from "./repositories/memory-app-repository.js";
 import { PostgresAppRepository } from "./repositories/postgres-app-repository.js";
 import { BuildJobService } from "./services/build-job-service.js";
 import { BuildPlanService } from "./services/build-plan-service.js";
 import { RepoSyncService } from "./services/repo-sync-service.js";
 import { SiteBindingService } from "./services/site-binding-service.js";
+import { WorkflowService } from "./services/workflow-service.js";
 import { BuildPlanValidator } from "./validation/build-plan-validator.js";
 
 let singleton: ReturnType<typeof createServices> | null = null;
@@ -24,6 +26,10 @@ function createServices() {
     : new MemoryBlobStore();
   const extractor = new MisRepoExtractor();
   const planner = new HeuristicBuildPlanner();
+  const planningProvider = new OpenAIPlanningProvider(
+    env.openAiApiKey,
+    env.openAiModel
+  );
   const validator = new BuildPlanValidator();
   const githubClient = createGitHubRepositoryClient(env);
 
@@ -49,7 +55,13 @@ function createServices() {
       validator
     ),
     siteBindingService: new SiteBindingService(repository),
-    buildJobService: new BuildJobService(repository)
+    buildJobService: new BuildJobService(repository),
+    workflowService: new WorkflowService(
+      repository,
+      blobStore,
+      extractor,
+      planningProvider
+    )
   };
 }
 

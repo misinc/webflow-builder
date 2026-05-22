@@ -2,7 +2,11 @@ import {
   dedupe,
   inferSharedCategory
 } from "../../../src/shared/client-first.js";
-import { BuildNode, SharedStyleContext } from "../../../src/shared/contracts.js";
+import {
+  BuildNode,
+  SharedStyleContext,
+  WebflowSitePage
+} from "../../../src/shared/contracts.js";
 
 export interface DesignerContext {
   siteId: string | null;
@@ -19,6 +23,7 @@ export interface CreateNodeInput {
 
 export interface WebflowDesignerBridge {
   getContext(): Promise<DesignerContext>;
+  getSitePages(siteId: string): Promise<WebflowSitePage[]>;
   inspectSharedStyles(siteId: string): Promise<SharedStyleContext>;
   createNode(input: CreateNodeInput): Promise<{ id: string }>;
   applyClasses(nodeId: string, classNames: string[]): Promise<void>;
@@ -96,6 +101,12 @@ interface WebflowElement {
 
 interface WebflowPage {
   id: string;
+  name?: string;
+  slug?: string | null;
+  getName?(): Promise<string>;
+  getSlug?(): Promise<string | null>;
+  isHomepage?: boolean;
+  getIsHomepage?(): Promise<boolean>;
 }
 
 interface WebflowApi {
@@ -106,6 +117,7 @@ interface WebflowApi {
   };
   getSiteInfo(): Promise<{ siteId: string }>;
   getCurrentPage(): Promise<WebflowPage | null>;
+  getAllPagesAndFolders?(): Promise<unknown[]>;
   getCurrentMode(): Promise<string | null>;
   getSelectedElement(): Promise<WebflowElement | null>;
   getAllStyles(): Promise<WebflowStyle[]>;
@@ -158,6 +170,20 @@ function categorizeVariable(name: string, variableType?: string): string {
     default:
       return "custom";
   }
+}
+
+function slugToRoute(slug: string | null | undefined, isHomepage = false): string | null {
+  if (isHomepage || slug === "home" || slug === "index" || slug === "") {
+    return "/";
+  }
+  if (!slug) {
+    return null;
+  }
+  return slug.startsWith("/") ? slug : `/${slug}`;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }
 
 class RealWebflowDesignerBridge implements WebflowDesignerBridge {
@@ -319,6 +345,78 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
       selectedElementId: this.registerElement(selected)
     };
     return context;
+  }
+
+  async getSitePages(_siteId: string): Promise<WebflowSitePage[]> {
+    const currentPage = await this.api.getCurrentPage();
+    const currentPageName =
+      (await currentPage?.getName?.()) ??
+      currentPage?.name ??
+      (currentPage?.id ? "Current page" : null);
+    const currentPageSlug =
+      (await currentPage?.getSlug?.()) ?? currentPage?.slug ?? null;
+    const currentPageIsHomepage =
+      (await currentPage?.getIsHomepage?.()) ?? currentPage?.isHomepage ?? false;
+
+    const liveItems = this.api.getAllPagesAndFolders
+      ? await this.api.getAllPagesAndFolders().catch(() => [])
+      : [];
+
+    const pages: WebflowSitePage[] = [];
+
+    const visit = async (value: unknown) => {
+      if (!isRecord(value)) {
+        return;
+      }
+
+      const nestedPages = value.pages;
+      if (Array.isArray(nestedPages)) {
+        for (const item of nestedPages) {
+          await visit(item);
+        }
+      }
+
+      const id = typeof value.id === "string" ? value.id : null;
+      if (!id) {
+        return;
+      }
+
+      const maybePage = value as unknown as WebflowPage;
+      const name =
+        (await maybePage.getName?.().catch(() => null)) ??
+        (typeof value.name === "string" ? value.name : null) ??
+        id;
+      const slug =
+        (await maybePage.getSlug?.().catch(() => null)) ??
+        (typeof value.slug === "string" ? value.slug : null);
+      const isHomepage =
+        (await maybePage.getIsHomepage?.().catch(() => false)) ??
+        (typeof value.isHomepage === "boolean" ? value.isHomepage : false);
+
+      pages.push({
+        id,
+        name,
+        route: slugToRoute(slug, isHomepage),
+        isHomepage
+      });
+    };
+
+    for (const item of liveItems) {
+      await visit(item);
+    }
+
+    if (pages.length === 0 && currentPage?.id) {
+      pages.push({
+        id: currentPage.id,
+        name: currentPageName ?? currentPage.id,
+        route: slugToRoute(currentPageSlug, currentPageIsHomepage),
+        isHomepage: currentPageIsHomepage
+      });
+    }
+
+    return dedupe(pages.map((page) => page.id)).map(
+      (id) => pages.find((page) => page.id === id)!
+    );
   }
 
   async inspectSharedStyles(siteId: string): Promise<SharedStyleContext> {
@@ -529,6 +627,23 @@ class MockWebflowDesignerBridge implements WebflowDesignerBridge {
       mode: "design",
       selectedElementId: "mock-selected-section"
     };
+  }
+
+  async getSitePages(): Promise<WebflowSitePage[]> {
+    return [
+      {
+        id: "mock-page-home",
+        name: "Home",
+        route: "/",
+        isHomepage: true
+      },
+      {
+        id: "mock-page-services",
+        name: "Services",
+        route: "/services",
+        isHomepage: false
+      }
+    ];
   }
 
   async inspectSharedStyles(siteId: string): Promise<SharedStyleContext> {

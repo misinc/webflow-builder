@@ -261,6 +261,199 @@ export const repoTreeResponseSchema = z.object({
   )
 });
 
+export const workflowModeSchema = z.enum([
+  "fullAssist",
+  "skeletonThenStyle",
+  "styleExisting"
+]);
+
+export const sectionWorkflowStatusSchema = z.enum([
+  "not_started",
+  "in_progress",
+  "skeleton_ready",
+  "styled",
+  "approved",
+  "skipped"
+]);
+
+export const sectionMetadataSchema = z.object({
+  repoId: z.string().min(1),
+  pageId: z.string().min(1),
+  sectionId: z.string().min(1),
+  pageName: z.string().min(1),
+  sectionName: z.string().min(1),
+  sourceFile: z.string().min(1)
+});
+
+export const sectionAnalysisSchema = z.object({
+  sectionMetadata: sectionMetadataSchema,
+  summary: z.string().min(1),
+  goals: z.array(z.string()).default([]),
+  content: z.array(
+    z.object({
+      kind: z.string().min(1),
+      label: z.string().min(1),
+      value: z.string().min(1)
+    })
+  ),
+  recommendedMode: workflowModeSchema,
+  reusableClasses: z.array(z.string()).default([]),
+  suggestedNewClasses: z.array(z.string()).default([]),
+  warnings: z.array(plannerWarningSchema).default([])
+});
+
+export const skeletonPlanSchema = z.object({
+  sectionMetadata: sectionMetadataSchema,
+  treeText: z.string().min(1),
+  elementTree: buildNodeSchema,
+  reusableClasses: z.array(z.string()).default([]),
+  suggestedNewClasses: z.array(z.string()).default([]),
+  warnings: z.array(plannerWarningSchema).default([])
+});
+
+export const stylingPlanSchema = z.object({
+  sectionMetadata: sectionMetadataSchema,
+  mode: workflowModeSchema,
+  styleDefinitions: z.array(styleDefinitionSchema),
+  variableBindings: z.array(variableBindingSchema).default([]),
+  reusableClasses: z.array(z.string()).default([]),
+  suggestedNewClasses: z.array(z.string()).default([]),
+  requiredClassNames: z.array(z.string()).default([]),
+  notes: z.array(z.string()).default([]),
+  warnings: z.array(plannerWarningSchema).default([])
+});
+
+export const sectionVerificationSchema = z.object({
+  sectionMetadata: sectionMetadataSchema,
+  summary: z.string().min(1),
+  readyForApproval: z.boolean(),
+  warnings: z.array(plannerWarningSchema).default([])
+});
+
+export const webflowSitePageSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  route: z.string().nullable().optional(),
+  isHomepage: z.boolean().default(false)
+});
+
+export const pageMappingSchema = z.object({
+  id: z.string().min(1),
+  userId: z.string().min(1),
+  repoId: z.string().min(1),
+  webflowSiteId: z.string().min(1),
+  webflowPageId: z.string().min(1),
+  webflowPageName: z.string().min(1),
+  webflowPageRoute: z.string().nullable(),
+  repoPageId: z.string().nullable(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime()
+});
+
+export const sitePageMappingRowSchema = z.object({
+  webflowSiteId: z.string().min(1),
+  webflowPageId: z.string().min(1),
+  webflowPageName: z.string().min(1),
+  webflowPageRoute: z.string().nullable(),
+  repoPageId: z.string().nullable(),
+  repoPageName: z.string().nullable(),
+  mappingStatus: z.enum(["mapped", "unmapped"])
+});
+
+export const sectionWorkflowStateSchema = z.object({
+  id: z.string().min(1),
+  userId: z.string().min(1),
+  webflowSiteId: z.string().min(1),
+  webflowPageId: z.string().min(1),
+  repoPageId: z.string().min(1),
+  repoSectionId: z.string().min(1),
+  status: sectionWorkflowStatusSchema,
+  sortOrder: z.number().int().nonnegative(),
+  lastRunId: z.string().nullable(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+  completedAt: z.string().datetime().nullable(),
+  skippedAt: z.string().datetime().nullable()
+});
+
+export const sectionRunSchema = z.object({
+  id: z.string().min(1),
+  userId: z.string().min(1),
+  repoId: z.string().min(1),
+  webflowSiteId: z.string().min(1),
+  webflowPageId: z.string().min(1),
+  repoPageId: z.string().min(1),
+  repoSectionId: z.string().min(1),
+  runType: z.enum(["analysis", "skeleton", "styling", "verification"]),
+  payload: z.record(z.string(), z.unknown()),
+  approvalOutcome: z.enum(["approved", "skipped"]).nullable(),
+  createdAt: z.string().datetime(),
+  approvedAt: z.string().datetime().nullable()
+});
+
+export const workflowQueueItemSchema = z.object({
+  repoSectionId: z.string().min(1),
+  sectionName: z.string().min(1),
+  sortOrder: z.number().int().nonnegative(),
+  status: sectionWorkflowStatusSchema,
+  recommendedMode: workflowModeSchema,
+  lastRunId: z.string().nullable()
+});
+
+export const workflowQueueResponseSchema = z.object({
+  mapping: sitePageMappingRowSchema.nullable(),
+  repoPage: repoPageSchema.nullable(),
+  items: z.array(workflowQueueItemSchema),
+  nextSectionId: z.string().nullable()
+});
+
+export const pageMappingsUpsertInputSchema = z.object({
+  repoId: z.string().min(1),
+  webflowSiteId: z.string().min(1),
+  requestedBy: z.string().min(1),
+  mappings: z.array(
+    z.object({
+      webflowPageId: z.string().min(1),
+      webflowPageName: z.string().min(1),
+      webflowPageRoute: z.string().nullable().optional(),
+      repoPageId: z.string().nullable()
+    })
+  )
+});
+
+export const workflowQueueRequestSchema = z.object({
+  repoId: z.string().min(1),
+  webflowSiteId: z.string().min(1),
+  webflowPageId: z.string().min(1),
+  requestedBy: z.string().min(1)
+});
+
+export const workflowSectionRequestSchema = z.object({
+  repoId: z.string().min(1),
+  webflowSiteId: z.string().min(1),
+  webflowPageId: z.string().min(1),
+  sectionId: z.string().min(1),
+  requestedBy: z.string().min(1),
+  mode: workflowModeSchema.default("fullAssist"),
+  selectedElementId: z.string().nullable().optional(),
+  sharedStyleContext: sharedStyleContextSchema.optional()
+});
+
+export const workflowSectionDecisionInputSchema = z.object({
+  repoId: z.string().min(1),
+  webflowSiteId: z.string().min(1),
+  webflowPageId: z.string().min(1),
+  sectionId: z.string().min(1),
+  requestedBy: z.string().min(1)
+});
+
+export const workflowPageCompleteInputSchema = z.object({
+  repoId: z.string().min(1),
+  webflowSiteId: z.string().min(1),
+  webflowPageId: z.string().min(1),
+  requestedBy: z.string().min(1)
+});
+
 export type SharedClass = z.infer<typeof sharedClassSchema>;
 export type SharedVariable = z.infer<typeof sharedVariableSchema>;
 export type SharedStyleContext = z.infer<typeof sharedStyleContextSchema>;
@@ -279,3 +472,26 @@ export type PlannerWarning = z.infer<typeof plannerWarningSchema>;
 export type PlacementMode = z.infer<typeof placementModeSchema>;
 export type BindSiteInput = z.infer<typeof bindSiteInputSchema>;
 export type CompleteBuildJobInput = z.infer<typeof completeBuildJobInputSchema>;
+export type WorkflowMode = z.infer<typeof workflowModeSchema>;
+export type SectionWorkflowStatus = z.infer<typeof sectionWorkflowStatusSchema>;
+export type SectionMetadata = z.infer<typeof sectionMetadataSchema>;
+export type SectionAnalysis = z.infer<typeof sectionAnalysisSchema>;
+export type SkeletonPlan = z.infer<typeof skeletonPlanSchema>;
+export type StylingPlan = z.infer<typeof stylingPlanSchema>;
+export type SectionVerification = z.infer<typeof sectionVerificationSchema>;
+export type WebflowSitePage = z.infer<typeof webflowSitePageSchema>;
+export type PageMapping = z.infer<typeof pageMappingSchema>;
+export type SitePageMappingRow = z.infer<typeof sitePageMappingRowSchema>;
+export type SectionWorkflowState = z.infer<typeof sectionWorkflowStateSchema>;
+export type SectionRunRecord = z.infer<typeof sectionRunSchema>;
+export type WorkflowQueueItem = z.infer<typeof workflowQueueItemSchema>;
+export type WorkflowQueueResponse = z.infer<typeof workflowQueueResponseSchema>;
+export type PageMappingsUpsertInput = z.infer<typeof pageMappingsUpsertInputSchema>;
+export type WorkflowQueueRequest = z.infer<typeof workflowQueueRequestSchema>;
+export type WorkflowSectionRequest = z.infer<typeof workflowSectionRequestSchema>;
+export type WorkflowSectionDecisionInput = z.infer<
+  typeof workflowSectionDecisionInputSchema
+>;
+export type WorkflowPageCompleteInput = z.infer<
+  typeof workflowPageCompleteInputSchema
+>;

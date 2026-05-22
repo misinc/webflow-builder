@@ -2,11 +2,15 @@ import {
   BindSiteInput,
   BuildJobRecord,
   BuildResultRecord,
+  PageMapping,
+  PageMappingsUpsertInput,
   RepoConnectionInput,
   RepoPageRecord,
   RepoRecord,
   RepoSectionRecord,
   RepoSyncRecord,
+  SectionRunRecord,
+  SectionWorkflowState,
   SharedStyleContext
 } from "../../shared/contracts.js";
 import { nowIso, stableId } from "../utils.js";
@@ -25,6 +29,12 @@ export class MemoryAppRepository implements AppRepository {
   private readonly sectionsByRepo = new Map<string, string[]>();
   private readonly siteBindings = new Map<string, WebflowSiteBinding>();
   private readonly sharedStyleContexts = new Map<string, SharedStyleContext>();
+  private readonly pageMappings = new Map<string, PageMapping>();
+  private readonly pageMappingsBySite = new Map<string, string[]>();
+  private readonly workflowStates = new Map<string, SectionWorkflowState>();
+  private readonly workflowStatesByPage = new Map<string, string[]>();
+  private readonly sectionRuns = new Map<string, SectionRunRecord>();
+  private readonly sectionRunsBySection = new Map<string, string[]>();
   private readonly buildJobs = new Map<string, BuildJobRecord>();
   private readonly buildResults = new Map<string, BuildResultRecord>();
 
@@ -150,6 +160,123 @@ export class MemoryAppRepository implements AppRepository {
 
   async getSharedStyleContext(siteId: string): Promise<SharedStyleContext | null> {
     return this.sharedStyleContexts.get(siteId) ?? null;
+  }
+
+  async upsertPageMappings(input: PageMappingsUpsertInput): Promise<PageMapping[]> {
+    const siteKey = `${input.requestedBy}:${input.webflowSiteId}:${input.repoId}`;
+    const ids: string[] = [];
+    const records = input.mappings.map((mapping) => {
+      const existingId = stableId(input.repoId, input.requestedBy, mapping.webflowPageId);
+      const existing = this.pageMappings.get(existingId);
+      const record: PageMapping = {
+        id: existingId,
+        userId: input.requestedBy,
+        repoId: input.repoId,
+        webflowSiteId: input.webflowSiteId,
+        webflowPageId: mapping.webflowPageId,
+        webflowPageName: mapping.webflowPageName,
+        webflowPageRoute: mapping.webflowPageRoute ?? null,
+        repoPageId: mapping.repoPageId,
+        createdAt: existing?.createdAt ?? nowIso(),
+        updatedAt: nowIso()
+      };
+      this.pageMappings.set(record.id, record);
+      ids.push(record.id);
+      return record;
+    });
+    this.pageMappingsBySite.set(siteKey, ids);
+    return records;
+  }
+
+  async getPageMappings(
+    repoId: string,
+    webflowSiteId: string,
+    userId: string
+  ): Promise<PageMapping[]> {
+    const ids = this.pageMappingsBySite.get(`${userId}:${webflowSiteId}:${repoId}`) ?? [];
+    return ids
+      .map((id) => this.pageMappings.get(id))
+      .filter((record): record is PageMapping => Boolean(record));
+  }
+
+  async replaceSectionWorkflowStates(
+    userId: string,
+    webflowSiteId: string,
+    webflowPageId: string,
+    repoPageId: string,
+    states: Array<{ repoSectionId: string; sortOrder: number }>
+  ): Promise<SectionWorkflowState[]> {
+    const pageKey = `${userId}:${webflowSiteId}:${webflowPageId}:${repoPageId}`;
+    const records = states.map((state) => {
+      const id = stableId(userId, webflowPageId, state.repoSectionId);
+      const existing = this.workflowStates.get(id);
+      const record: SectionWorkflowState = {
+        id,
+        userId,
+        webflowSiteId,
+        webflowPageId,
+        repoPageId,
+        repoSectionId: state.repoSectionId,
+        status: existing?.status ?? "not_started",
+        sortOrder: state.sortOrder,
+        lastRunId: existing?.lastRunId ?? null,
+        createdAt: existing?.createdAt ?? nowIso(),
+        updatedAt: nowIso(),
+        completedAt: existing?.completedAt ?? null,
+        skippedAt: existing?.skippedAt ?? null
+      };
+      this.workflowStates.set(id, record);
+      return record;
+    });
+    this.workflowStatesByPage.set(
+      pageKey,
+      records.map((record) => record.id)
+    );
+    return records;
+  }
+
+  async getSectionWorkflowStates(
+    userId: string,
+    webflowSiteId: string,
+    webflowPageId: string,
+    repoPageId: string
+  ): Promise<SectionWorkflowState[]> {
+    const ids =
+      this.workflowStatesByPage.get(
+        `${userId}:${webflowSiteId}:${webflowPageId}:${repoPageId}`
+      ) ?? [];
+    return ids
+      .map((id) => this.workflowStates.get(id))
+      .filter((record): record is SectionWorkflowState => Boolean(record))
+      .sort((left, right) => left.sortOrder - right.sortOrder);
+  }
+
+  async updateSectionWorkflowState(state: SectionWorkflowState): Promise<void> {
+    this.workflowStates.set(state.id, state);
+  }
+
+  async saveSectionRun(run: SectionRunRecord): Promise<void> {
+    this.sectionRuns.set(run.id, run);
+    const key = `${run.userId}:${run.webflowSiteId}:${run.webflowPageId}:${run.repoSectionId}`;
+    const existing = this.sectionRunsBySection.get(key) ?? [];
+    this.sectionRunsBySection.set(key, [...existing, run.id]);
+  }
+
+  async getLatestSectionRun(
+    userId: string,
+    webflowSiteId: string,
+    webflowPageId: string,
+    repoSectionId: string,
+    runType?: SectionRunRecord["runType"]
+  ): Promise<SectionRunRecord | null> {
+    const key = `${userId}:${webflowSiteId}:${webflowPageId}:${repoSectionId}`;
+    const ids = this.sectionRunsBySection.get(key) ?? [];
+    const records = ids
+      .map((id) => this.sectionRuns.get(id))
+      .filter((record): record is SectionRunRecord => Boolean(record))
+      .filter((record) => (runType ? record.runType === runType : true))
+      .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+    return records[0] ?? null;
   }
 
   async createBuildJob(job: BuildJobRecord): Promise<void> {

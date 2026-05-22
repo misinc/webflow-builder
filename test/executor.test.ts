@@ -28,6 +28,10 @@ class FailingBridge implements WebflowDesignerBridge {
     };
   }
 
+  async getSitePages() {
+    return [];
+  }
+
   async createNode() {
     return { id: "node-1" };
   }

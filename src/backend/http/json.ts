@@ -67,3 +67,12 @@ export function pathParam(event: HandlerEvent, name: string): string {
 
   return fallback;
 }
+
+export function queryParam(event: HandlerEvent, name: string): string | null {
+  const rawUrl = event.rawUrl;
+  if (!rawUrl) {
+    return null;
+  }
+
+  return new URL(rawUrl).searchParams.get(name);
+}

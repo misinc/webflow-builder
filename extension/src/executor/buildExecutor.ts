@@ -2,7 +2,9 @@ import {
   BuildNode,
   BuildPlan,
   PlacementMode,
-  PlannerWarning
+  PlannerWarning,
+  SkeletonPlan,
+  StylingPlan
 } from "../../../src/shared/contracts.js";
 import { DesignerContext, WebflowDesignerBridge } from "../webflow/bridge.js";
 
@@ -19,6 +21,7 @@ export interface ExecutionSummary {
     successful: boolean;
     details: string;
   } | null;
+  rootNodeId?: string | null;
 }
 
 async function buildNodeTree(params: {
@@ -139,7 +142,8 @@ export async function executeBuildPlan(params: {
       createdClasses: params.plan.styleDefinitions.map((item) => item.className),
       warnings: [...params.plan.warnings, ...executionWarnings],
       missingAssets,
-      rollbackOutcome: null
+      rollbackOutcome: null,
+      rootNodeId: createdNodeIds[0] ?? null
     };
   } catch (error) {
     let rollbackOutcome: ExecutionSummary["rollbackOutcome"] = null;
@@ -178,7 +182,154 @@ export async function executeBuildPlan(params: {
         }
       ],
       missingAssets,
-      rollbackOutcome
+      rollbackOutcome,
+      rootNodeId: createdNodeIds[0] ?? null
+    };
+  }
+}
+
+export async function executeSkeletonPlan(params: {
+  bridge: WebflowDesignerBridge;
+  context: DesignerContext;
+  plan: SkeletonPlan;
+  placementMode: PlacementMode;
+  placementTarget: string | null;
+}): Promise<ExecutionSummary> {
+  const collectAssignments = (node: BuildNode): Array<{
+    nodeId: string;
+    classNames: string[];
+    reused: string[];
+    created: string[];
+  }> => [
+    {
+      nodeId: node.id,
+      classNames: node.classNames,
+      reused: node.classNames,
+      created: []
+    },
+    ...node.children.flatMap(collectAssignments)
+  ];
+
+  return executeBuildPlan({
+    bridge: params.bridge,
+    context: params.context,
+    placementMode: params.placementMode,
+    placementTarget: params.placementTarget,
+    plan: {
+      sectionMetadata: params.plan.sectionMetadata,
+      elementTree: params.plan.elementTree,
+      classAssignments: collectAssignments(params.plan.elementTree),
+      styleDefinitions: [],
+      variableBindings: [],
+      assetBindings: [],
+      warnings: params.plan.warnings
+    }
+  });
+}
+
+export async function applyStylingPlan(params: {
+  bridge: WebflowDesignerBridge;
+  context: DesignerContext;
+  plan: StylingPlan;
+  targetNodeId: string | null;
+}): Promise<ExecutionSummary> {
+  if (!params.context.siteId || !params.context.pageId) {
+    throw new Error("No active Webflow site or page.");
+  }
+  if (!["design", "build", "edit"].includes(params.context.mode)) {
+    throw new Error("Webflow Designer is not in editable mode.");
+  }
+  if (!params.targetNodeId) {
+    throw new Error("Styling requires a selected section root or inserted skeleton root.");
+  }
+
+  const createdStyleIds: string[] = [];
+  const warnings: PlannerWarning[] = [...params.plan.warnings];
+
+  try {
+    for (const styleDefinition of params.plan.styleDefinitions) {
+      const style = await params.bridge.ensureStyle(
+        styleDefinition.className,
+        styleDefinition.properties
+      );
+      createdStyleIds.push(style.styleId);
+    }
+
+    if (params.plan.requiredClassNames.length > 0) {
+      await params.bridge.applyClasses(
+        params.targetNodeId,
+        params.plan.requiredClassNames
+      );
+    }
+
+    for (const binding of params.plan.variableBindings) {
+      try {
+        await params.bridge.bindVariable(
+          params.targetNodeId,
+          binding.property,
+          binding.variableName
+        );
+      } catch (error) {
+        warnings.push({
+          code: "variable-binding-skipped",
+          message:
+            error instanceof Error
+              ? error.message
+              : `Variable binding failed for ${binding.variableName}.`,
+          level: "warning"
+        });
+      }
+    }
+
+    return {
+      success: true,
+      createdNodeIds: [],
+      createdStyleIds,
+      reusedClasses: params.plan.reusableClasses,
+      createdClasses: params.plan.styleDefinitions.map((item) => item.className),
+      warnings,
+      missingAssets: [],
+      rollbackOutcome: null,
+      rootNodeId: params.targetNodeId
+    };
+  } catch (error) {
+    let rollbackOutcome: ExecutionSummary["rollbackOutcome"] = null;
+    try {
+      await params.bridge.deleteStyles(createdStyleIds);
+      rollbackOutcome = {
+        attempted: true,
+        successful: true,
+        details: "Created styles were removed after failure."
+      };
+    } catch (rollbackError) {
+      rollbackOutcome = {
+        attempted: true,
+        successful: false,
+        details:
+          rollbackError instanceof Error
+            ? rollbackError.message
+            : "Rollback failed."
+      };
+    }
+
+    return {
+      success: false,
+      createdNodeIds: [],
+      createdStyleIds,
+      reusedClasses: [],
+      createdClasses: params.plan.styleDefinitions.map((item) => item.className),
+      warnings: [
+        ...warnings,
+        {
+          code: "styling-failure",
+          message:
+            error instanceof Error ? error.message : "Styling execution failed.",
+          level: "error"
+        }
+      ],
+      missingAssets: [],
+      rollbackOutcome,
+      rootNodeId: params.targetNodeId
     };
   }
 }

@@ -49,3 +49,60 @@ status = 200
 from = "/api/debug/env-status"
 to = "/.netlify/functions/debug-env-status"
 status = 200
+
+[[redirects]]
+from = "/api/workflow/site-pages"
+to = "/.netlify/functions/workflow-site-pages"
+status = 200
+
+[[redirects]]
+from = "/api/workflow/page-mappings"
+to = "/.netlify/functions/workflow-page-mappings-get"
+status = 200
+conditions = {Method = ["GET", "OPTIONS"]}
+
+[[redirects]]
+from = "/api/workflow/page-mappings"
+to = "/.netlify/functions/workflow-page-mappings-post"
+status = 200
+conditions = {Method = ["POST"]}
+
+[[redirects]]
+from = "/api/workflow/queue"
+to = "/.netlify/functions/workflow-queue"
+status = 200
+
+[[redirects]]
+from = "/api/workflow/section/analyze"
+to = "/.netlify/functions/workflow-section-analyze"
+status = 200
+
+[[redirects]]
+from = "/api/workflow/section/generate-skeleton"
+to = "/.netlify/functions/workflow-section-generate-skeleton"
+status = 200
+
+[[redirects]]
+from = "/api/workflow/section/style"
+to = "/.netlify/functions/workflow-section-style"
+status = 200
+
+[[redirects]]
+from = "/api/workflow/section/verify"
+to = "/.netlify/functions/workflow-section-verify"
+status = 200
+
+[[redirects]]
+from = "/api/workflow/section/approve"
+to = "/.netlify/functions/workflow-section-approve"
+status = 200
+
+[[redirects]]
+from = "/api/workflow/section/skip"
+to = "/.netlify/functions/workflow-section-skip"
+status = 200
+
+[[redirects]]
+from = "/api/workflow/page/complete"
+to = "/.netlify/functions/workflow-page-complete"
+status = 200

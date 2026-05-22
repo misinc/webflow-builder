@@ -133,6 +133,33 @@ export const webflowSiteBindings = pgTable(
   })
 );
 
+export const webflowPageMappings = pgTable(
+  "webflow_page_mappings",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id").notNull(),
+    repoId: text("repo_id").notNull(),
+    webflowSiteId: text("webflow_site_id").notNull(),
+    webflowPageId: text("webflow_page_id").notNull(),
+    webflowPageName: text("webflow_page_name").notNull(),
+    webflowPageRoute: text("webflow_page_route"),
+    repoPageId: text("repo_page_id"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull()
+  },
+  (table) => ({
+    repoUserPageIdx: uniqueIndex("webflow_page_mappings_repo_user_page_idx").on(
+      table.repoId,
+      table.userId,
+      table.webflowPageId
+    ),
+    siteUserIdx: index("webflow_page_mappings_site_user_idx").on(
+      table.webflowSiteId,
+      table.userId
+    )
+  })
+);
+
 export const sharedStyleContexts = pgTable("shared_style_contexts", {
   siteId: text("site_id").primaryKey(),
   contextJson: jsonb("context_json").notNull(),
@@ -145,6 +172,64 @@ export const appBlobs = pgTable("app_blobs", {
   valueJson: jsonb("value_json").notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull()
 });
+
+export const sectionWorkflowStates = pgTable(
+  "section_workflow_states",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id").notNull(),
+    webflowSiteId: text("webflow_site_id").notNull(),
+    webflowPageId: text("webflow_page_id").notNull(),
+    repoPageId: text("repo_page_id").notNull(),
+    repoSectionId: text("repo_section_id").notNull(),
+    status: text("status").notNull(),
+    sortOrder: integer("sort_order").notNull(),
+    lastRunId: text("last_run_id"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    skippedAt: timestamp("skipped_at", { withTimezone: true })
+  },
+  (table) => ({
+    uniqueStateIdx: uniqueIndex("section_workflow_states_unique_idx").on(
+      table.userId,
+      table.webflowPageId,
+      table.repoSectionId
+    ),
+    pageStateIdx: index("section_workflow_states_page_idx").on(
+      table.userId,
+      table.webflowSiteId,
+      table.webflowPageId,
+      table.sortOrder
+    )
+  })
+);
+
+export const sectionRuns = pgTable(
+  "section_runs",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id").notNull(),
+    repoId: text("repo_id").notNull(),
+    webflowSiteId: text("webflow_site_id").notNull(),
+    webflowPageId: text("webflow_page_id").notNull(),
+    repoPageId: text("repo_page_id").notNull(),
+    repoSectionId: text("repo_section_id").notNull(),
+    runType: text("run_type").notNull(),
+    payloadJson: jsonb("payload_json").notNull(),
+    approvalOutcome: text("approval_outcome"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+    approvedAt: timestamp("approved_at", { withTimezone: true })
+  },
+  (table) => ({
+    pageSectionRunIdx: index("section_runs_page_section_idx").on(
+      table.userId,
+      table.webflowPageId,
+      table.repoSectionId,
+      table.createdAt
+    )
+  })
+);
 
 export const buildJobs = pgTable(
   "build_jobs",

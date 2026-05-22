@@ -3,11 +3,15 @@ import {
   BindSiteInput,
   BuildJobRecord,
   BuildResultRecord,
+  PageMapping,
+  PageMappingsUpsertInput,
   RepoConnectionInput,
   RepoPageRecord,
   RepoRecord,
   RepoSectionRecord,
   RepoSyncRecord,
+  SectionRunRecord,
+  SectionWorkflowState,
   SharedStyleContext
 } from "../../shared/contracts.js";
 import { createDatabaseClient } from "../db/client.js";
@@ -18,7 +22,10 @@ import {
   repos,
   repoSections,
   repoSyncs,
+  sectionRuns,
+  sectionWorkflowStates,
   sharedStyleContexts,
+  webflowPageMappings,
   webflowSiteBindings
 } from "../db/schema.js";
 import { nowIso, stableId } from "../utils.js";
@@ -91,6 +98,58 @@ function mapBinding(row: typeof webflowSiteBindings.$inferSelect): WebflowSiteBi
     rulesetName: row.rulesetId ?? "live-webflow-site",
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString()
+  };
+}
+
+function mapPageMapping(row: typeof webflowPageMappings.$inferSelect): PageMapping {
+  return {
+    id: row.id,
+    userId: row.userId,
+    repoId: row.repoId,
+    webflowSiteId: row.webflowSiteId,
+    webflowPageId: row.webflowPageId,
+    webflowPageName: row.webflowPageName,
+    webflowPageRoute: row.webflowPageRoute,
+    repoPageId: row.repoPageId,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString()
+  };
+}
+
+function mapWorkflowState(
+  row: typeof sectionWorkflowStates.$inferSelect
+): SectionWorkflowState {
+  return {
+    id: row.id,
+    userId: row.userId,
+    webflowSiteId: row.webflowSiteId,
+    webflowPageId: row.webflowPageId,
+    repoPageId: row.repoPageId,
+    repoSectionId: row.repoSectionId,
+    status: row.status as SectionWorkflowState["status"],
+    sortOrder: row.sortOrder,
+    lastRunId: row.lastRunId,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+    completedAt: toIso(row.completedAt),
+    skippedAt: toIso(row.skippedAt)
+  };
+}
+
+function mapSectionRun(row: typeof sectionRuns.$inferSelect): SectionRunRecord {
+  return {
+    id: row.id,
+    userId: row.userId,
+    repoId: row.repoId,
+    webflowSiteId: row.webflowSiteId,
+    webflowPageId: row.webflowPageId,
+    repoPageId: row.repoPageId,
+    repoSectionId: row.repoSectionId,
+    runType: row.runType as SectionRunRecord["runType"],
+    payload: row.payloadJson as SectionRunRecord["payload"],
+    approvalOutcome: row.approvalOutcome as SectionRunRecord["approvalOutcome"],
+    createdAt: row.createdAt.toISOString(),
+    approvedAt: toIso(row.approvedAt)
   };
 }
 
@@ -358,6 +417,190 @@ export class PostgresAppRepository implements AppRepository {
       where: eq(sharedStyleContexts.siteId, siteId)
     });
     return row ? (row.contextJson as SharedStyleContext) : null;
+  }
+
+  async upsertPageMappings(input: PageMappingsUpsertInput): Promise<PageMapping[]> {
+    const timestamp = new Date();
+    await this.client.db.transaction(async (tx) => {
+      for (const mapping of input.mappings) {
+        await tx
+          .insert(webflowPageMappings)
+          .values({
+            id: stableId(input.repoId, input.requestedBy, mapping.webflowPageId),
+            userId: input.requestedBy,
+            repoId: input.repoId,
+            webflowSiteId: input.webflowSiteId,
+            webflowPageId: mapping.webflowPageId,
+            webflowPageName: mapping.webflowPageName,
+            webflowPageRoute: mapping.webflowPageRoute ?? null,
+            repoPageId: mapping.repoPageId,
+            createdAt: timestamp,
+            updatedAt: timestamp
+          })
+          .onConflictDoUpdate({
+            target: [
+              webflowPageMappings.repoId,
+              webflowPageMappings.userId,
+              webflowPageMappings.webflowPageId
+            ],
+            set: {
+              webflowPageName: mapping.webflowPageName,
+              webflowPageRoute: mapping.webflowPageRoute ?? null,
+              repoPageId: mapping.repoPageId,
+              updatedAt: timestamp
+            }
+          });
+      }
+    });
+
+    return this.getPageMappings(input.repoId, input.webflowSiteId, input.requestedBy);
+  }
+
+  async getPageMappings(
+    repoId: string,
+    webflowSiteId: string,
+    userId: string
+  ): Promise<PageMapping[]> {
+    const rows = await this.client.db.query.webflowPageMappings.findMany({
+      where: and(
+        eq(webflowPageMappings.repoId, repoId),
+        eq(webflowPageMappings.webflowSiteId, webflowSiteId),
+        eq(webflowPageMappings.userId, userId)
+      ),
+      orderBy: [asc(webflowPageMappings.webflowPageName)]
+    });
+    return rows.map(mapPageMapping);
+  }
+
+  async replaceSectionWorkflowStates(
+    userId: string,
+    webflowSiteId: string,
+    webflowPageId: string,
+    repoPageId: string,
+    states: Array<{ repoSectionId: string; sortOrder: number }>
+  ): Promise<SectionWorkflowState[]> {
+    const timestamp = new Date();
+    await this.client.db.transaction(async (tx) => {
+      for (const state of states) {
+        await tx
+          .insert(sectionWorkflowStates)
+          .values({
+            id: stableId(userId, webflowPageId, state.repoSectionId),
+            userId,
+            webflowSiteId,
+            webflowPageId,
+            repoPageId,
+            repoSectionId: state.repoSectionId,
+            status: "not_started",
+            sortOrder: state.sortOrder,
+            lastRunId: null,
+            createdAt: timestamp,
+            updatedAt: timestamp,
+            completedAt: null,
+            skippedAt: null
+          })
+          .onConflictDoUpdate({
+            target: [
+              sectionWorkflowStates.userId,
+              sectionWorkflowStates.webflowPageId,
+              sectionWorkflowStates.repoSectionId
+            ],
+            set: {
+              repoPageId,
+              sortOrder: state.sortOrder,
+              updatedAt: timestamp
+            }
+          });
+      }
+    });
+
+    return this.getSectionWorkflowStates(
+      userId,
+      webflowSiteId,
+      webflowPageId,
+      repoPageId
+    );
+  }
+
+  async getSectionWorkflowStates(
+    userId: string,
+    webflowSiteId: string,
+    webflowPageId: string,
+    repoPageId: string
+  ): Promise<SectionWorkflowState[]> {
+    const rows = await this.client.db.query.sectionWorkflowStates.findMany({
+      where: and(
+        eq(sectionWorkflowStates.userId, userId),
+        eq(sectionWorkflowStates.webflowSiteId, webflowSiteId),
+        eq(sectionWorkflowStates.webflowPageId, webflowPageId),
+        eq(sectionWorkflowStates.repoPageId, repoPageId)
+      ),
+      orderBy: [asc(sectionWorkflowStates.sortOrder)]
+    });
+    return rows.map(mapWorkflowState);
+  }
+
+  async updateSectionWorkflowState(state: SectionWorkflowState): Promise<void> {
+    await this.client.db
+      .update(sectionWorkflowStates)
+      .set({
+        status: state.status,
+        sortOrder: state.sortOrder,
+        lastRunId: state.lastRunId,
+        updatedAt: new Date(state.updatedAt),
+        completedAt: state.completedAt ? new Date(state.completedAt) : null,
+        skippedAt: state.skippedAt ? new Date(state.skippedAt) : null
+      })
+      .where(eq(sectionWorkflowStates.id, state.id));
+  }
+
+  async saveSectionRun(run: SectionRunRecord): Promise<void> {
+    await this.client.db
+      .insert(sectionRuns)
+      .values({
+        id: run.id,
+        userId: run.userId,
+        repoId: run.repoId,
+        webflowSiteId: run.webflowSiteId,
+        webflowPageId: run.webflowPageId,
+        repoPageId: run.repoPageId,
+        repoSectionId: run.repoSectionId,
+        runType: run.runType,
+        payloadJson: run.payload,
+        approvalOutcome: run.approvalOutcome,
+        createdAt: new Date(run.createdAt),
+        approvedAt: run.approvedAt ? new Date(run.approvedAt) : null
+      })
+      .onConflictDoUpdate({
+        target: sectionRuns.id,
+        set: {
+          payloadJson: run.payload,
+          approvalOutcome: run.approvalOutcome,
+          approvedAt: run.approvedAt ? new Date(run.approvedAt) : null
+        }
+      });
+  }
+
+  async getLatestSectionRun(
+    userId: string,
+    webflowSiteId: string,
+    webflowPageId: string,
+    repoSectionId: string,
+    runType?: SectionRunRecord["runType"]
+  ): Promise<SectionRunRecord | null> {
+    const rows = await this.client.db.query.sectionRuns.findMany({
+      where: and(
+        eq(sectionRuns.userId, userId),
+        eq(sectionRuns.webflowSiteId, webflowSiteId),
+        eq(sectionRuns.webflowPageId, webflowPageId),
+        eq(sectionRuns.repoSectionId, repoSectionId)
+      ),
+      orderBy: [desc(sectionRuns.createdAt)]
+    });
+    const row = runType
+      ? rows.find((item) => item.runType === runType) ?? null
+      : (rows[0] ?? null);
+    return row ? mapSectionRun(row) : null;
   }
 
   async createBuildJob(job: BuildJobRecord): Promise<void> {

@@ -9,6 +9,8 @@ export interface AppEnv {
   githubAccessToken?: string;
   localMisRepoPath?: string;
   canonicalWebflowSiteId: string;
+  openAiApiKey?: string;
+  openAiModel: string;
 }
 
 export function getEnv(): AppEnv {
@@ -24,6 +26,8 @@ export function getEnv(): AppEnv {
       process.env.GITHUB_APP_INSTALLATION_TOKEN ?? process.env.GITHUB_ACCESS_TOKEN,
     localMisRepoPath: process.env.LOCAL_MIS_REPO_PATH,
     canonicalWebflowSiteId:
-      process.env.CANONICAL_WEBFLOW_SITE_ID ?? "6a10876cde32438bc9f52304"
+      process.env.CANONICAL_WEBFLOW_SITE_ID ?? "6a10876cde32438bc9f52304",
+    openAiApiKey: process.env.OPENAI_API_KEY,
+    openAiModel: process.env.OPENAI_MODEL ?? "gpt-5.4"
   };
 }
