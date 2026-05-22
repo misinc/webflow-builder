@@ -130,6 +130,45 @@ function truncateTarget(value: string | null | undefined) {
   return value.length > 52 ? `${value.slice(0, 52)}…` : value;
 }
 
+function StepStatusIcon({
+  state
+}: {
+  state: "complete" | "active" | "pending" | "skipped";
+}) {
+  if (state === "complete") {
+    return (
+      <span className="wf-step-icon is-complete" aria-hidden="true">
+        <svg viewBox="0 0 16 16" focusable="false">
+          <path
+            d="M6.4 11.7 3.2 8.5l1.1-1.1 2.1 2.1 5.3-5.3 1.1 1.1-6.4 6.4Z"
+            fill="currentColor"
+          />
+        </svg>
+      </span>
+    );
+  }
+  if (state === "skipped") {
+    return <span className="wf-step-badge is-muted">Skipped</span>;
+  }
+  if (state === "active") {
+    return <span className="wf-step-badge is-active">Current</span>;
+  }
+  return null;
+}
+
+function queueStatusTone(status: string) {
+  if (status === "approved") {
+    return "complete";
+  }
+  if (status === "skipped") {
+    return "skipped";
+  }
+  if (status === "in_progress" || status === "styled" || status === "skeleton_ready") {
+    return "active";
+  }
+  return "pending";
+}
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<ScreenTab>("settings");
   const [mappingFilter, setMappingFilter] = useState<MappingFilter>("all");
@@ -191,6 +230,11 @@ export default function App() {
   const totalCount = queue?.items.length ?? 0;
   const hasReviewContent =
     Boolean(analysis || skeleton || styling || verification || lastExecution);
+  const analysisComplete = Boolean(analysis);
+  const skeletonComplete = Boolean(skeleton);
+  const insertionComplete = Boolean(currentTargetNodeId);
+  const stylingComplete = Boolean(styling);
+  const verificationComplete = Boolean(verification?.readyForApproval);
 
   const primaryAction = useMemo(() => {
     if (!currentQueueItem) {
@@ -1015,7 +1059,10 @@ export default function App() {
                       onClick={() => setSelectedSectionId(item.repoSectionId)}
                     >
                       <span>{item.sectionName}</span>
-                      <span>{statusLabel(item.status)}</span>
+                      <span className="wf-queue-status">
+                        <StepStatusIcon state={queueStatusTone(item.status)} />
+                        <span>{statusLabel(item.status)}</span>
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -1073,30 +1120,64 @@ export default function App() {
               <div className="wf-primary-action">
                 <button
                   type="button"
-                  className="wf-primary-button"
+                  className={`wf-primary-button ${
+                    primaryAction?.label === "Analyze source section" && analysisComplete
+                      ? "is-complete"
+                      : primaryAction?.label === "Generate skeleton" && skeletonComplete
+                        ? "is-complete"
+                        : primaryAction?.label === "Style current section" && stylingComplete
+                          ? "is-complete"
+                          : ""
+                  }`}
                   onClick={primaryAction?.action}
                   disabled={!primaryAction || !currentQueueItem || Boolean(loading)}
                 >
-                  {primaryAction?.label ?? "Choose a section"}
+                  <span className="wf-button-label">
+                    {primaryAction?.label ? (
+                      <StepStatusIcon
+                        state={
+                          primaryAction.label === "Analyze source section" && analysisComplete
+                            ? "complete"
+                            : primaryAction.label === "Generate skeleton" && skeletonComplete
+                              ? "complete"
+                              : primaryAction.label === "Style current section" &&
+                                  stylingComplete
+                                ? "complete"
+                                : "active"
+                        }
+                      />
+                    ) : null}
+                    <span>{primaryAction?.label ?? "Choose a section"}</span>
+                  </span>
                 </button>
               </div>
 
               <div className="wf-secondary-actions">
                 <button
                   type="button"
-                  className="wf-secondary wf-action-chip"
+                  className={`wf-secondary wf-action-chip ${
+                    skeletonComplete ? "is-complete" : ""
+                  }`}
                   onClick={generateCurrentSkeleton}
                   disabled={!currentQueueItem || Boolean(loading)}
                 >
-                  Generate skeleton
+                  <span className="wf-button-label">
+                    <StepStatusIcon state={skeletonComplete ? "complete" : "pending"} />
+                    <span>Generate skeleton</span>
+                  </span>
                 </button>
                 <button
                   type="button"
-                  className="wf-secondary wf-action-chip"
+                  className={`wf-secondary wf-action-chip ${
+                    insertionComplete ? "is-complete" : ""
+                  }`}
                   onClick={insertSkeleton}
                   disabled={!skeleton || Boolean(loading)}
                 >
-                  Insert skeleton
+                  <span className="wf-button-label">
+                    <StepStatusIcon state={insertionComplete ? "complete" : "pending"} />
+                    <span>Insert skeleton</span>
+                  </span>
                 </button>
                 <button
                   type="button"
@@ -1104,7 +1185,10 @@ export default function App() {
                   onClick={approveAndNext}
                   disabled={!currentQueueItem || Boolean(loading)}
                 >
-                  Approve and next
+                  <span className="wf-button-label">
+                    <StepStatusIcon state="pending" />
+                    <span>Approve and next</span>
+                  </span>
                 </button>
                 <button
                   type="button"
@@ -1112,7 +1196,10 @@ export default function App() {
                   onClick={skipCurrentSection}
                   disabled={!currentQueueItem || Boolean(loading)}
                 >
-                  Skip
+                  <span className="wf-button-label">
+                    <StepStatusIcon state="skipped" />
+                    <span>Skip</span>
+                  </span>
                 </button>
                 <button
                   type="button"
@@ -1120,7 +1207,12 @@ export default function App() {
                   onClick={markPageComplete}
                   disabled={!queue?.items.length || Boolean(loading)}
                 >
-                  Mark page complete
+                  <span className="wf-button-label">
+                    <StepStatusIcon
+                      state={completedCount === totalCount && totalCount > 0 ? "complete" : "pending"}
+                    />
+                    <span>Mark page complete</span>
+                  </span>
                 </button>
               </div>
             </article>

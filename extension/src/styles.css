@@ -314,6 +314,61 @@ ul {
   color: var(--wf-app-text);
 }
 
+.wf-queue-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wf-button-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.wf-step-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--wf-app-success) 12%, var(--wf-app-surface));
+  color: var(--wf-app-success);
+  flex: 0 0 auto;
+}
+
+.wf-step-icon svg {
+  width: 12px;
+  height: 12px;
+}
+
+.wf-step-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--wf-app-border);
+  background: var(--wf-app-surface);
+  color: var(--wf-app-text-subtle);
+}
+
+.wf-step-badge.is-active {
+  border-color: var(--wf-app-accent);
+  background: color-mix(in srgb, var(--wf-app-accent) 8%, var(--wf-app-surface));
+  color: var(--wf-app-accent);
+}
+
+.wf-step-badge.is-muted {
+  color: var(--wf-app-text-subtle);
+}
+
 .wf-queue-item.is-active {
   border-color: var(--wf-app-accent);
   background: color-mix(in srgb, var(--wf-app-accent) 8%, var(--wf-app-surface));
@@ -341,6 +396,11 @@ ul {
 .wf-primary-button {
   min-height: 44px;
   font-weight: 600;
+}
+
+.wf-primary-button.is-complete,
+.wf-action-chip.is-complete {
+  border-color: color-mix(in srgb, var(--wf-app-success) 40%, var(--wf-app-border));
 }
 
 .wf-secondary-actions {
