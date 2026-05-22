@@ -1,0 +1,46 @@
+[build]
+command = "npm run build"
+functions = "netlify/functions"
+
+[functions]
+node_bundler = "esbuild"
+
+[[redirects]]
+from = "/api/repos/connect"
+to = "/.netlify/functions/repos-connect"
+status = 200
+
+[[redirects]]
+from = "/api/repos/:repoId/sync"
+to = "/.netlify/functions/repos-sync/:repoId"
+status = 200
+
+[[redirects]]
+from = "/api/repos/:repoId/tree"
+to = "/.netlify/functions/repos-tree/:repoId"
+status = 200
+
+[[redirects]]
+from = "/api/webflow/bind-site"
+to = "/.netlify/functions/webflow-bind-site"
+status = 200
+
+[[redirects]]
+from = "/api/build/plan"
+to = "/.netlify/functions/build-plan"
+status = 200
+
+[[redirects]]
+from = "/api/build/jobs"
+to = "/.netlify/functions/build-jobs-create"
+status = 200
+
+[[redirects]]
+from = "/api/build/jobs/:id/complete"
+to = "/.netlify/functions/build-jobs-complete/:id"
+status = 200
+
+[[redirects]]
+from = "/api/build/jobs/:id"
+to = "/.netlify/functions/build-jobs-get/:id"
+status = 200

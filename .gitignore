@@ -1,0 +1,13 @@
+.DS_Store
+*.log
+*.tsbuildinfo
+
+node_modules
+dist
+extension/dist
+.netlify
+.env
+.env.local
+.env.*
+coverage
+build

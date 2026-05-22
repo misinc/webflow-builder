@@ -1,0 +1,8 @@
+.padding-global {
+  padding-inline: 5vw;
+}
+
+.container-large {
+  max-width: 80rem;
+  margin-inline: auto;
+}

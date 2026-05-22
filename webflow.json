@@ -1,0 +1,6 @@
+{
+  "name": "Repo Section Builder",
+  "apiVersion": "2",
+  "publicDir": "extension/dist",
+  "appConnections": []
+}
