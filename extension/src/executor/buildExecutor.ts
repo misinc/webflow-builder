@@ -77,6 +77,7 @@ export async function executeBuildPlan(params: {
   const createdNodeIds: string[] = [];
   const createdStyleIds: string[] = [];
   const missingAssets: string[] = [];
+  const executionWarnings: PlannerWarning[] = [];
   const nodeIdMap = new Map<string, string>();
   try {
     await buildNodeTree({
@@ -99,11 +100,22 @@ export async function executeBuildPlan(params: {
     for (const binding of params.plan.variableBindings) {
       const runtimeNodeId = nodeIdMap.get(binding.nodeId);
       if (!runtimeNodeId) continue;
-      await params.bridge.bindVariable(
-        runtimeNodeId,
-        binding.property,
-        binding.variableName
-      );
+      try {
+        await params.bridge.bindVariable(
+          runtimeNodeId,
+          binding.property,
+          binding.variableName
+        );
+      } catch (error) {
+        executionWarnings.push({
+          code: "variable-binding-skipped",
+          message:
+            error instanceof Error
+              ? error.message
+              : `Variable binding failed for ${binding.variableName}.`,
+          level: "warning"
+        });
+      }
     }
 
     for (const assetBinding of params.plan.assetBindings) {
@@ -125,7 +137,7 @@ export async function executeBuildPlan(params: {
       createdStyleIds,
       reusedClasses: params.plan.classAssignments.flatMap((item) => item.reused),
       createdClasses: params.plan.styleDefinitions.map((item) => item.className),
-      warnings: params.plan.warnings,
+      warnings: [...params.plan.warnings, ...executionWarnings],
       missingAssets,
       rollbackOutcome: null
     };

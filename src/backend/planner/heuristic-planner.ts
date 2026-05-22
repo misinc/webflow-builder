@@ -395,19 +395,27 @@ export class HeuristicBuildPlanner {
       };
     });
 
-    const variableBindings =
-      params.sharedStyleContext.variables.length > 0
-        ? [
-            {
-              nodeId: elementTree.id,
-              property: "padding-top",
-              variableName:
-                params.sharedStyleContext.variables.find(
-                  (item) => item.category === "spacing"
-                )?.name ?? params.sharedStyleContext.variables[0].name
-            }
-          ]
-        : [];
+    const spacingVariable = params.sharedStyleContext.variables.find(
+      (item) => item.category === "spacing"
+    );
+    const variableBindings = spacingVariable
+      ? [
+          {
+            nodeId: elementTree.id,
+            property: "padding-top",
+            variableName: spacingVariable.name
+          }
+        ]
+      : [];
+
+    if (!spacingVariable && params.sharedStyleContext.variables.length > 0) {
+      warnings.push({
+        code: "missing-spacing-variable",
+        message:
+          "No spacing variable was available on the active Webflow site, so spacing variable bindings were skipped.",
+        level: "warning"
+      });
+    }
 
     const assetTargetNode =
       findFirstNode(elementTree, (node) => node.tag === "img")?.id ??
