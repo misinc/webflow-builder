@@ -79,12 +79,25 @@ export class WorkflowService {
     siteId: string
   ): Promise<void> {
     const binding = await this.repository.getSiteBinding(repoId, userId);
-    if (!binding) {
-      throw new Error("Repo is not bound to a Webflow site for this user.");
+    if (binding?.webflowSiteId === siteId) {
+      return;
     }
-    if (binding.webflowSiteId !== siteId) {
+    if (binding && binding.webflowSiteId !== siteId) {
       throw new Error("Requested Webflow site does not match the bound site.");
     }
+
+    const mappings = await this.repository.getPageMappings(repoId, siteId, userId);
+    if (mappings.length > 0) {
+      await this.repository.upsertSiteBinding({
+        repoId,
+        webflowSiteId: siteId,
+        requestedBy: userId,
+        rulesetName: "recovered-from-page-mappings"
+      });
+      return;
+    }
+
+    throw new Error("Repo is not bound to a Webflow site for this user.");
   }
 
   private async toSitePageMappingRows(

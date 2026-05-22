@@ -306,6 +306,25 @@ export default function App() {
   }, [repoId, designerContext?.siteId, designerContext?.pageId, userId, repoPageNameById]);
 
   useEffect(() => {
+    if (!repoId || !designerContext?.siteId || sharedStyleSummary) {
+      return;
+    }
+
+    let cancelled = false;
+
+    captureSharedStyles(designerContext.siteId).catch(() => {
+      if (!cancelled) {
+        setSharedStyleContext(null);
+        setSharedStyleSummary("");
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [repoId, designerContext?.siteId, sharedStyleSummary]);
+
+  useEffect(() => {
     if (hasBootstrappedRepo || repoId) {
       return;
     }
