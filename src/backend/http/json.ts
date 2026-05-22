@@ -48,6 +48,19 @@ function findPathValue(event: HandlerEvent, segmentName: string): string | null 
   return segments[markerIndex + 1] ?? null;
 }
 
+function findPathValueAny(
+  event: HandlerEvent,
+  segmentNames: string[]
+): string | null {
+  for (const segmentName of segmentNames) {
+    const value = findPathValue(event, segmentName);
+    if (value) {
+      return value;
+    }
+  }
+  return null;
+}
+
 export function pathParam(event: HandlerEvent, name: string): string {
   const value = event.pathParameters?.[name];
   if (value) {
@@ -56,9 +69,13 @@ export function pathParam(event: HandlerEvent, name: string): string {
 
   const fallback =
     name === "repoId"
-      ? findPathValue(event, "repos")
+      ? findPathValueAny(event, ["repos", "repos-sync", "repos-tree"])
       : name === "id"
-        ? findPathValue(event, "jobs")
+        ? findPathValueAny(event, [
+            "jobs",
+            "build-jobs-get",
+            "build-jobs-complete"
+          ])
         : null;
 
   if (!fallback) {
