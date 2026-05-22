@@ -447,6 +447,107 @@ export class WorkflowService {
     };
   }
 
+  private async getLightweightSectionContext(request: WorkflowSectionRequest) {
+    workflowSectionRequestSchema.parse(request);
+    await this.assertSiteBinding(
+      request.repoId,
+      request.requestedBy,
+      request.webflowSiteId
+    );
+    const queue = await this.getQueue(
+      request.repoId,
+      request.webflowSiteId,
+      request.webflowPageId,
+      request.requestedBy
+    );
+    if (!queue.mapping?.repoPageId || !queue.repoPage) {
+      throw new Error("Current Webflow page is not mapped to a repo page.");
+    }
+
+    const section = await this.repository.getSection(request.sectionId);
+    if (!section || section.pageId !== queue.repoPage.id) {
+      throw new Error("Selected repo section does not belong to the mapped repo page.");
+    }
+
+    const sharedStyleContext = await this.getSharedStyleContext(request.webflowSiteId);
+    const metadata = {
+      repoId: request.repoId,
+      pageId: queue.repoPage.id,
+      sectionId: section.id,
+      pageName: queue.repoPage.name,
+      sectionName: section.name,
+      sourceFile: section.sourceFile
+    };
+    const state =
+      (
+        await this.repository.getSectionWorkflowStates(
+          request.requestedBy,
+          request.webflowSiteId,
+          request.webflowPageId,
+          queue.repoPage.id
+        )
+      ).find((item) => item.repoSectionId === section.id) ?? null;
+
+    return {
+      queue,
+      state,
+      section,
+      metadata,
+      sharedStyleContext
+    };
+  }
+
+  private minimalSerializedSection(input: {
+    pageName: string;
+    pageSourceFile: string;
+    section: {
+      name: string;
+      sectionKey: string;
+      sourceFile: string;
+      componentName: string;
+      sortOrder: number;
+      metadata: Record<string, unknown>;
+    };
+  }) {
+    return {
+      summary: `${input.section.name} on ${input.pageName}. Use indexed repo structure and shared site classes to guide the workflow.`,
+      content: [],
+      assetReferences: [],
+      layoutHints: [
+        `section family: ${input.section.sectionKey}`,
+        `component: ${input.section.componentName}`
+      ],
+      sourceExcerpt: JSON.stringify(input.section.metadata ?? {})
+    };
+  }
+
+  private minimalSectionContext(input: {
+    repoId: string;
+    pageName: string;
+    pageSourceFile: string;
+    section: {
+      name: string;
+      sourceFile: string;
+      componentName: string;
+      sortOrder: number;
+    };
+  }): SectionContext {
+    return {
+      repoId: input.repoId,
+      pageName: input.pageName,
+      pageSourceFile: input.pageSourceFile,
+      sectionName: input.section.name,
+      sectionSourceFile: input.section.sourceFile,
+      componentName: input.section.componentName,
+      sectionOrder: input.section.sortOrder,
+      sourceCode: "deterministic skeleton fallback",
+      relevantStylesheets: [],
+      assetReferences: [],
+      contentHints: [],
+      relatedSharedClasses: []
+    };
+  }
+
   private async persistRun(
     request: WorkflowSectionRequest,
     repoPageId: string,
@@ -499,10 +600,14 @@ export class WorkflowService {
   }
 
   async analyzeSection(request: WorkflowSectionRequest): Promise<SectionAnalysis> {
-    const context = await this.getSectionStateContext(request);
+    const context = await this.getLightweightSectionContext(request);
     const analysis = deterministicAnalysis({
       metadata: context.metadata,
-      serializedSection: context.serializedSection,
+      serializedSection: this.minimalSerializedSection({
+        pageName: context.queue.repoPage!.name,
+        pageSourceFile: context.queue.repoPage!.sourceFile,
+        section: context.section
+      }),
       section: {
         name: context.section.name,
         sectionKey: context.section.sectionKey
@@ -521,10 +626,15 @@ export class WorkflowService {
   }
 
   async generateSkeleton(request: WorkflowSectionRequest): Promise<SkeletonPlan> {
-    const context = await this.getSectionStateContext(request);
+    const context = await this.getLightweightSectionContext(request);
     const skeleton = deterministicSkeleton({
       metadata: context.metadata,
-      sectionContext: context.sectionContext,
+      sectionContext: this.minimalSectionContext({
+        repoId: request.repoId,
+        pageName: context.queue.repoPage!.name,
+        pageSourceFile: context.queue.repoPage!.sourceFile,
+        section: context.section
+      }),
       sharedStyleContext: context.sharedStyleContext
     });
     const runId = await this.persistRun(
