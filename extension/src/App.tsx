@@ -155,6 +155,7 @@ export default function App() {
   const [currentTargetNodeId, setCurrentTargetNodeId] = useState<string | null>(null);
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [hasBootstrappedRepo, setHasBootstrappedRepo] = useState(false);
 
   const repoPages = repoTree?.pages ?? [];
   const repoPageNameById = useMemo(
@@ -282,6 +283,7 @@ export default function App() {
     );
     setQueue(nextQueue);
     setSelectedSectionId(nextSectionIdFromQueue(nextQueue));
+    setActiveTab(nextQueue.mapping?.repoPageId ? "workspace" : "mappings");
   }
 
   useEffect(() => {
@@ -302,6 +304,60 @@ export default function App() {
       }
     );
   }, [repoId, designerContext?.siteId, designerContext?.pageId, userId, repoPageNameById]);
+
+  useEffect(() => {
+    if (hasBootstrappedRepo || repoId) {
+      return;
+    }
+    if (!repoOwner || !repoName || !repoUrl || !userId) {
+      setHasBootstrappedRepo(true);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function restoreRepoSession() {
+      try {
+        setLoading((current) => current ?? "Restoring workspace");
+        const repoResponse = await backend.connectRepo({
+          owner: repoOwner,
+          name: repoName,
+          repoUrl,
+          provider: "github",
+          requestedBy: userId
+        });
+        if (cancelled) {
+          return;
+        }
+        setRepoId(repoResponse.repo.id);
+        try {
+          const nextTree = await backend.getRepoTree(repoResponse.repo.id);
+          if (!cancelled) {
+            setRepoTree(nextTree);
+          }
+        } catch {
+          if (!cancelled) {
+            setRepoTree(null);
+          }
+        }
+      } catch {
+        // Keep startup tolerant. The explicit connect action can recover later.
+      } finally {
+        if (!cancelled) {
+          setHasBootstrappedRepo(true);
+          setLoading((current) =>
+            current === "Restoring workspace" ? null : current
+          );
+        }
+      }
+    }
+
+    restoreRepoSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hasBootstrappedRepo, repoId, repoOwner, repoName, repoUrl, userId]);
 
   async function connectAndSyncRepo() {
     setLoading("Connecting repo");
