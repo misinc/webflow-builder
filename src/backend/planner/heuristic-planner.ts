@@ -15,12 +15,29 @@ function sharedOrFallback(
   preferred: string[],
   fallback: string
 ): string {
-  const shared = sharedStyleContext.classes.find(
-    (item) =>
-      item.category === category &&
-      preferred.some((value) => item.name.toLowerCase().includes(value.toLowerCase()))
+  const candidates = sharedStyleContext.classes.filter(
+    (item) => item.category === category
   );
-  return shared?.name ?? fallback;
+  const normalizedPreferred = preferred.map((value) => value.toLowerCase());
+
+  const exactMatch = candidates.find((item) =>
+    normalizedPreferred.includes(item.name.toLowerCase())
+  );
+  if (exactMatch) {
+    return exactMatch.name;
+  }
+
+  const prefixMatch = candidates.find((item) =>
+    normalizedPreferred.some((value) => item.name.toLowerCase().startsWith(value))
+  );
+  if (prefixMatch) {
+    return prefixMatch.name;
+  }
+
+  const containsMatch = candidates.find((item) =>
+    normalizedPreferred.some((value) => item.name.toLowerCase().includes(value))
+  );
+  return containsMatch?.name ?? fallback;
 }
 
 function buildNode(
@@ -70,7 +87,14 @@ function createBaseTree(
     `${sectionKey}-container`,
     "container",
     "div",
-    [sharedOrFallback(sharedStyleContext, "layout", ["container"], "container-large")],
+    [
+      sharedOrFallback(
+        sharedStyleContext,
+        "layout",
+        ["container-large", "container"],
+        "container-large"
+      )
+    ],
     []
   );
   const sectionPadding = buildNode(
@@ -81,8 +105,8 @@ function createBaseTree(
       sharedOrFallback(
         sharedStyleContext,
         "spacing",
-        ["padding-section", "section-padding"],
-        "padding-section-large"
+        ["padding-section-medium", "padding-section", "section-padding"],
+        "padding-section-medium"
       )
     ],
     []
@@ -146,7 +170,14 @@ function heroPlan(
       "hero-eyebrow",
       "text",
       "p",
-      [sharedOrFallback(sharedStyleContext, "text", ["eyebrow", "text-small"], "text-size-small")],
+      [
+        sharedOrFallback(
+          sharedStyleContext,
+          "text",
+          ["text-size-small", "is-text-small", "eyebrow", "text-small"],
+          "text-size-small"
+        )
+      ],
       [],
       copy.eyebrow
     ),
@@ -162,7 +193,14 @@ function heroPlan(
       "hero-body",
       "text",
       "p",
-      [sharedOrFallback(sharedStyleContext, "text", ["body", "text-medium"], "text-size-medium")],
+      [
+        sharedOrFallback(
+          sharedStyleContext,
+          "text",
+          ["text-size-medium", "body", "text-medium"],
+          "text-size-medium"
+        )
+      ],
       [],
       copy.body
     ),
@@ -220,7 +258,14 @@ function servicesPlan(
           `services-item-copy-${index}`,
           "text",
           "p",
-          [sharedOrFallback(sharedStyleContext, "text", ["body", "text-small"], "text-size-regular")],
+          [
+            sharedOrFallback(
+              sharedStyleContext,
+              "text",
+              ["text-size-small", "body", "text-small"],
+              "text-size-small"
+            )
+          ],
           [],
           "Mapped into Webflow with Client-First-compatible structure and reuse-first class decisions."
         )
@@ -241,7 +286,14 @@ function servicesPlan(
       "services-body",
       "text",
       "p",
-      [sharedOrFallback(sharedStyleContext, "text", ["body", "text-medium"], "text-size-medium")],
+      [
+        sharedOrFallback(
+          sharedStyleContext,
+          "text",
+          ["text-size-medium", "body", "text-medium"],
+          "text-size-medium"
+        )
+      ],
       [],
       copy.body
     )
@@ -266,7 +318,14 @@ function solutionsPlan(
       "solutions-eyebrow",
       "text",
       "p",
-      [sharedOrFallback(sharedStyleContext, "text", ["eyebrow", "text-small"], "text-size-small")],
+      [
+        sharedOrFallback(
+          sharedStyleContext,
+          "text",
+          ["text-size-small", "is-text-small", "eyebrow", "text-small"],
+          "text-size-small"
+        )
+      ],
       [],
       copy.eyebrow
     ),
@@ -282,7 +341,14 @@ function solutionsPlan(
       "solutions-body",
       "text",
       "p",
-      [sharedOrFallback(sharedStyleContext, "text", ["body", "text-medium"], "text-size-medium")],
+      [
+        sharedOrFallback(
+          sharedStyleContext,
+          "text",
+          ["text-size-medium", "body", "text-medium"],
+          "text-size-medium"
+        )
+      ],
       [],
       copy.body
     )
