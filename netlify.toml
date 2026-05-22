@@ -44,3 +44,8 @@ status = 200
 from = "/api/build/jobs/:id"
 to = "/.netlify/functions/build-jobs-get/:id"
 status = 200
+
+[[redirects]]
+from = "/api/debug/env-status"
+to = "/.netlify/functions/debug-env-status"
+status = 200
