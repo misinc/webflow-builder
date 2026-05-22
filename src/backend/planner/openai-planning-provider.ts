@@ -59,6 +59,70 @@ const VERIFICATION_RULES = [
   "Return JSON only."
 ].join(" ");
 
+const EXTENSION_OPERATING_RULES = [
+  "You are operating inside a staged Webflow Designer extension workflow, not an open-ended chat session.",
+  "Do not ask clarifying questions in the response. When the source is ambiguous, encode that ambiguity as warnings and keep the output reviewable.",
+  "Return only machine-readable JSON that fits the requested stage contract.",
+  "Do not include markdown fences, prose introductions, or extra explanation outside the contract fields.",
+  "Treat the shared class inventory as the authoritative source of reusable wrappers, typography, spacing, and utility classes.",
+  "Prefer exact shared class matches over approximate semantic guesses.",
+  "If a requested structure or style cannot be justified from the section source and shared class inventory, warn instead of inventing extra structure."
+].join(" ");
+
+function stagePrompt(
+  stage: "analysis" | "skeleton" | "styling" | "verification"
+): string {
+  const common = [WEBFLOW_SITE_BUILDER_RULES, EXTENSION_OPERATING_RULES].join(" ");
+
+  if (stage === "analysis") {
+    return [
+      "You are the analysis step of a guided Webflow section workflow.",
+      common,
+      "Your job is to inspect one repo section and prepare the next extension step.",
+      "Summarize the section briefly, list concrete goals, extract the most useful content items, recommend the workflow mode, and identify reusable classes already present in the bound Webflow site.",
+      "Do not propose implementation details that belong to styling.",
+      "If the section looks structurally complex, bias toward styleExisting or skeletonThenStyle rather than pretending full automation is safe.",
+      "Return JSON with: sectionMetadata, summary, goals, content, recommendedMode, reusableClasses, suggestedNewClasses, warnings."
+    ].join(" ");
+  }
+
+  if (stage === "skeleton") {
+    return [
+      "You are the skeleton-generation step of a guided Webflow section workflow.",
+      common,
+      SKELETON_TREE_RULES,
+      "Your job is to propose a reviewable structural skeleton for one section before styling happens.",
+      "The skeleton should preserve the source section hierarchy, reuse shared wrappers when available, and keep section-specific classes functional and reusable.",
+      "Do not style the section in this step. Focus on structure, semantic content nodes, and correct shared wrapper usage.",
+      "If the inventory contains exact wrappers like padding-global, container-large, or padding-section-medium, use those exact names.",
+      "If the source implies lists, cards, CTAs, or media groups, represent them structurally without inventing visual styling classes.",
+      "Return JSON with: sectionMetadata, treeText, elementTree, reusableClasses, suggestedNewClasses, warnings."
+    ].join(" ");
+  }
+
+  if (stage === "styling") {
+    return [
+      "You are the styling step of a guided Webflow section workflow.",
+      common,
+      STYLING_RULES,
+      "Your job is to style only the current section against the approved skeleton or selected section root.",
+      "Preserve the existing structure. Reuse existing shared typography, spacing, container, and utility classes before suggesting any new class.",
+      "Only suggest new classes when existing shared classes cannot support the section cleanly.",
+      "Prefer exact shared class names such as text-size-small, text-size-medium, heading-style-h2, button, or container-large when they exist.",
+      "Return JSON with: sectionMetadata, mode, styleDefinitions, variableBindings, reusableClasses, suggestedNewClasses, requiredClassNames, notes, warnings."
+    ].join(" ");
+  }
+
+  return [
+    "You are the verification step of a guided Webflow section workflow.",
+    common,
+    VERIFICATION_RULES,
+    "Your job is to judge whether only the current section is ready for approval.",
+    "Check structural fidelity, class reuse, Client-First naming, and whether any remaining ambiguity should block approval.",
+    "Return JSON with: sectionMetadata, summary, readyForApproval, warnings."
+  ].join(" ");
+}
+
 function safeJsonParse<T>(content: string): T {
   try {
     return JSON.parse(content) as T;
@@ -492,13 +556,7 @@ export class OpenAIPlanningProvider implements PlanningProvider {
     try {
       const raw = await this.requestJson<unknown>(
         "section_analysis",
-        [
-          "You are planning a Webflow Designer section workflow using the Webflow site builder operating rules.",
-          WEBFLOW_SITE_BUILDER_RULES,
-          "Analyze the provided repo section and recommend the best workflow mode for this single section.",
-          "Call out likely reusable wrappers, typography classes, spacing utilities, and component candidates.",
-          "Return JSON with sectionMetadata, summary, goals, content, recommendedMode, reusableClasses, suggestedNewClasses, warnings."
-        ].join(" "),
+        stagePrompt("analysis"),
         input
       );
       return normalizeAnalysis(raw, fallback);
@@ -541,14 +599,7 @@ export class OpenAIPlanningProvider implements PlanningProvider {
     try {
       const raw = await this.requestJson<unknown>(
         "skeleton_plan",
-        [
-          "You are generating an approved-first Webflow section skeleton using the Webflow site builder rules.",
-          WEBFLOW_SITE_BUILDER_RULES,
-          SKELETON_TREE_RULES,
-          "Return a compact but faithful skeleton for the provided section and shared class inventory.",
-          "The skeleton must be suitable for explicit review before styling begins.",
-          "Return JSON with sectionMetadata, treeText, elementTree, reusableClasses, suggestedNewClasses, warnings."
-        ].join(" "),
+        stagePrompt("skeleton"),
         input
       );
       return normalizeSkeleton(raw, fallback);
@@ -593,14 +644,7 @@ export class OpenAIPlanningProvider implements PlanningProvider {
     try {
       const raw = await this.requestJson<unknown>(
         "styling_plan",
-        [
-          "You are generating a Webflow section styling plan using the Webflow site builder rules.",
-          WEBFLOW_SITE_BUILDER_RULES,
-          STYLING_RULES,
-          "Preserve the site's existing design system, variables, and reusable classes.",
-          "Prefer updating existing shared classes over introducing new ones, and only add new classes when existing classes cannot support the section cleanly.",
-          "Return JSON with sectionMetadata, mode, styleDefinitions, variableBindings, reusableClasses, suggestedNewClasses, requiredClassNames, notes, warnings."
-        ].join(" "),
+        stagePrompt("styling"),
         input
       );
       return normalizeStyling(raw, fallback);
@@ -634,13 +678,7 @@ export class OpenAIPlanningProvider implements PlanningProvider {
     try {
       const raw = await this.requestJson<unknown>(
         "section_verification",
-        [
-          "You are verifying whether the current section work is ready for approval using the Webflow site builder rules.",
-          WEBFLOW_SITE_BUILDER_RULES,
-          VERIFICATION_RULES,
-          "Assess the provided section context and workflow mode.",
-          "Return JSON with sectionMetadata, summary, readyForApproval, warnings."
-        ].join(" "),
+        stagePrompt("verification"),
         input
       );
       return normalizeVerification(raw, fallback);
