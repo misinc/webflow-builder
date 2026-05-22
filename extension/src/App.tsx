@@ -243,8 +243,19 @@ export default function App() {
         requestedBy: userId
       });
       setRepoId(repoResponse.repo.id);
-      await backend.syncRepo(repoResponse.repo.id);
-      const nextTree = await backend.getRepoTree(repoResponse.repo.id);
+      let nextTree = null;
+      try {
+        nextTree = await backend.getRepoTree(repoResponse.repo.id);
+      } catch {
+        nextTree = null;
+      }
+
+      if (!nextTree || nextTree.pages.length === 0) {
+        setLoading("Syncing repo");
+        await backend.syncRepo(repoResponse.repo.id);
+        nextTree = await backend.getRepoTree(repoResponse.repo.id);
+      }
+
       setRepoTree(nextTree);
       setActiveTab("mappings");
     } catch (err) {
@@ -600,9 +611,9 @@ export default function App() {
             <span>Bridge</span>
             <span>{bridgeLabel}</span>
             <span>Site</span>
-            <span>{designerContext?.siteId ?? "Unavailable"}</span>
+            <span>{designerContext?.siteName ?? designerContext?.siteId ?? "Unavailable"}</span>
             <span>Page</span>
-            <span>{designerContext?.pageId ?? "Unavailable"}</span>
+            <span>{designerContext?.pageName ?? designerContext?.pageId ?? "Unavailable"}</span>
             <span>Selection</span>
             <span>{designerContext?.selectedElementId ?? "None"}</span>
             <span>Shared inventory</span>
@@ -674,9 +685,9 @@ export default function App() {
             </div>
             <div className="wf-detail-list">
               <span>Active site</span>
-              <span>{designerContext?.siteId ?? "Unavailable"}</span>
+              <span>{designerContext?.siteName ?? designerContext?.siteId ?? "Unavailable"}</span>
               <span>Active page</span>
-              <span>{designerContext?.pageId ?? "Unavailable"}</span>
+              <span>{designerContext?.pageName ?? designerContext?.pageId ?? "Unavailable"}</span>
             </div>
             <div className="wf-actions">
               <button type="button" onClick={bindCurrentSite} disabled={!repoId}>
@@ -793,7 +804,7 @@ export default function App() {
             </div>
             <div className="wf-detail-list">
               <span>Webflow page</span>
-              <span>{designerContext?.pageId ?? "Unavailable"}</span>
+              <span>{designerContext?.pageName ?? designerContext?.pageId ?? "Unavailable"}</span>
               <span>Mapped repo page</span>
               <span>{queue?.repoPage?.name ?? currentMapping?.repoPageName ?? "Unmapped"}</span>
               <span>Current mode</span>

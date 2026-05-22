@@ -10,7 +10,9 @@ import {
 
 export interface DesignerContext {
   siteId: string | null;
+  siteName: string | null;
   pageId: string | null;
+  pageName: string | null;
   mode: "design" | "build" | "edit" | "preview" | "comment" | "unknown";
   selectedElementId: string | null;
 }
@@ -115,7 +117,7 @@ interface WebflowApi {
     DivBlock?: unknown;
     Image?: unknown;
   };
-  getSiteInfo(): Promise<{ siteId: string }>;
+  getSiteInfo(): Promise<Record<string, unknown> & { siteId: string }>;
   getCurrentPage(): Promise<WebflowPage | null>;
   getAllPagesAndFolders?(): Promise<unknown[]>;
   getCurrentMode(): Promise<string | null>;
@@ -333,7 +335,16 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
 
     const context: DesignerContext = {
       siteId: siteInfo.siteId ?? null,
+      siteName:
+        (typeof siteInfo.name === "string" ? siteInfo.name : null) ??
+        (typeof siteInfo.shortName === "string" ? siteInfo.shortName : null) ??
+        (typeof siteInfo.displayName === "string" ? siteInfo.displayName : null) ??
+        null,
       pageId: page?.id ?? null,
+      pageName:
+        (await page?.getName?.().catch(() => null)) ??
+        page?.name ??
+        null,
       mode:
         mode === "design" ||
         mode === "build" ||
@@ -623,7 +634,9 @@ class MockWebflowDesignerBridge implements WebflowDesignerBridge {
   async getContext(): Promise<DesignerContext> {
     return {
       siteId: "6a10876cde32438bc9f52304",
+      siteName: "Relume Style Guide Clone",
       pageId: "mock-page-home",
+      pageName: "Home",
       mode: "design",
       selectedElementId: "mock-selected-section"
     };

@@ -12,7 +12,9 @@ class FailingBridge implements WebflowDesignerBridge {
   async getContext() {
     return {
       siteId: "site-1",
+      siteName: "Test Site",
       pageId: "page-1",
+      pageName: "Home",
       mode: "design",
       selectedElementId: null
     } satisfies DesignerContext;
