@@ -68,12 +68,8 @@ async function request<T>(
   return (await response.json()) as T;
 }
 
-function withQuery(
-  baseUrl: string,
-  path: string,
-  params: Record<string, string | null | undefined>
-): string {
-  const url = new URL(`${baseUrl}${path}`, window.location.origin);
+function withQuery(urlString: string, params: Record<string, string | null | undefined>): string {
+  const url = new URL(urlString, window.location.origin);
   Object.entries(params).forEach(([key, value]) => {
     if (value) {
       url.searchParams.set(key, value);
@@ -88,9 +84,17 @@ export class BackendClient {
       (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "/api"
   ) {}
 
+  private get functionBaseUrl() {
+    return this.baseUrl.replace(/\/api\/?$/, "/.netlify/functions");
+  }
+
+  private functionUrl(functionName: string) {
+    return `${this.functionBaseUrl}/${functionName}`;
+  }
+
   connectRepo(input: RepoConnectionInput) {
     return request<{ repo: RepoRecord }>(
-      `${this.baseUrl}/repos/connect`,
+      this.functionUrl("repos-connect"),
       {
         method: "POST",
         body: JSON.stringify(input)
@@ -100,7 +104,7 @@ export class BackendClient {
 
   syncRepo(repoId: string) {
     return request<{ sync: RepoSyncRecord }>(
-      `${this.baseUrl}/repos/${repoId}/sync`,
+      `${this.functionUrl("repos-sync")}/${repoId}`,
       {
         method: "POST"
       }
@@ -109,7 +113,7 @@ export class BackendClient {
 
   async getRepoTree(repoId: string): Promise<RepoTreeResponse> {
     const response = await request<RepoTreeResponse>(
-      `${this.baseUrl}/repos/${repoId}/tree`,
+      `${this.functionUrl("repos-tree")}/${repoId}`,
       {
         method: "GET"
       }
@@ -119,7 +123,7 @@ export class BackendClient {
 
   bindSite(input: BindSiteInput) {
     return request<{ binding: unknown }>(
-      `${this.baseUrl}/webflow/bind-site`,
+      this.functionUrl("webflow-bind-site"),
       {
         method: "POST",
         body: JSON.stringify(input)
@@ -133,7 +137,7 @@ export class BackendClient {
     userId: string
   ): Promise<SitePageMappingRow[]> {
     const response = await request<{ pages: SitePageMappingRow[] }>(
-      withQuery(this.baseUrl, "/workflow/site-pages", { repoId, webflowSiteId }),
+      withQuery(this.functionUrl("workflow-site-pages"), { repoId, webflowSiteId }),
       { method: "GET" },
       userId
     );
@@ -146,7 +150,10 @@ export class BackendClient {
     userId: string
   ): Promise<SitePageMappingRow[]> {
     const response = await request<{ mappings: SitePageMappingRow[] }>(
-      withQuery(this.baseUrl, "/workflow/page-mappings", { repoId, webflowSiteId }),
+      withQuery(this.functionUrl("workflow-page-mappings-get"), {
+        repoId,
+        webflowSiteId
+      }),
       { method: "GET" },
       userId
     );
@@ -155,7 +162,7 @@ export class BackendClient {
 
   async savePageMappings(input: PageMappingsUpsertInput): Promise<SitePageMappingRow[]> {
     const response = await request<{ mappings: SitePageMappingRow[] }>(
-      `${this.baseUrl}/workflow/page-mappings`,
+      this.functionUrl("workflow-page-mappings-post"),
       {
         method: "POST",
         body: JSON.stringify(input)
@@ -172,7 +179,7 @@ export class BackendClient {
     userId: string
   ): Promise<WorkflowQueueResponse> {
     const response = await request<WorkflowQueueResponse>(
-      withQuery(this.baseUrl, "/workflow/queue", {
+      withQuery(this.functionUrl("workflow-queue"), {
         repoId,
         webflowSiteId,
         webflowPageId
@@ -186,7 +193,7 @@ export class BackendClient {
   async analyzeSection(input: WorkflowSectionRequest): Promise<SectionAnalysis> {
     const validated = workflowSectionRequestSchema.parse(input);
     const response = await request<SectionAnalysis>(
-      `${this.baseUrl}/workflow/section/analyze`,
+      this.functionUrl("workflow-section-analyze"),
       {
         method: "POST",
         body: JSON.stringify(validated)
@@ -199,7 +206,7 @@ export class BackendClient {
   async generateSkeleton(input: WorkflowSectionRequest): Promise<SkeletonPlan> {
     const validated = workflowSectionRequestSchema.parse(input);
     const response = await request<SkeletonPlan>(
-      `${this.baseUrl}/workflow/section/generate-skeleton`,
+      this.functionUrl("workflow-section-generate-skeleton"),
       {
         method: "POST",
         body: JSON.stringify(validated)
@@ -212,7 +219,7 @@ export class BackendClient {
   async styleSection(input: WorkflowSectionRequest): Promise<StylingPlan> {
     const validated = workflowSectionRequestSchema.parse(input);
     const response = await request<StylingPlan>(
-      `${this.baseUrl}/workflow/section/style`,
+      this.functionUrl("workflow-section-style"),
       {
         method: "POST",
         body: JSON.stringify(validated)
@@ -225,7 +232,7 @@ export class BackendClient {
   async verifySection(input: WorkflowSectionRequest): Promise<SectionVerification> {
     const validated = workflowSectionRequestSchema.parse(input);
     const response = await request<SectionVerification>(
-      `${this.baseUrl}/workflow/section/verify`,
+      this.functionUrl("workflow-section-verify"),
       {
         method: "POST",
         body: JSON.stringify(validated)
@@ -237,7 +244,7 @@ export class BackendClient {
 
   async approveSection(input: WorkflowSectionDecisionInput): Promise<WorkflowQueueResponse> {
     const response = await request<WorkflowQueueResponse>(
-      `${this.baseUrl}/workflow/section/approve`,
+      this.functionUrl("workflow-section-approve"),
       {
         method: "POST",
         body: JSON.stringify(input)
@@ -249,7 +256,7 @@ export class BackendClient {
 
   async skipSection(input: WorkflowSectionDecisionInput): Promise<WorkflowQueueResponse> {
     const response = await request<WorkflowQueueResponse>(
-      `${this.baseUrl}/workflow/section/skip`,
+      this.functionUrl("workflow-section-skip"),
       {
         method: "POST",
         body: JSON.stringify(input)
@@ -266,7 +273,7 @@ export class BackendClient {
     >
   ): Promise<WorkflowQueueResponse> {
     const response = await request<WorkflowQueueResponse>(
-      `${this.baseUrl}/workflow/page/complete`,
+      this.functionUrl("workflow-page-complete"),
       {
         method: "POST",
         body: JSON.stringify(input)
