@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { RepoConnectionInput } from "../../shared/contracts.js";
@@ -21,6 +22,13 @@ export interface GitHubRepositoryClient {
     input: RepoConnectionInput
   ): Promise<{ defaultBranch: string; remoteId: string }>;
   fetchSnapshot(owner: string, name: string): Promise<RepositorySnapshot>;
+}
+
+interface GitHubAppCredentials {
+  appId?: string;
+  clientId?: string;
+  installationId: string;
+  privateKey: string;
 }
 
 function isRelevantRepoFile(filePath: string): boolean {
@@ -80,14 +88,55 @@ class LocalFixtureGitHubClient implements GitHubRepositoryClient {
   }
 }
 
+function base64UrlEncode(value: string | Buffer): string {
+  const buffer = typeof value === "string" ? Buffer.from(value) : value;
+  return buffer
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+}
+
+function normalizePrivateKey(privateKey: string): string {
+  return privateKey.includes("\\n") ? privateKey.replace(/\\n/g, "\n") : privateKey;
+}
+
+function createGitHubAppJwt(credentials: GitHubAppCredentials): string {
+  const issuer = credentials.clientId ?? credentials.appId;
+  if (!issuer) {
+    throw new Error(
+      "GitHub App credentials are incomplete. Set GITHUB_APP_CLIENT_ID or GITHUB_APP_ID."
+    );
+  }
+
+  const header = { alg: "RS256", typ: "JWT" };
+  const now = Math.floor(Date.now() / 1000);
+  const payload = {
+    iat: now - 60,
+    exp: now + 9 * 60,
+    iss: issuer
+  };
+  const signingInput = `${base64UrlEncode(JSON.stringify(header))}.${base64UrlEncode(
+    JSON.stringify(payload)
+  )}`;
+  const signature = crypto
+    .createSign("RSA-SHA256")
+    .update(signingInput)
+    .end()
+    .sign(normalizePrivateKey(credentials.privateKey));
+
+  return `${signingInput}.${base64UrlEncode(signature)}`;
+}
+
 class GitHubHttpRepositoryClient implements GitHubRepositoryClient {
-  constructor(private readonly accessToken: string) {}
+  constructor(private readonly getAccessToken: () => Promise<string>) {}
 
   private async request<T>(pathName: string): Promise<T> {
+    const accessToken = await this.getAccessToken();
     const response = await fetch(`https://api.github.com${pathName}`, {
       headers: {
         Accept: "application/vnd.github+json",
-        Authorization: `Bearer ${this.accessToken}`,
+        Authorization: `Bearer ${accessToken}`,
         "User-Agent": "webflow-builder"
       }
     });
@@ -129,10 +178,11 @@ class GitHubHttpRepositoryClient implements GitHubRepositoryClient {
 
     const files: RepoFile[] = [];
     for (const blob of relevantBlobs) {
+      const accessToken = await this.getAccessToken();
       const response = await fetch(blob.url, {
         headers: {
           Accept: "application/vnd.github+json",
-          Authorization: `Bearer ${this.accessToken}`,
+          Authorization: `Bearer ${accessToken}`,
           "User-Agent": "webflow-builder"
         }
       });
@@ -160,29 +210,102 @@ class GitHubHttpRepositoryClient implements GitHubRepositoryClient {
   }
 }
 
+class GitHubAppRepositoryClient implements GitHubRepositoryClient {
+  private cachedToken:
+    | {
+        token: string;
+        expiresAtMs: number;
+      }
+    | undefined;
+  private readonly delegate: GitHubHttpRepositoryClient;
+
+  constructor(private readonly credentials: GitHubAppCredentials) {
+    this.delegate = new GitHubHttpRepositoryClient(async () => this.getInstallationToken());
+  }
+
+  private async getInstallationToken(): Promise<string> {
+    const now = Date.now();
+    if (this.cachedToken && this.cachedToken.expiresAtMs - now > 60_000) {
+      return this.cachedToken.token;
+    }
+
+    const jwt = createGitHubAppJwt(this.credentials);
+    const response = await fetch(
+      `https://api.github.com/app/installations/${this.credentials.installationId}/access_tokens`,
+      {
+        method: "POST",
+        headers: {
+          Accept: "application/vnd.github+json",
+          Authorization: `Bearer ${jwt}`,
+          "User-Agent": "webflow-builder"
+        }
+      }
+    );
+
+    if (!response.ok) {
+      const message = await response.text();
+      throw new Error(
+        `GitHub App installation token request failed (${response.status} ${response.statusText}): ${message}`
+      );
+    }
+
+    const payload = (await response.json()) as {
+      token: string;
+      expires_at: string;
+    };
+    this.cachedToken = {
+      token: payload.token,
+      expiresAtMs: new Date(payload.expires_at).getTime()
+    };
+    return payload.token;
+  }
+
+  async connectRepo(
+    input: RepoConnectionInput
+  ): Promise<{ defaultBranch: string; remoteId: string }> {
+    return this.delegate.connectRepo(input);
+  }
+
+  async fetchSnapshot(owner: string, name: string): Promise<RepositorySnapshot> {
+    return this.delegate.fetchSnapshot(owner, name);
+  }
+}
+
 class UnsupportedGitHubClient implements GitHubRepositoryClient {
   async connectRepo(): Promise<{ defaultBranch: string; remoteId: string }> {
     throw new Error(
-      "GitHub access is not configured. Set GITHUB_APP_INSTALLATION_TOKEN or LOCAL_MIS_REPO_PATH."
+      "GitHub access is not configured. Set GitHub App credentials, GITHUB_ACCESS_TOKEN, or LOCAL_MIS_REPO_PATH."
     );
   }
 
   async fetchSnapshot(): Promise<RepositorySnapshot> {
     throw new Error(
-      "GitHub access is not configured. Set GITHUB_APP_INSTALLATION_TOKEN or LOCAL_MIS_REPO_PATH."
+      "GitHub access is not configured. Set GitHub App credentials, GITHUB_ACCESS_TOKEN, or LOCAL_MIS_REPO_PATH."
     );
   }
 }
 
 export function createGitHubRepositoryClient(config: {
+  githubAppId?: string;
+  githubAppClientId?: string;
+  githubAppInstallationId?: string;
+  githubAppPrivateKey?: string;
   githubAccessToken?: string;
   localMisRepoPath?: string;
 }): GitHubRepositoryClient {
   if (config.localMisRepoPath) {
     return new LocalFixtureGitHubClient(config.localMisRepoPath);
   }
+  if (config.githubAppInstallationId && config.githubAppPrivateKey) {
+    return new GitHubAppRepositoryClient({
+      appId: config.githubAppId,
+      clientId: config.githubAppClientId,
+      installationId: config.githubAppInstallationId,
+      privateKey: config.githubAppPrivateKey
+    });
+  }
   if (config.githubAccessToken) {
-    return new GitHubHttpRepositoryClient(config.githubAccessToken);
+    return new GitHubHttpRepositoryClient(async () => config.githubAccessToken as string);
   }
   return new UnsupportedGitHubClient();
 }

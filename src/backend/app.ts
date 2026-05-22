@@ -4,6 +4,7 @@ import { MisRepoExtractor } from "./extractor/mis-extractor.js";
 import { createGitHubRepositoryClient } from "./github/client.js";
 import { HeuristicBuildPlanner } from "./planner/heuristic-planner.js";
 import { MemoryAppRepository } from "./repositories/memory-app-repository.js";
+import { PostgresAppRepository } from "./repositories/postgres-app-repository.js";
 import { BuildJobService } from "./services/build-job-service.js";
 import { BuildPlanService } from "./services/build-plan-service.js";
 import { RepoSyncService } from "./services/repo-sync-service.js";
@@ -14,7 +15,9 @@ let singleton: ReturnType<typeof createServices> | null = null;
 
 function createServices() {
   const env = getEnv();
-  const repository = new MemoryAppRepository();
+  const repository = env.databaseUrl
+    ? new PostgresAppRepository(env.databaseUrl)
+    : new MemoryAppRepository();
   const blobStore = new MemoryBlobStore();
   const extractor = new MisRepoExtractor();
   const planner = new HeuristicBuildPlanner();
