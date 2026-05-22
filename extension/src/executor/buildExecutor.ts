@@ -62,7 +62,7 @@ export async function executeBuildPlan(params: {
   if (!params.context.siteId || !params.context.pageId) {
     throw new Error("No active Webflow site or page.");
   }
-  if (params.context.mode !== "designer") {
+  if (!["design", "build", "edit"].includes(params.context.mode)) {
     throw new Error("Webflow Designer is not in editable mode.");
   }
 

@@ -7,10 +7,15 @@ import { BackendClient, RepoTreeResponse, summarizeSharedStyles } from "./api/cl
 import { BuildSummary } from "./components/BuildSummary.js";
 import { RepoTree } from "./components/RepoTree.js";
 import { executeBuildPlan } from "./executor/buildExecutor.js";
-import { DesignerContext, getWebflowBridge } from "./webflow/bridge.js";
+import {
+  DesignerContext,
+  getWebflowBridge,
+  getWebflowBridgeLabel
+} from "./webflow/bridge.js";
 
 const backend = new BackendClient();
 const bridge = getWebflowBridge();
+const bridgeLabel = getWebflowBridgeLabel();
 
 function usePersistentState(
   key: string,
@@ -164,9 +169,18 @@ export default function App() {
           <h1>Compile MIS sections straight into the active Designer page.</h1>
         </div>
         <div className="context-card">
-          <div className={`status-pill ${designerContext?.mode === "designer" ? "is-success" : "is-error"}`}>
-            {designerContext?.mode === "designer" ? "Editable Designer" : "Designer not ready"}
+          <div
+            className={`status-pill ${
+              ["design", "build", "edit"].includes(designerContext?.mode ?? "")
+                ? "is-success"
+                : "is-error"
+            }`}
+          >
+            {["design", "build", "edit"].includes(designerContext?.mode ?? "")
+              ? "Editable Designer"
+              : "Designer not ready"}
           </div>
+          <p>Bridge: {bridgeLabel}</p>
           <p>Site: {designerContext?.siteId ?? "Unavailable"}</p>
           <p>Page: {designerContext?.pageId ?? "Unavailable"}</p>
           <p>Selection: {designerContext?.selectedElementId ?? "None"}</p>

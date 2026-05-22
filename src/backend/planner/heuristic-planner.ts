@@ -313,6 +313,24 @@ function walkTree(node: BuildNode, visit: (node: BuildNode) => void): void {
   node.children.forEach((child) => walkTree(child, visit));
 }
 
+function findFirstNode(
+  node: BuildNode,
+  predicate: (candidate: BuildNode) => boolean
+): BuildNode | null {
+  if (predicate(node)) {
+    return node;
+  }
+
+  for (const child of node.children) {
+    const match = findFirstNode(child, predicate);
+    if (match) {
+      return match;
+    }
+  }
+
+  return null;
+}
+
 export class HeuristicBuildPlanner {
   plan(params: {
     pageId: string;
@@ -391,8 +409,13 @@ export class HeuristicBuildPlanner {
           ]
         : [];
 
+    const assetTargetNode =
+      findFirstNode(elementTree, (node) => node.tag === "img")?.id ??
+      findFirstNode(elementTree, (node) => node.id.endsWith("-visual"))?.id ??
+      elementTree.id;
+
     const assetBindings = params.sectionContext.assetReferences.map((source) => ({
-      nodeId: `${sectionKey}-visual`,
+      nodeId: assetTargetNode,
       source,
       fallback: "placeholder" as const
     }));

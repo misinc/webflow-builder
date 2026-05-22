@@ -13,7 +13,7 @@ class FailingBridge implements WebflowDesignerBridge {
     return {
       siteId: "site-1",
       pageId: "page-1",
-      mode: "designer",
+      mode: "design",
       selectedElementId: null
     } satisfies DesignerContext;
   }
