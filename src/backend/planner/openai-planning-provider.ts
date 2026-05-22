@@ -1,6 +1,7 @@
 import {
   BuildNode,
   SectionAnalysis,
+  SectionMetadata,
   SectionVerification,
   SkeletonPlan,
   StylingPlan
@@ -26,6 +27,258 @@ function safeJsonParse<T>(content: string): T {
         : "Planner returned invalid JSON."
     );
   }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function readString(value: unknown): string | null {
+  if (typeof value === "string") {
+    return value;
+  }
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  if (isRecord(value)) {
+    for (const key of ["name", "value", "label", "title", "message", "text"]) {
+      const candidate = value[key];
+      if (typeof candidate === "string" && candidate.trim()) {
+        return candidate.trim();
+      }
+    }
+  }
+  return null;
+}
+
+function stringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    const single = readString(value);
+    return single ? [single] : [];
+  }
+  return value
+    .map((item) => readString(item))
+    .filter((item): item is string => Boolean(item));
+}
+
+function warningsArray(value: unknown) {
+  if (!Array.isArray(value)) {
+    const single = readString(value);
+    return single ? [providerWarning("provider-warning", single)] : [];
+  }
+  return value
+    .map((item, index) => {
+      if (isRecord(item) && typeof item.message === "string") {
+        return providerWarning(
+          typeof item.code === "string" ? item.code : `provider-warning-${index}`,
+          item.message,
+          item.level === "error" || item.level === "info" || item.level === "warning"
+            ? item.level
+            : "warning"
+        );
+      }
+      const message = readString(item);
+      return message
+        ? providerWarning(`provider-warning-${index}`, message)
+        : null;
+    })
+    .filter((item): item is ReturnType<typeof providerWarning> => Boolean(item));
+}
+
+function contentArray(value: unknown) {
+  const normalized = Array.isArray(value) ? value : value ? [value] : [];
+  return normalized
+    .map((item, index) => {
+      if (isRecord(item)) {
+        return {
+          kind: readString(item.kind) ?? "content",
+          label: readString(item.label) ?? `Item ${index + 1}`,
+          value: readString(item.value) ?? readString(item.text) ?? readString(item.message) ?? ""
+        };
+      }
+      const text = readString(item);
+      if (!text) {
+        return null;
+      }
+      return {
+        kind: "content",
+        label: `Item ${index + 1}`,
+        value: text
+      };
+    })
+    .filter(
+      (
+        item
+      ): item is { kind: string; label: string; value: string } =>
+        Boolean(item?.value)
+    );
+}
+
+function normalizeSectionMetadata(
+  value: unknown,
+  fallback: SectionMetadata
+): SectionMetadata {
+  if (!isRecord(value)) {
+    return fallback;
+  }
+  return {
+    repoId: readString(value.repoId) ?? fallback.repoId,
+    pageId: readString(value.pageId) ?? fallback.pageId,
+    sectionId: readString(value.sectionId) ?? fallback.sectionId,
+    pageName: readString(value.pageName) ?? fallback.pageName,
+    sectionName: readString(value.sectionName) ?? fallback.sectionName,
+    sourceFile: readString(value.sourceFile) ?? fallback.sourceFile
+  };
+}
+
+function normalizeStyleDefinitions(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value
+    .map((item) => {
+      if (!isRecord(item)) {
+        return null;
+      }
+      const className = readString(item.className);
+      const properties = isRecord(item.properties)
+        ? Object.fromEntries(
+            Object.entries(item.properties)
+              .map(([key, val]) => [key, readString(val)])
+              .filter((entry): entry is [string, string] => Boolean(entry[1]))
+          )
+        : {};
+      if (!className) {
+        return null;
+      }
+      return {
+        className,
+        properties,
+        shared: item.shared === true
+      };
+    })
+    .filter(
+      (item): item is { className: string; properties: Record<string, string>; shared: boolean } =>
+        Boolean(item)
+    );
+}
+
+function normalizeVariableBindings(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value
+    .map((item) => {
+      if (!isRecord(item)) {
+        return null;
+      }
+      const property = readString(item.property);
+      const variableName = readString(item.variableName);
+      const nodeId = readString(item.nodeId) ?? "selected-section";
+      if (!property || !variableName) {
+        return null;
+      }
+      return { nodeId, property, variableName };
+    })
+    .filter(
+      (item): item is { nodeId: string; property: string; variableName: string } =>
+        Boolean(item)
+    );
+}
+
+function normalizeElementTree(value: unknown, fallback: BuildNode): BuildNode {
+  if (!isRecord(value)) {
+    return fallback;
+  }
+
+  const children = Array.isArray(value.children)
+    ? value.children.map((child) => normalizeElementTree(child, fallback)).filter(Boolean)
+    : [];
+
+  return {
+    id: readString(value.id) ?? fallback.id,
+    type: readString(value.type) ?? fallback.type,
+    tag: readString(value.tag) ?? fallback.tag,
+    label: readString(value.label) ?? undefined,
+    textContent: readString(value.textContent) ?? undefined,
+    classNames: stringArray(value.classNames),
+    children
+  };
+}
+
+function normalizeAnalysis(raw: unknown, fallback: SectionAnalysis): SectionAnalysis {
+  if (!isRecord(raw)) {
+    return fallback;
+  }
+  return {
+    sectionMetadata: normalizeSectionMetadata(raw.sectionMetadata, fallback.sectionMetadata),
+    summary: readString(raw.summary) ?? fallback.summary,
+    goals: stringArray(raw.goals),
+    content: contentArray(raw.content),
+    recommendedMode:
+      raw.recommendedMode === "fullAssist" ||
+      raw.recommendedMode === "skeletonThenStyle" ||
+      raw.recommendedMode === "styleExisting"
+        ? raw.recommendedMode
+        : fallback.recommendedMode,
+    reusableClasses: stringArray(raw.reusableClasses),
+    suggestedNewClasses: stringArray(raw.suggestedNewClasses),
+    warnings: warningsArray(raw.warnings)
+  };
+}
+
+function normalizeSkeleton(raw: unknown, fallback: SkeletonPlan): SkeletonPlan {
+  if (!isRecord(raw)) {
+    return fallback;
+  }
+  return {
+    sectionMetadata: normalizeSectionMetadata(raw.sectionMetadata, fallback.sectionMetadata),
+    treeText: readString(raw.treeText) ?? fallback.treeText,
+    elementTree: normalizeElementTree(raw.elementTree, fallback.elementTree),
+    reusableClasses: stringArray(raw.reusableClasses),
+    suggestedNewClasses: stringArray(raw.suggestedNewClasses),
+    warnings: warningsArray(raw.warnings)
+  };
+}
+
+function normalizeStyling(raw: unknown, fallback: StylingPlan): StylingPlan {
+  if (!isRecord(raw)) {
+    return fallback;
+  }
+  return {
+    sectionMetadata: normalizeSectionMetadata(raw.sectionMetadata, fallback.sectionMetadata),
+    mode:
+      raw.mode === "fullAssist" ||
+      raw.mode === "skeletonThenStyle" ||
+      raw.mode === "styleExisting"
+        ? raw.mode
+        : fallback.mode,
+    styleDefinitions: normalizeStyleDefinitions(raw.styleDefinitions),
+    variableBindings: normalizeVariableBindings(raw.variableBindings),
+    reusableClasses: stringArray(raw.reusableClasses),
+    suggestedNewClasses: stringArray(raw.suggestedNewClasses),
+    requiredClassNames: stringArray(raw.requiredClassNames),
+    notes: stringArray(raw.notes),
+    warnings: warningsArray(raw.warnings)
+  };
+}
+
+function normalizeVerification(
+  raw: unknown,
+  fallback: SectionVerification
+): SectionVerification {
+  if (!isRecord(raw)) {
+    return fallback;
+  }
+  return {
+    sectionMetadata: normalizeSectionMetadata(raw.sectionMetadata, fallback.sectionMetadata),
+    summary: readString(raw.summary) ?? fallback.summary,
+    readyForApproval:
+      typeof raw.readyForApproval === "boolean"
+        ? raw.readyForApproval
+        : fallback.readyForApproval,
+    warnings: warningsArray(raw.warnings)
+  };
 }
 
 function extractHeading(
@@ -195,7 +448,7 @@ export class OpenAIPlanningProvider implements PlanningProvider {
     };
 
     try {
-      return await this.requestJson<SectionAnalysis>(
+      const raw = await this.requestJson<unknown>(
         "section_analysis",
         [
           "You are planning a Webflow Designer section workflow.",
@@ -205,6 +458,7 @@ export class OpenAIPlanningProvider implements PlanningProvider {
         ].join(" "),
         input
       );
+      return normalizeAnalysis(raw, fallback);
     } catch (error) {
       return {
         ...fallback,
@@ -242,7 +496,7 @@ export class OpenAIPlanningProvider implements PlanningProvider {
     };
 
     try {
-      return await this.requestJson<SkeletonPlan>(
+      const raw = await this.requestJson<unknown>(
         "skeleton_plan",
         [
           "You are generating an approved-first Webflow section skeleton.",
@@ -252,6 +506,7 @@ export class OpenAIPlanningProvider implements PlanningProvider {
         ].join(" "),
         input
       );
+      return normalizeSkeleton(raw, fallback);
     } catch (error) {
       return {
         ...fallback,
@@ -291,7 +546,7 @@ export class OpenAIPlanningProvider implements PlanningProvider {
     };
 
     try {
-      return await this.requestJson<StylingPlan>(
+      const raw = await this.requestJson<unknown>(
         "styling_plan",
         [
           "You are generating a Webflow section styling plan.",
@@ -301,6 +556,7 @@ export class OpenAIPlanningProvider implements PlanningProvider {
         ].join(" "),
         input
       );
+      return normalizeStyling(raw, fallback);
     } catch (error) {
       return {
         ...fallback,
@@ -329,7 +585,7 @@ export class OpenAIPlanningProvider implements PlanningProvider {
     };
 
     try {
-      return await this.requestJson<SectionVerification>(
+      const raw = await this.requestJson<unknown>(
         "section_verification",
         [
           "You are verifying whether the current section work is ready for approval.",
@@ -338,6 +594,7 @@ export class OpenAIPlanningProvider implements PlanningProvider {
         ].join(" "),
         input
       );
+      return normalizeVerification(raw, fallback);
     } catch (error) {
       return {
         ...fallback,

@@ -8,7 +8,6 @@ import {
   SkeletonPlan,
   StylingPlan,
   WorkflowMode,
-  WorkflowQueueItem,
   WorkflowQueueResponse,
   WebflowSitePage
 } from "../../src/shared/contracts.js";
@@ -100,6 +99,28 @@ function warningList(items: Array<{ message: string; level?: string }> | undefin
   ));
 }
 
+function modeLabel(mode: WorkflowMode) {
+  switch (mode) {
+    case "fullAssist":
+      return "Full assist";
+    case "skeletonThenStyle":
+      return "Skeleton then style";
+    case "styleExisting":
+      return "Style existing section";
+  }
+}
+
+function statusLabel(value: string | null | undefined) {
+  return value ? value.replace(/_/g, " ") : "—";
+}
+
+function truncateTarget(value: string | null | undefined) {
+  if (!value) {
+    return "None";
+  }
+  return value.length > 52 ? `${value.slice(0, 52)}…` : value;
+}
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<ScreenTab>("settings");
   const [mappingFilter, setMappingFilter] = useState<MappingFilter>("all");
@@ -154,6 +175,57 @@ export default function App() {
   );
   const currentPageReady =
     Boolean(currentMapping?.repoPageId) && Boolean(queue?.repoPage);
+  const completedCount =
+    queue?.items.filter((item) => ["approved", "skipped"].includes(item.status)).length ?? 0;
+  const totalCount = queue?.items.length ?? 0;
+  const hasReviewContent =
+    Boolean(analysis || skeleton || styling || verification || lastExecution);
+
+  const primaryAction = useMemo(() => {
+    if (!currentQueueItem) {
+      return null;
+    }
+    if (!analysis) {
+      return {
+        label: "Analyze section",
+        action: analyzeCurrentSection
+      };
+    }
+    if (workflowMode !== "styleExisting" && !skeleton) {
+      return {
+        label: "Generate skeleton",
+        action: generateCurrentSkeleton
+      };
+    }
+    if (workflowMode !== "styleExisting" && skeleton && !currentTargetNodeId) {
+      return {
+        label: "Insert skeleton",
+        action: insertSkeleton
+      };
+    }
+    if (!styling || !verification?.readyForApproval) {
+      return {
+        label: styling ? "Refine styling" : "Style current section",
+        action: styleCurrentSection
+      };
+    }
+    return {
+      label: "Approve and next",
+      action: approveAndNext
+    };
+  }, [
+    analysis,
+    approveAndNext,
+    currentQueueItem,
+    currentTargetNodeId,
+    generateCurrentSkeleton,
+    insertSkeleton,
+    skeleton,
+    styleCurrentSection,
+    styling,
+    verification?.readyForApproval,
+    workflowMode
+  ]);
 
   async function refreshDesignerContext() {
     try {
@@ -639,8 +711,12 @@ export default function App() {
         ))}
       </nav>
 
-      {loading ? <p className="wf-banner wf-banner-info">{loading}…</p> : null}
-      {error ? <p className="wf-banner wf-banner-error">{error}</p> : null}
+      {activeTab !== "workspace" && loading ? (
+        <p className="wf-banner wf-banner-info">{loading}…</p>
+      ) : null}
+      {activeTab !== "workspace" && error ? (
+        <p className="wf-banner wf-banner-error">{error}</p>
+      ) : null}
 
       {activeTab === "settings" ? (
         <section className="wf-panel-stack">
@@ -794,215 +870,263 @@ export default function App() {
       ) : null}
 
       {activeTab === "workspace" ? (
-        <section className="wf-panel-stack">
-          <article className="wf-panel">
-            <div className="wf-panel-header">
-              <div>
-                <h2>Current page</h2>
-                <p>Use the mapped repo page to walk sections in order.</p>
+        <section className="wf-workspace-grid">
+          <div className="wf-panel-stack">
+            <article className="wf-panel">
+              <div className="wf-panel-header">
+                <div>
+                  <h2>Current page</h2>
+                  <p>Use the mapped repo page to walk sections in order.</p>
+                </div>
+                <span className="wf-status-pill">{completedCount}/{totalCount || 0} done</span>
               </div>
-            </div>
-            <div className="wf-detail-list">
-              <span>Webflow page</span>
-              <span>{designerContext?.pageName ?? designerContext?.pageId ?? "Unavailable"}</span>
-              <span>Mapped repo page</span>
-              <span>{queue?.repoPage?.name ?? currentMapping?.repoPageName ?? "Unmapped"}</span>
-              <span>Current mode</span>
-              <span>
-                {workflowMode === "fullAssist"
-                  ? "Full assist"
-                  : workflowMode === "skeletonThenStyle"
-                    ? "Skeleton then style"
-                    : "Style existing section"}
-              </span>
-            </div>
-            {!currentPageReady ? (
-              <p className="wf-empty-state">
-                This Webflow page is not mapped yet. Open Page mappings and choose a repo page.
-              </p>
-            ) : null}
-          </article>
+              <div className="wf-detail-list">
+                <span>Webflow page</span>
+                <span>{designerContext?.pageName ?? designerContext?.pageId ?? "Unavailable"}</span>
+                <span>Mapped repo page</span>
+                <span>{queue?.repoPage?.name ?? currentMapping?.repoPageName ?? "Unmapped"}</span>
+                <span>Current mode</span>
+                <span>{modeLabel(workflowMode as WorkflowMode)}</span>
+              </div>
+              {!currentPageReady ? (
+                <p className="wf-empty-state">
+                  This Webflow page is not mapped yet. Open Page mappings and choose a repo page.
+                </p>
+              ) : null}
+            </article>
 
-          <article className="wf-panel">
-            <div className="wf-panel-header">
-              <div>
-                <h2>Section queue</h2>
-                <p>Approve or skip sections to move to the next one automatically.</p>
+            <article className="wf-panel">
+              <div className="wf-panel-header">
+                <div>
+                  <h2>Section queue</h2>
+                  <p>Select a section or continue from the next unfinished one.</p>
+                </div>
               </div>
-            </div>
-            {queue?.items.length ? (
-              <div className="wf-queue-list">
-                {queue.items.map((item) => (
-                  <button
-                    type="button"
-                    key={item.repoSectionId}
-                    className={`wf-queue-item ${
-                      selectedSectionId === item.repoSectionId ? "is-active" : ""
-                    }`}
-                    onClick={() => setSelectedSectionId(item.repoSectionId)}
+              {queue?.items.length ? (
+                <div className="wf-queue-list">
+                  {queue.items.map((item) => (
+                    <button
+                      type="button"
+                      key={item.repoSectionId}
+                      className={`wf-queue-item ${
+                        selectedSectionId === item.repoSectionId ? "is-active" : ""
+                      }`}
+                      onClick={() => setSelectedSectionId(item.repoSectionId)}
+                    >
+                      <span>{item.sectionName}</span>
+                      <span>{statusLabel(item.status)}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="wf-empty-state">No queued sections for the current page.</p>
+              )}
+            </article>
+          </div>
+
+          <div className="wf-panel-stack">
+            <article className="wf-panel wf-panel-sticky">
+              <div className="wf-panel-header">
+                <div>
+                  <h2>Current section</h2>
+                  <p>One clear next step, plus review beside the active work.</p>
+                </div>
+                {currentQueueItem ? (
+                  <span className="wf-status-pill">{statusLabel(currentQueueItem.status)}</span>
+                ) : null}
+              </div>
+
+              {error ? (
+                <p className="wf-banner wf-banner-error wf-banner-inline">{error}</p>
+              ) : null}
+              {loading ? (
+                <p className="wf-banner wf-banner-info wf-banner-inline">{loading}…</p>
+              ) : null}
+
+              <div className="wf-current-section-grid">
+                <div className="wf-detail-list">
+                  <span>Section</span>
+                  <span>{currentQueueItem?.sectionName ?? "None selected"}</span>
+                  <span>Designer target</span>
+                  <span title={currentTargetNodeId ?? designerContext?.selectedElementId ?? ""}>
+                    {truncateTarget(currentTargetNodeId ?? designerContext?.selectedElementId)}
+                  </span>
+                  <span>Placement</span>
+                  <span>{placementMode === "append" ? "Append to page body" : "Insert after selection"}</span>
+                </div>
+
+                <label>
+                  Placement
+                  <select
+                    value={placementMode}
+                    onChange={(event) =>
+                      setPlacementMode(event.target.value as "append" | "afterSelected")
+                    }
                   >
-                    <span>{item.sectionName}</span>
-                    <span>{item.status.replace(/_/g, " ")}</span>
-                  </button>
-                ))}
+                    <option value="append">Append to page body</option>
+                    <option value="afterSelected">Insert after selected element</option>
+                  </select>
+                </label>
               </div>
-            ) : (
-              <p className="wf-empty-state">No queued sections for the current page.</p>
-            )}
-          </article>
 
-          <article className="wf-panel">
-            <div className="wf-panel-header">
-              <div>
-                <h2>Current section</h2>
-                <p>Analyze, build, style, review, then advance to the next section.</p>
-              </div>
-            </div>
-            <div className="wf-detail-list">
-              <span>Section</span>
-              <span>{currentQueueItem?.sectionName ?? "None selected"}</span>
-              <span>Status</span>
-              <span>{currentQueueItem?.status.replace(/_/g, " ") ?? "—"}</span>
-              <span>Designer target</span>
-              <span>{currentTargetNodeId ?? designerContext?.selectedElementId ?? "None"}</span>
-            </div>
-
-            <div className="wf-form-grid">
-              <label>
-                Placement
-                <select
-                  value={placementMode}
-                  onChange={(event) =>
-                    setPlacementMode(event.target.value as "append" | "afterSelected")
-                  }
+              <div className="wf-primary-action">
+                <button
+                  type="button"
+                  className="wf-primary-button"
+                  onClick={primaryAction?.action}
+                  disabled={!primaryAction || !currentQueueItem || Boolean(loading)}
                 >
-                  <option value="append">Append to page body</option>
-                  <option value="afterSelected">Insert after selected element</option>
-                </select>
-              </label>
-            </div>
-
-            <div className="wf-actions">
-              <button type="button" onClick={analyzeCurrentSection} disabled={!currentQueueItem}>
-                Analyze section
-              </button>
-              <button type="button" className="wf-secondary" onClick={generateCurrentSkeleton} disabled={!currentQueueItem}>
-                Generate skeleton
-              </button>
-              <button type="button" className="wf-secondary" onClick={insertSkeleton} disabled={!skeleton}>
-                Insert skeleton
-              </button>
-              <button type="button" onClick={styleCurrentSection} disabled={!currentQueueItem}>
-                Style current section
-              </button>
-              <button type="button" className="wf-secondary" onClick={approveAndNext} disabled={!currentQueueItem}>
-                Approve and next
-              </button>
-              <button type="button" className="wf-secondary" onClick={skipCurrentSection} disabled={!currentQueueItem}>
-                Skip section
-              </button>
-              <button type="button" className="wf-secondary" onClick={markPageComplete} disabled={!queue?.items.length}>
-                Mark page complete
-              </button>
-            </div>
-          </article>
-
-          <article className="wf-panel">
-            <div className="wf-panel-header">
-              <div>
-                <h2>Review</h2>
-                <p>Keep the output explicit and reviewable before you approve it.</p>
+                  {primaryAction?.label ?? "Choose a section"}
+                </button>
               </div>
-            </div>
 
-            <div className="wf-review-stack">
-              <section className="wf-review-block">
-                <h3>Analysis</h3>
-                {analysis ? (
-                  <>
-                    <p>{analysis.summary}</p>
-                    {analysis.goals.length ? (
-                      <ul>{analysis.goals.map((goal) => <li key={goal}>{goal}</li>)}</ul>
-                    ) : null}
-                    {analysis.warnings.length ? <ul>{warningList(analysis.warnings)}</ul> : null}
-                  </>
-                ) : (
-                  <p className="wf-empty-state">Run analysis for the current section.</p>
-                )}
-              </section>
+              <div className="wf-secondary-actions">
+                <button
+                  type="button"
+                  className="wf-secondary wf-action-chip"
+                  onClick={generateCurrentSkeleton}
+                  disabled={!currentQueueItem || Boolean(loading)}
+                >
+                  Generate skeleton
+                </button>
+                <button
+                  type="button"
+                  className="wf-secondary wf-action-chip"
+                  onClick={insertSkeleton}
+                  disabled={!skeleton || Boolean(loading)}
+                >
+                  Insert skeleton
+                </button>
+                <button
+                  type="button"
+                  className="wf-secondary wf-action-chip"
+                  onClick={approveAndNext}
+                  disabled={!currentQueueItem || Boolean(loading)}
+                >
+                  Approve and next
+                </button>
+                <button
+                  type="button"
+                  className="wf-secondary wf-action-chip"
+                  onClick={skipCurrentSection}
+                  disabled={!currentQueueItem || Boolean(loading)}
+                >
+                  Skip
+                </button>
+                <button
+                  type="button"
+                  className="wf-secondary wf-action-chip"
+                  onClick={markPageComplete}
+                  disabled={!queue?.items.length || Boolean(loading)}
+                >
+                  Mark page complete
+                </button>
+              </div>
+            </article>
 
-              <section className="wf-review-block">
-                <h3>Skeleton</h3>
-                {skeleton ? (
-                  <>
-                    <pre>{skeleton.treeText}</pre>
-                    {skeleton.warnings.length ? <ul>{warningList(skeleton.warnings)}</ul> : null}
-                  </>
-                ) : (
-                  <p className="wf-empty-state">Generate a skeleton when you need structure help.</p>
-                )}
-              </section>
+            <article className="wf-panel">
+              <div className="wf-panel-header">
+                <div>
+                  <h2>Review</h2>
+                  <p>Review stays next to the active section so errors and output are visible together.</p>
+                </div>
+              </div>
 
-              <section className="wf-review-block">
-                <h3>Styling</h3>
-                {styling ? (
-                  <>
-                    {styling.notes.length ? (
-                      <ul>{styling.notes.map((note) => <li key={note}>{note}</li>)}</ul>
-                    ) : null}
-                    <p>
-                      {styling.reusableClasses.length} reusable classes,{" "}
-                      {styling.suggestedNewClasses.length} suggested new classes,{" "}
-                      {styling.styleDefinitions.length} style definitions.
-                    </p>
-                    {styling.warnings.length ? <ul>{warningList(styling.warnings)}</ul> : null}
-                  </>
-                ) : (
-                  <p className="wf-empty-state">Style the current section after structure is ready.</p>
-                )}
-              </section>
+              {!hasReviewContent ? (
+                <p className="wf-empty-state">
+                  Run the next step for this section to populate the review panel.
+                </p>
+              ) : null}
 
-              <section className="wf-review-block">
-                <h3>Verification</h3>
-                {verification ? (
-                  <>
-                    <p>{verification.summary}</p>
-                    <p>
-                      {verification.readyForApproval
-                        ? "This section is ready for approval."
-                        : "Review this section before approval."}
-                    </p>
-                    {verification.warnings.length ? (
-                      <ul>{warningList(verification.warnings)}</ul>
-                    ) : null}
-                  </>
-                ) : (
-                  <p className="wf-empty-state">Verification will appear after styling.</p>
-                )}
-              </section>
+              <div className="wf-review-stack">
+                <section className="wf-review-block">
+                  <h3>Analysis</h3>
+                  {analysis ? (
+                    <>
+                      <p>{analysis.summary}</p>
+                      {analysis.goals.length ? (
+                        <ul>{analysis.goals.map((goal) => <li key={goal}>{goal}</li>)}</ul>
+                      ) : null}
+                      {analysis.warnings.length ? <ul>{warningList(analysis.warnings)}</ul> : null}
+                    </>
+                  ) : (
+                    <p className="wf-empty-state">No analysis yet.</p>
+                  )}
+                </section>
 
-              <section className="wf-review-block">
-                <h3>Execution</h3>
-                {lastExecution ? (
-                  <>
-                    <p>{lastExecution.success ? "Last action succeeded." : "Last action failed."}</p>
-                    <p>
-                      Created nodes: {lastExecution.createdNodeIds.length}. Created classes:{" "}
-                      {lastExecution.createdClasses.length}.
-                    </p>
-                    {lastExecution.warnings.length ? (
-                      <ul>{warningList(lastExecution.warnings)}</ul>
-                    ) : null}
-                    {lastExecution.rollbackOutcome ? (
-                      <p>{lastExecution.rollbackOutcome.details}</p>
-                    ) : null}
-                  </>
-                ) : (
-                  <p className="wf-empty-state">No section action has run in this session.</p>
-                )}
-              </section>
-            </div>
-          </article>
+                <section className="wf-review-block">
+                  <h3>Skeleton</h3>
+                  {skeleton ? (
+                    <>
+                      <pre>{skeleton.treeText}</pre>
+                      {skeleton.warnings.length ? <ul>{warningList(skeleton.warnings)}</ul> : null}
+                    </>
+                  ) : (
+                    <p className="wf-empty-state">No skeleton generated yet.</p>
+                  )}
+                </section>
+
+                <section className="wf-review-block">
+                  <h3>Styling</h3>
+                  {styling ? (
+                    <>
+                      <p>
+                        {styling.reusableClasses.length} reusable classes,{" "}
+                        {styling.suggestedNewClasses.length} suggested new classes,{" "}
+                        {styling.styleDefinitions.length} style definitions.
+                      </p>
+                      {styling.notes.length ? (
+                        <ul>{styling.notes.map((note) => <li key={note}>{note}</li>)}</ul>
+                      ) : null}
+                      {styling.warnings.length ? <ul>{warningList(styling.warnings)}</ul> : null}
+                    </>
+                  ) : (
+                    <p className="wf-empty-state">No styling plan yet.</p>
+                  )}
+                </section>
+
+                <section className="wf-review-block">
+                  <h3>Execution</h3>
+                  {lastExecution ? (
+                    <>
+                      <p>{lastExecution.success ? "Last action succeeded." : "Last action failed."}</p>
+                      <p>
+                        Created nodes: {lastExecution.createdNodeIds.length}. Created classes:{" "}
+                        {lastExecution.createdClasses.length}.
+                      </p>
+                      {lastExecution.warnings.length ? (
+                        <ul>{warningList(lastExecution.warnings)}</ul>
+                      ) : null}
+                      {lastExecution.rollbackOutcome ? (
+                        <p>{lastExecution.rollbackOutcome.details}</p>
+                      ) : null}
+                    </>
+                  ) : (
+                    <p className="wf-empty-state">No execution results yet.</p>
+                  )}
+                </section>
+
+                <section className="wf-review-block">
+                  <h3>Verification</h3>
+                  {verification ? (
+                    <>
+                      <p>{verification.summary}</p>
+                      <p>
+                        {verification.readyForApproval
+                          ? "This section is ready for approval."
+                          : "Review this section before approval."}
+                      </p>
+                      {verification.warnings.length ? (
+                        <ul>{warningList(verification.warnings)}</ul>
+                      ) : null}
+                    </>
+                  ) : (
+                    <p className="wf-empty-state">No verification yet.</p>
+                  )}
+                </section>
+              </div>
+            </article>
+          </div>
         </section>
       ) : null}
     </main>

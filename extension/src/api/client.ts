@@ -62,7 +62,27 @@ async function request<T>(
 
   if (!response.ok) {
     const body = await response.text();
-    throw new Error(body || `Request failed: ${response.status}`);
+    try {
+      const payload = JSON.parse(body) as {
+        error?: string;
+        details?: {
+          formErrors?: string[];
+          fieldErrors?: Record<string, string[]>;
+        };
+      };
+      const formError = payload.details?.formErrors?.find(Boolean);
+      const fieldError = payload.details?.fieldErrors
+        ? Object.values(payload.details.fieldErrors).flat().find(Boolean)
+        : null;
+      throw new Error(
+        formError ??
+          fieldError ??
+          payload.error ??
+          `Request failed: ${response.status}`
+      );
+    } catch {
+      throw new Error(body || `Request failed: ${response.status}`);
+    }
   }
 
   return (await response.json()) as T;
