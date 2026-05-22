@@ -454,27 +454,34 @@ export class WorkflowService {
       request.requestedBy,
       request.webflowSiteId
     );
-    const queue = await this.getQueue(
+
+    const mappings = await this.repository.getPageMappings(
       request.repoId,
       request.webflowSiteId,
-      request.webflowPageId,
       request.requestedBy
     );
-    if (!queue.mapping?.repoPageId || !queue.repoPage) {
+    const mapping =
+      mappings.find((item) => item.webflowPageId === request.webflowPageId) ?? null;
+    if (!mapping?.repoPageId) {
       throw new Error("Current Webflow page is not mapped to a repo page.");
     }
 
+    const repoPage = await this.repository.getPage(mapping.repoPageId);
+    if (!repoPage) {
+      throw new Error("Mapped repo page no longer exists.");
+    }
+
     const section = await this.repository.getSection(request.sectionId);
-    if (!section || section.pageId !== queue.repoPage.id) {
+    if (!section || section.pageId !== repoPage.id) {
       throw new Error("Selected repo section does not belong to the mapped repo page.");
     }
 
     const sharedStyleContext = await this.getSharedStyleContext(request.webflowSiteId);
     const metadata = {
       repoId: request.repoId,
-      pageId: queue.repoPage.id,
+      pageId: repoPage.id,
       sectionId: section.id,
-      pageName: queue.repoPage.name,
+      pageName: repoPage.name,
       sectionName: section.name,
       sourceFile: section.sourceFile
     };
@@ -484,12 +491,26 @@ export class WorkflowService {
           request.requestedBy,
           request.webflowSiteId,
           request.webflowPageId,
-          queue.repoPage.id
+          repoPage.id
         )
       ).find((item) => item.repoSectionId === section.id) ?? null;
 
     return {
-      queue,
+      queue: {
+        mapping: {
+          id: mapping.id,
+          webflowSiteId: mapping.webflowSiteId,
+          webflowPageId: mapping.webflowPageId,
+          webflowPageName: mapping.webflowPageName,
+          webflowPageRoute: mapping.webflowPageRoute,
+          repoId: mapping.repoId,
+          repoPageId: mapping.repoPageId,
+          userId: mapping.userId
+        },
+        repoPage,
+        items: [],
+        nextSectionId: null
+      },
       state,
       section,
       metadata,
