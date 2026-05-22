@@ -140,6 +140,12 @@ export const sharedStyleContexts = pgTable("shared_style_contexts", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull()
 });
 
+export const appBlobs = pgTable("app_blobs", {
+  key: text("key").primaryKey(),
+  valueJson: jsonb("value_json").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull()
+});
+
 export const buildJobs = pgTable(
   "build_jobs",
   {

@@ -1,4 +1,5 @@
 import { MemoryBlobStore } from "./blob/blob-store.js";
+import { PostgresBlobStore } from "./blob/postgres-blob-store.js";
 import { getEnv } from "./env.js";
 import { MisRepoExtractor } from "./extractor/mis-extractor.js";
 import { createGitHubRepositoryClient } from "./github/client.js";
@@ -18,7 +19,9 @@ function createServices() {
   const repository = env.databaseUrl
     ? new PostgresAppRepository(env.databaseUrl)
     : new MemoryAppRepository();
-  const blobStore = new MemoryBlobStore();
+  const blobStore = env.databaseUrl
+    ? new PostgresBlobStore(env.databaseUrl)
+    : new MemoryBlobStore();
   const extractor = new MisRepoExtractor();
   const planner = new HeuristicBuildPlanner();
   const validator = new BuildPlanValidator();
