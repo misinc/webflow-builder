@@ -1,6 +1,7 @@
 {
   "name": "Repo Section Builder",
   "apiVersion": "2",
+  "size": "large",
   "publicDir": "extension/dist",
   "appConnections": [],
   "telemetry": {

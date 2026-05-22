@@ -1,11 +1,17 @@
+import { corsHeaders } from "./cors.js";
 import { ZodSchema } from "zod";
 import { HandlerEvent, HandlerResponse } from "./types.js";
 
-export function json(statusCode: number, payload: unknown): HandlerResponse {
+export function json(
+  statusCode: number,
+  payload: unknown,
+  event?: HandlerEvent
+): HandlerResponse {
   return {
     statusCode,
     headers: {
-      "content-type": "application/json"
+      "content-type": "application/json",
+      ...corsHeaders(event)
     },
     body: JSON.stringify(payload)
   };

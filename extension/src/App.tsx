@@ -31,10 +31,10 @@ function usePersistentState(
 export default function App() {
   const [userId, setUserId] = usePersistentState("builder-user-id", "karim");
   const [repoOwner, setRepoOwner] = usePersistentState("builder-repo-owner", "misinc");
-  const [repoName, setRepoName] = usePersistentState("builder-repo-name", "atlas");
+  const [repoName, setRepoName] = usePersistentState("builder-repo-name", "webflow-builder");
   const [repoUrl, setRepoUrl] = usePersistentState(
     "builder-repo-url",
-    "https://github.com/misinc/atlas"
+    "https://github.com/misinc/webflow-builder"
   );
   const [repoId, setRepoId] = useState<string | null>(null);
   const [tree, setTree] = useState<RepoTreeResponse | null>(null);
