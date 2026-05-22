@@ -17,6 +17,48 @@ interface OpenAIMessage {
   content: string;
 }
 
+const WEBFLOW_SITE_BUILDER_RULES = [
+  "Work on one section at a time.",
+  "Preserve the site's existing design system, variables, fonts, navbar, and footer.",
+  "Only plan the current body section unless the section requires shared global behavior.",
+  "Reuse existing Client-First wrappers and shared classes whenever possible.",
+  "Any new classes must follow functional Client-First naming and must not be page-specific.",
+  "Prefer functional names like section_solutions, solutions_content, solutions_list, and solutions_item.",
+  "Do not use page-specific names such as home_hero, homepage_services, or section_home-hero.",
+  "Do not introduce hardcoded hex colors, opacity colors, or custom properties when existing variables and standard Designer controls can handle the work.",
+  "Treat fresh Relume or Client-First clones as structural scaffolding, not as the final brand system.",
+  "When clone defaults conflict with the actual project design, follow the project design and existing approved site patterns.",
+  "When proposing a skeleton, keep the tree shallow, readable, and section-scoped.",
+  "Use the real existing class names when reusing classes.",
+  "Prefer semantic content elements over generic wrappers when layout wrappers are not required.",
+  "Stop at the current section and produce output that is explicit and reviewable before approval."
+].join(" ");
+
+const SKELETON_TREE_RULES = [
+  "Return a faithful section skeleton tree in the style: section.section-name -> div.padding-global -> div.container-large -> div.padding-section-medium -> div.section-name_component -> div.section-name_content / div.section-name_visual.",
+  "Prefer existing shared wrappers such as padding-global, container-large, and padding-section-medium when they exist in the shared class inventory.",
+  "If the shared class inventory contains a more exact match such as text-size-small, text-size-medium, heading-style-h2, or is-text-small, prefer that exact class over broader fuzzy matches.",
+  "Do not invent navbar-specific or unrelated layout classes such as navbar wrappers for a body section unless the source section genuinely reuses them.",
+  "If a class is reused, use the exact class name from the shared class inventory.",
+  "If a class is new, make it functional, reusable, and Client-First compatible.",
+  "Return JSON only."
+].join(" ");
+
+const STYLING_RULES = [
+  "Style only the current section against the approved structure or selected section root.",
+  "Prefer reusing existing shared typography, spacing, container, button, and utility classes before suggesting new classes.",
+  "Use existing variables for color application instead of hardcoded values.",
+  "Do not mutate unrelated sections, navbar, footer, or global styles unless explicitly required by the current section.",
+  "When new classes are necessary, keep them functional and section-scoped by purpose, not by page name.",
+  "Return JSON only."
+].join(" ");
+
+const VERIFICATION_RULES = [
+  "Verify only the current section.",
+  "Confirm existing classes were reused where possible, new classes remain Client-First-compatible, no page-specific naming was introduced, and the result is ready for section approval only if it matches the source intent.",
+  "Return JSON only."
+].join(" ");
+
 function safeJsonParse<T>(content: string): T {
   try {
     return JSON.parse(content) as T;
@@ -451,9 +493,10 @@ export class OpenAIPlanningProvider implements PlanningProvider {
       const raw = await this.requestJson<unknown>(
         "section_analysis",
         [
-          "You are planning a Webflow Designer section workflow.",
-          "Analyze the provided repo section and recommend the best workflow mode.",
-          "Prefer reusing existing shared classes and preserving Client-First naming.",
+          "You are planning a Webflow Designer section workflow using the Webflow site builder operating rules.",
+          WEBFLOW_SITE_BUILDER_RULES,
+          "Analyze the provided repo section and recommend the best workflow mode for this single section.",
+          "Call out likely reusable wrappers, typography classes, spacing utilities, and component candidates.",
           "Return JSON with sectionMetadata, summary, goals, content, recommendedMode, reusableClasses, suggestedNewClasses, warnings."
         ].join(" "),
         input
@@ -499,9 +542,11 @@ export class OpenAIPlanningProvider implements PlanningProvider {
       const raw = await this.requestJson<unknown>(
         "skeleton_plan",
         [
-          "You are generating an approved-first Webflow section skeleton.",
-          "Return a compact, faithful skeleton tree for the provided section.",
-          "Prefer existing shared classes. Only propose minimal new Client-First-compatible classes.",
+          "You are generating an approved-first Webflow section skeleton using the Webflow site builder rules.",
+          WEBFLOW_SITE_BUILDER_RULES,
+          SKELETON_TREE_RULES,
+          "Return a compact but faithful skeleton for the provided section and shared class inventory.",
+          "The skeleton must be suitable for explicit review before styling begins.",
           "Return JSON with sectionMetadata, treeText, elementTree, reusableClasses, suggestedNewClasses, warnings."
         ].join(" "),
         input
@@ -549,9 +594,11 @@ export class OpenAIPlanningProvider implements PlanningProvider {
       const raw = await this.requestJson<unknown>(
         "styling_plan",
         [
-          "You are generating a Webflow section styling plan.",
+          "You are generating a Webflow section styling plan using the Webflow site builder rules.",
+          WEBFLOW_SITE_BUILDER_RULES,
+          STYLING_RULES,
           "Preserve the site's existing design system, variables, and reusable classes.",
-          "Prefer updating existing shared classes over introducing new ones.",
+          "Prefer updating existing shared classes over introducing new ones, and only add new classes when existing classes cannot support the section cleanly.",
           "Return JSON with sectionMetadata, mode, styleDefinitions, variableBindings, reusableClasses, suggestedNewClasses, requiredClassNames, notes, warnings."
         ].join(" "),
         input
@@ -588,7 +635,9 @@ export class OpenAIPlanningProvider implements PlanningProvider {
       const raw = await this.requestJson<unknown>(
         "section_verification",
         [
-          "You are verifying whether the current section work is ready for approval.",
+          "You are verifying whether the current section work is ready for approval using the Webflow site builder rules.",
+          WEBFLOW_SITE_BUILDER_RULES,
+          VERIFICATION_RULES,
           "Assess the provided section context and workflow mode.",
           "Return JSON with sectionMetadata, summary, readyForApproval, warnings."
         ].join(" "),
