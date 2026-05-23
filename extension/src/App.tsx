@@ -28,6 +28,7 @@ const backend = new BackendClient();
 const bridge = getWebflowBridge();
 const bridgeLabel = getWebflowBridgeLabel();
 const DESIGNER_CONTEXT_POLL_MS = 1500;
+const EMPTY_REPO_PAGES: Awaited<ReturnType<BackendClient["getRepoTree"]>>["pages"] = [];
 
 type ScreenTab = "settings" | "mappings" | "workspace";
 type MappingFilter = "all" | "mapped" | "unmapped";
@@ -252,6 +253,20 @@ function queueStatusTone(status: string) {
   return "pending";
 }
 
+function sameDesignerContext(
+  left: DesignerContext | null,
+  right: DesignerContext | null
+) {
+  return (
+    left?.siteId === right?.siteId &&
+    left?.siteName === right?.siteName &&
+    left?.pageId === right?.pageId &&
+    left?.pageName === right?.pageName &&
+    left?.mode === right?.mode &&
+    left?.selectedElementId === right?.selectedElementId
+  );
+}
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<ScreenTab>("settings");
   const [mappingFilter, setMappingFilter] = useState<MappingFilter>("all");
@@ -290,7 +305,7 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [hasBootstrappedRepo, setHasBootstrappedRepo] = useState(false);
 
-  const repoPages = repoTree?.pages ?? [];
+  const repoPages = useMemo(() => repoTree?.pages ?? EMPTY_REPO_PAGES, [repoTree]);
   const repoPageNameById = useMemo(
     () =>
       new Map(
@@ -373,7 +388,9 @@ export default function App() {
   async function refreshDesignerContext() {
     try {
       const context = await bridge.getContext();
-      setDesignerContext(context);
+      setDesignerContext((current) =>
+        sameDesignerContext(current, context) ? current : context
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to read Webflow context.");
     }
