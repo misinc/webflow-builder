@@ -188,6 +188,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+function canAppendChildren(element: WebflowElement | null): element is WebflowElement {
+  return Boolean(element?.append) && element?.children !== false;
+}
+
 class RealWebflowDesignerBridge implements WebflowDesignerBridge {
   private readonly stylesById = new Map<string, WebflowStyle>();
   private readonly stylesByName = new Map<string, WebflowStyle>();
@@ -245,12 +249,12 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
       return { parent: null, after: explicitAfter };
     }
 
-    if (explicitParent?.children) {
+    if (canAppendChildren(explicitParent)) {
       return { parent: explicitParent, after: null };
     }
 
     const selected = await this.getSelectedElement();
-    if (selected?.children) {
+    if (canAppendChildren(selected)) {
       return { parent: selected, after: null };
     }
     if (selected) {
@@ -486,7 +490,7 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
 
     if (after) {
       created = await after.after(presetOrTag);
-    } else if (parent?.children) {
+    } else if (canAppendChildren(parent)) {
       created = await parent.append(presetOrTag);
     } else {
       throw new Error(
