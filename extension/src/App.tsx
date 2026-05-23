@@ -27,7 +27,6 @@ import {
 const backend = new BackendClient();
 const bridge = getWebflowBridge();
 const bridgeLabel = getWebflowBridgeLabel();
-const DESIGNER_CONTEXT_POLL_MS = 1500;
 const EMPTY_REPO_PAGES: Awaited<ReturnType<BackendClient["getRepoTree"]>>["pages"] = [];
 
 type ScreenTab = "settings" | "mappings" | "workspace";
@@ -447,10 +446,6 @@ export default function App() {
 
   useEffect(() => {
     refreshDesignerContext();
-    const interval = window.setInterval(() => {
-      refreshDesignerContext();
-    }, DESIGNER_CONTEXT_POLL_MS);
-    return () => window.clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -1143,7 +1138,16 @@ export default function App() {
                   <h2>Current page</h2>
                   <p>Use the mapped repo page to walk sections in order.</p>
                 </div>
-                <span className="wf-status-pill">{completedCount}/{totalCount || 0} done</span>
+                <div className="wf-inline-controls">
+                  <button
+                    type="button"
+                    className="wf-secondary"
+                    onClick={refreshDesignerContext}
+                  >
+                    Refresh Designer context
+                  </button>
+                  <span className="wf-status-pill">{completedCount}/{totalCount || 0} done</span>
+                </div>
               </div>
               <div className="wf-detail-list">
                 <span>Webflow page</span>
