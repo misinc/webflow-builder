@@ -420,6 +420,20 @@ ul {
   line-height: 1.5;
 }
 
+.wf-skeleton-preview {
+  margin: 0;
+  min-height: 220px;
+  border: 1px solid var(--wf-app-border);
+  border-radius: 10px;
+  background: var(--wf-app-surface);
+  color: var(--wf-app-text);
+  padding: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
 .wf-current-section-grid {
   display: grid;
   gap: 12px;
