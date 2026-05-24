@@ -319,6 +319,124 @@ function normalizeElementTree(value: unknown, fallback: BuildNode): BuildNode {
   };
 }
 
+function countAssignedClasses(node: BuildNode): number {
+  return (
+    node.classNames.length +
+    node.children.reduce((total, child) => total + countAssignedClasses(child), 0)
+  );
+}
+
+function normalizeTagToken(token: string): string {
+  return token.replace(/^<\/?/, "").replace(/\/?>$/, "").trim();
+}
+
+function inferNodeType(tag: string): BuildNode["type"] {
+  if (tag === "img") return "image";
+  if (tag === "button" || tag === "a") return "button";
+  if (tag === "ul" || tag === "ol") return "list";
+  if (tag === "li") return "listItem";
+  if (/^h[1-6]$/i.test(tag)) return "heading";
+  if (tag === "p" || tag === "span" || tag === "label") return "text";
+  return "box";
+}
+
+function parseElementTreeFromTreeText(treeText: string, fallback: BuildNode): BuildNode | null {
+  const compact = treeText.trim();
+  if (!compact) {
+    return null;
+  }
+
+  const expanded =
+    compact.includes("\n") || !compact.includes("->")
+      ? compact
+      : compact
+          .split(/\s*->\s*/)
+          .map((part, index) => `${"  ".repeat(index)}${part.trim()}`)
+          .join("\n");
+
+  const lines = expanded
+    .split("\n")
+    .map((line) => line.replace(/\t/g, "  "))
+    .filter((line) => line.trim().length > 0);
+
+  if (!lines.length) {
+    return null;
+  }
+
+  const lineIndent = (rawLine: string) =>
+    rawLine
+      .replace(/│/g, " ")
+      .replace(/[├└]─\s*/g, "")
+      .match(/^ */)?.[0].length ?? 0;
+  const lineContent = (rawLine: string) =>
+    rawLine.replace(/^[\s│]*[├└]─\s*/, "").trim();
+  const indentUnit =
+    Math.min(
+      ...lines
+        .map(lineIndent)
+        .filter((indent) => indent > 0)
+    ) || 2;
+
+  const stack: Array<{ depth: number; node: BuildNode }> = [];
+  let root: BuildNode | null = null;
+
+  for (const [index, rawLine] of lines.entries()) {
+    let content = lineContent(rawLine);
+    const depth = Math.floor(lineIndent(rawLine) / indentUnit);
+    const textMatch = content.match(/\s+"([^"]*)"$/);
+    const textContent = textMatch?.[1];
+    if (textMatch?.index !== undefined) {
+      content = content.slice(0, textMatch.index).trim();
+    }
+
+    const tokens = content.split(/\s+/).filter(Boolean);
+    const structureToken = tokens[0];
+    if (!structureToken) {
+      return null;
+    }
+
+    const parts = structureToken.split(".").filter(Boolean);
+    const tag = normalizeTagToken(parts[0] ?? "");
+    if (!tag) {
+      return null;
+    }
+
+    const classNames = [
+      ...parts.slice(1),
+      ...tokens
+        .slice(1)
+        .map((token) => token.replace(/^\./, "").trim())
+        .filter((token) => Boolean(token) && token !== "/" && token !== "->")
+    ];
+
+    const node: BuildNode = {
+      id: `${fallback.id}-parsed-${index}`,
+      type: inferNodeType(tag),
+      tag,
+      textContent,
+      classNames,
+      children: []
+    };
+
+    while (stack.length > 0 && stack[stack.length - 1].depth >= depth) {
+      stack.pop();
+    }
+
+    if (!stack.length) {
+      if (root) {
+        return null;
+      }
+      root = node;
+    } else {
+      stack[stack.length - 1].node.children.push(node);
+    }
+
+    stack.push({ depth, node });
+  }
+
+  return root;
+}
+
 function normalizeAnalysis(raw: unknown, fallback: SectionAnalysis): SectionAnalysis {
   if (!isRecord(raw)) {
     return fallback;
@@ -345,10 +463,17 @@ function normalizeSkeleton(raw: unknown, fallback: SkeletonPlan): SkeletonPlan {
   if (!isRecord(raw)) {
     return fallback;
   }
+  const treeText = readString(raw.treeText) ?? fallback.treeText;
+  const elementTree = normalizeElementTree(raw.elementTree, fallback.elementTree);
+  const recoveredElementTree =
+    countAssignedClasses(elementTree) === 0
+      ? parseElementTreeFromTreeText(treeText, fallback.elementTree) ?? elementTree
+      : elementTree;
+
   return {
     sectionMetadata: normalizeSectionMetadata(raw.sectionMetadata, fallback.sectionMetadata),
-    treeText: readString(raw.treeText) ?? fallback.treeText,
-    elementTree: normalizeElementTree(raw.elementTree, fallback.elementTree),
+    treeText,
+    elementTree: recoveredElementTree,
     reusableClasses: stringArray(raw.reusableClasses),
     suggestedNewClasses: stringArray(raw.suggestedNewClasses),
     warnings: warningsArray(raw.warnings)
