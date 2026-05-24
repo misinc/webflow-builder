@@ -17,6 +17,7 @@ export function MapPagesScreen() {
   const {
     hasUnsavedMappings,
     isBootstrapping,
+    isLoadingWorkflowState,
     isMutating,
     loadingLabel,
     mappingRows,
@@ -25,6 +26,10 @@ export function MapPagesScreen() {
     updateMapping
   } = useAppState();
   const mappedCount = mappingRows.filter((row) => row.mappingStatus === "mapped").length;
+  const isLoadingMappings = isBootstrapping || (isLoadingWorkflowState && mappingRows.length === 0);
+  const mappingSummaryLabel = isLoadingMappings
+    ? "Loading pages…"
+    : `${mappedCount} of ${mappingRows.length || 0} mapped`;
 
   return (
     <Panel
@@ -32,7 +37,7 @@ export function MapPagesScreen() {
       footer={
         <>
           <span className="text-[11.5px] text-wb-text-tertiary">
-            {loadingLabel ?? `${mappedCount} of ${mappingRows.length || 0} mapped`}
+            {loadingLabel ?? mappingSummaryLabel}
           </span>
           <div className="flex-1" />
           <Button variant="ghost" onClick={() => navigate("choose-repo")}>
@@ -65,7 +70,7 @@ export function MapPagesScreen() {
           Page mapping
         </div>
         <span className="text-[11px] text-wb-text-tertiary tabular-nums">
-          {mappedCount} of {mappingRows.length || 0} mapped
+          {mappingSummaryLabel}
         </span>
       </div>
 
@@ -76,7 +81,7 @@ export function MapPagesScreen() {
             <div />
             <div>Repo page</div>
           </div>
-          {isBootstrapping ? (
+          {isLoadingMappings ? (
             <div className="py-10 flex flex-col items-center justify-center gap-3 text-center">
               <Spinner size={24} thickness={2.5} />
               <div>

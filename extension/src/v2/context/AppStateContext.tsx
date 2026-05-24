@@ -37,7 +37,7 @@ import {
   executeSkeletonPlanIntoRoot,
   type ExecutionSummary
 } from "../../executor/buildExecutor.js";
-import { parseSkeletonTreeText } from "../../skeleton/tree.js";
+import { parseSkeletonTreeText, sanitizeSkeletonPlan } from "../../skeleton/tree.js";
 import {
   mergeExecutionSummaries,
   rollbackExecutionSummary
@@ -217,6 +217,7 @@ interface SectionOutcomeSummary {
 
 interface AppStateContextValue {
   isBootstrapping: boolean;
+  isLoadingWorkflowState: boolean;
   isMutating: boolean;
   loadingLabel: string | null;
   error: string | null;
@@ -286,6 +287,7 @@ const AppStateContext = createContext<AppStateContextValue | null>(null);
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
   const [isBootstrapping, setIsBootstrapping] = useState(true);
+  const [isLoadingWorkflowState, setIsLoadingWorkflowState] = useState(true);
   const [isMutating, setIsMutating] = useState(false);
   const [loadingLabel, setLoadingLabel] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -605,6 +607,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
+    setIsLoadingWorkflowState(true);
+
     async function loadWorkflowData() {
       try {
         await refreshWorkflowState();
@@ -613,6 +617,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           setError(
             err instanceof Error ? err.message : "Failed to load mappings and workflow progress."
           );
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingWorkflowState(false);
         }
       }
     }
@@ -960,7 +968,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         const request = currentWorkflowRequest(nextSectionId);
         const nextAnalysis = await backend.analyzeSection(request, controller.signal);
         setAnalysis(nextAnalysis);
-        const nextSkeleton = await backend.generateSkeleton(request, controller.signal);
+        const nextSkeleton = sanitizeSkeletonPlan(
+          await backend.generateSkeleton(request, controller.signal)
+        );
         setSkeleton(nextSkeleton);
         setSkeletonDraft(nextSkeleton.treeText);
         return true;
@@ -1018,7 +1028,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       return false;
     }
     try {
-      const parsed = parseSkeletonTreeText(skeleton, skeletonDraft || skeleton.treeText);
+      const parsed = sanitizeSkeletonPlan(
+        parseSkeletonTreeText(skeleton, skeletonDraft || skeleton.treeText)
+      );
       setSkeleton(parsed);
       setSkeletonDraft(parsed.treeText);
       setIsEditingSkeleton(false);
@@ -1084,9 +1096,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
         const editableSkeleton =
           isEditingSkeleton && skeletonDraft.trim()
-            ? parseSkeletonTreeText(skeleton, skeletonDraft)
+            ? sanitizeSkeletonPlan(parseSkeletonTreeText(skeleton, skeletonDraft))
             : skeleton;
-        let targetNodeId = currentTargetNodeId ?? context.selectedElementId;
+        let targetNodeId = currentTargetNodeId;
         let nodeExecution: ExecutionSummary | null = null;
         const executionParts: ExecutionSummary[] = [];
         const updatePendingExecution = () => {
@@ -1504,6 +1516,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AppStateContextValue>(
     () => ({
       isBootstrapping,
+      isLoadingWorkflowState,
       isMutating,
       loadingLabel,
       error,
@@ -1603,6 +1616,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       hasUnsavedMappings,
       isBootstrapping,
       isEditingSkeleton,
+      isLoadingWorkflowState,
       isMutating,
       lastExecution,
       lastCompletedSection,

@@ -76,13 +76,20 @@ function InitialRouteResolver() {
     activeMapping,
     designerContext,
     isBootstrapping,
+    isLoadingWorkflowState,
     livePages,
     mappingRows,
     selectedRepoId
   } = useAppState();
 
   useEffect(() => {
-    if (isBootstrapping || historyLength !== 1 || current !== 'welcome' || !selectedRepoId) {
+    if (
+      isBootstrapping ||
+      isLoadingWorkflowState ||
+      historyLength !== 1 ||
+      current !== 'welcome' ||
+      !selectedRepoId
+    ) {
       return;
     }
 
@@ -103,6 +110,7 @@ function InitialRouteResolver() {
     designerContext?.pageId,
     historyLength,
     isBootstrapping,
+    isLoadingWorkflowState,
     livePages.length,
     mappingRows.length,
     replace,

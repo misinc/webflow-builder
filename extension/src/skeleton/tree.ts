@@ -1,5 +1,7 @@
 import { BuildNode, SkeletonPlan } from "../../../src/shared/contracts.js";
 
+const LEAF_TAGS = new Set(["img", "source", "br", "hr", "input", "meta", "link"]);
+
 function inferNodeType(tag: string): BuildNode["type"] {
   if (tag === "img") return "image";
   if (tag === "button" || tag === "a") return "button";
@@ -115,5 +117,51 @@ export function parseSkeletonTreeText(
     ...plan,
     treeText,
     elementTree: root
+  };
+}
+
+export function sanitizeSkeletonPlan(plan: SkeletonPlan): SkeletonPlan {
+  const warnings = [...plan.warnings];
+
+  function sanitizeNode(node: BuildNode): {
+    node: BuildNode;
+    hoistedChildren: BuildNode[];
+  } {
+    const normalizedChildren: BuildNode[] = [];
+    for (const child of node.children) {
+      const sanitizedChild = sanitizeNode(child);
+      normalizedChildren.push(sanitizedChild.node, ...sanitizedChild.hoistedChildren);
+    }
+
+    if (LEAF_TAGS.has(node.tag) && normalizedChildren.length > 0) {
+      warnings.push({
+        code: "invalid-leaf-children",
+        message: `Moved children out of <${node.tag}> because it cannot contain nested elements.`,
+        level: "warning"
+      });
+      return {
+        node: {
+          ...node,
+          children: []
+        },
+        hoistedChildren: normalizedChildren
+      };
+    }
+
+    return {
+      node: {
+        ...node,
+        children: normalizedChildren
+      },
+      hoistedChildren: []
+    };
+  }
+
+  const sanitizedRoot = sanitizeNode(plan.elementTree);
+
+  return {
+    ...plan,
+    elementTree: sanitizedRoot.node,
+    warnings
   };
 }

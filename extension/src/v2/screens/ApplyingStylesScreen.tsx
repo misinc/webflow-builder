@@ -10,10 +10,11 @@ import { useNavigation } from "../context/NavigationContext";
 import { useAppState } from "../context/AppStateContext";
 
 interface StyleLine {
-  selector: string;
+  selector?: string;
   prop?: string;
   value?: string;
   pending?: boolean;
+  message?: string;
 }
 
 export function ApplyingStylesScreen() {
@@ -27,6 +28,7 @@ export function ApplyingStylesScreen() {
     loadingLabel,
     rollbackCurrentExecution,
     selectedSection,
+    skeleton,
     styling,
     verification
   } = useAppState();
@@ -48,10 +50,13 @@ export function ApplyingStylesScreen() {
     }) ?? [];
 
   if (isMutating && appliedLines.length === 0) {
+    const pendingClassName =
+      skeleton?.elementTree.classNames.find((className) => className !== "section") ??
+      skeleton?.elementTree.classNames[0];
     appliedLines.push({
-      selector: ".section-root",
-      prop: "applying styles",
-      pending: true
+      selector: pendingClassName ? `.${pendingClassName}` : undefined,
+      pending: true,
+      message: styling ? "Applying styles" : "Preparing styling plan"
     });
   }
 
@@ -118,7 +123,9 @@ export function ApplyingStylesScreen() {
           count={
             styling
               ? `${styling.styleDefinitions.length} classes · ${styling.variableBindings.length} variables`
-              : "Waiting on styling plan"
+              : isMutating
+                ? "Generating styling plan"
+                : "Waiting on styling plan"
           }
         />
 
@@ -137,8 +144,8 @@ function StyleLineRow({ line }: { line: StyleLine }) {
     return (
       <div className="flex gap-2 px-2 py-0.5 rounded text-wb-text-secondary opacity-70">
         <span className="text-wb-accent w-3 text-center">…</span>
-        <span className="text-[#8ad7ff]">{line.selector}</span>
-        <span className="text-[#ffd479]">{line.prop}</span>
+        {line.selector ? <span className="text-[#8ad7ff]">{line.selector}</span> : null}
+        <span className="text-[#ffd479]">{line.message ?? "Working…"}</span>
       </div>
     );
   }
