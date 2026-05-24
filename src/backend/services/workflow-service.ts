@@ -740,22 +740,13 @@ export class WorkflowService {
       sharedStyleContext: context.sharedStyleContext,
       selectedElementId: request.selectedElementId ?? null
     };
-    const maxAttempts = 3;
-    let skeleton: SkeletonPlan | null = null;
+    const skeleton = skeletonPlanSchema.parse(
+      await this.planningProvider.generateSkeleton(providerInput)
+    );
 
-    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-      const candidate = skeletonPlanSchema.parse(
-        await this.planningProvider.generateSkeleton(providerInput)
-      );
-      if (countAssignedClasses(candidate.elementTree) > 0) {
-        skeleton = candidate;
-        break;
-      }
-    }
-
-    if (!skeleton) {
+    if (countAssignedClasses(skeleton.elementTree) === 0) {
       throw new Error(
-        `OpenAI skeleton output omitted class names after ${maxAttempts} attempts. Retry generation.`
+        "OpenAI skeleton output omitted class names. Use Regenerate to retry."
       );
     }
 
