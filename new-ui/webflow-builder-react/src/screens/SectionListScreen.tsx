@@ -62,7 +62,7 @@ export function SectionListScreen() {
         }
       />
 
-      {/* Component opportunities banner — dismissible, only shown when patterns detected */}
+      {/* Component opportunities suggestion banner */}
       {!bannerDismissed && !isPageComplete && (
         <div
           className="px-5 py-2.5 flex items-center gap-3 flex-shrink-0 border-b"
@@ -86,7 +86,7 @@ export function SectionListScreen() {
               4 component opportunities detected
             </div>
             <div className="text-[11px] text-wb-text-tertiary mt-px">
-              Make repeating patterns reusable before building this page.
+              Reusable patterns worth considering as Webflow Components for easier site maintenance.
             </div>
           </div>
           <button

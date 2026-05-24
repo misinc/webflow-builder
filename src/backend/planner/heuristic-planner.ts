@@ -7,7 +7,7 @@ import {
   SharedStyleContext
 } from "../../shared/contracts.js";
 import { dedupe } from "../../shared/client-first.js";
-import { slugify } from "../utils.js";
+import { slugify } from "../../shared/text.js";
 
 function sharedOrFallback(
   sharedStyleContext: SharedStyleContext,

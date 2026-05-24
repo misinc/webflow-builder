@@ -67,6 +67,7 @@ export const repoPageSchema = z.object({
   name: z.string().min(1),
   route: z.string().min(1),
   sourceFile: z.string().min(1),
+  sourceCode: z.string().optional(),
   sortOrder: z.number().int().nonnegative(),
   metadata: z.record(z.string(), z.unknown()).default({})
 });
@@ -78,6 +79,7 @@ export const repoSectionSchema = z.object({
   name: z.string().min(1),
   sectionKey: z.string().min(1),
   sourceFile: z.string().min(1),
+  sourceCode: z.string().optional(),
   importPath: z.string().min(1),
   sortOrder: z.number().int().nonnegative(),
   componentName: z.string().min(1),
@@ -288,6 +290,7 @@ export const sectionMetadataSchema = z.object({
 export const sectionAnalysisSchema = z.object({
   sectionMetadata: sectionMetadataSchema,
   summary: z.string().min(1),
+  sourceCode: z.string().default(""),
   goals: z.array(z.string()).default([]),
   content: z.array(
     z.object({

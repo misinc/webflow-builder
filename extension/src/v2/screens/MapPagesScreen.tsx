@@ -2,6 +2,7 @@ import { Home, FileText, ArrowRight, Plus } from "lucide-react";
 import { Panel, PanelContent } from "../components/Panel";
 import { Button } from "../components/Button";
 import { Stepper, type Step } from "../components/Stepper";
+import { Spinner } from "../components/Spinner";
 import { useNavigation } from "../context/NavigationContext";
 import { useAppState } from "../context/AppStateContext";
 
@@ -76,7 +77,17 @@ export function MapPagesScreen() {
             <div>Repo page</div>
           </div>
           {isBootstrapping ? (
-            <div className="py-6 text-[12.5px] text-wb-text-tertiary">Loading page mappings…</div>
+            <div className="py-10 flex flex-col items-center justify-center gap-3 text-center">
+              <Spinner size={24} thickness={2.5} />
+              <div>
+                <div className="text-[12.5px] text-wb-text-primary font-medium">
+                  Loading page mappings
+                </div>
+                <div className="text-[11.5px] text-wb-text-tertiary mt-1">
+                  Pulling live Webflow pages and saved repo mappings for this site.
+                </div>
+              </div>
+            </div>
           ) : (
             mappingRows.map((mapping, index) => (
               <div

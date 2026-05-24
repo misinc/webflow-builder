@@ -11,6 +11,7 @@ import {
 export interface DesignerContext {
   siteId: string | null;
   siteName: string | null;
+  siteDomain?: string | null;
   pageId: string | null;
   pageName: string | null;
   mode: "design" | "build" | "edit" | "preview" | "comment" | "unknown";
@@ -205,6 +206,12 @@ interface WebflowApi {
   createAsset?(fileBlob: File): Promise<WebflowAsset>;
 }
 
+interface WebflowSiteDomain {
+  url?: string;
+  default?: boolean;
+  stage?: "staging" | "production";
+}
+
 declare global {
   interface Window {
     __WEBFLOW_SECTION_BUILDER_BRIDGE__?: WebflowDesignerBridge;
@@ -256,6 +263,25 @@ function slugToRoute(slug: string | null | undefined, isHomepage = false): strin
     return null;
   }
   return slug.startsWith("/") ? slug : `/${slug}`;
+}
+
+function normalizeSiteDomain(siteInfo: Record<string, unknown>): string | null {
+  const domains = Array.isArray(siteInfo.domains)
+    ? (siteInfo.domains as WebflowSiteDomain[])
+    : [];
+  const preferred =
+    domains.find((domain) => domain.default && domain.stage === "production") ??
+    domains.find((domain) => domain.stage === "production") ??
+    domains.find((domain) => domain.default) ??
+    domains[0];
+
+  if (preferred?.url && typeof preferred.url === "string") {
+    return preferred.url.replace(/^https?:\/\//, "").replace(/\/+$/, "");
+  }
+
+  const shortName =
+    typeof siteInfo.shortName === "string" ? siteInfo.shortName.trim() : "";
+  return shortName ? `${shortName}.webflow.io` : null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -443,10 +469,12 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
     const context: DesignerContext = {
       siteId: siteInfo.siteId ?? null,
       siteName:
+        (typeof siteInfo.siteName === "string" ? siteInfo.siteName : null) ??
         (typeof siteInfo.name === "string" ? siteInfo.name : null) ??
         (typeof siteInfo.shortName === "string" ? siteInfo.shortName : null) ??
         (typeof siteInfo.displayName === "string" ? siteInfo.displayName : null) ??
         null,
+      siteDomain: normalizeSiteDomain(siteInfo),
       pageId: page?.id ?? null,
       pageName:
         (await page?.getName?.().catch(() => null)) ??
@@ -595,6 +623,7 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
     if (!this.api.createPage) {
       throw new Error("This version of the Webflow Designer API cannot create pages.");
     }
+    const previousPage = await this.api.getCurrentPage().catch(() => null);
     const page = await this.api.createPage();
     if (!page) {
       throw new Error("Webflow did not return the created page.");
@@ -607,6 +636,8 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
     }
     if (input.switchToNewPage && this.api.switchPage) {
       await this.api.switchPage(page);
+    } else if (!input.switchToNewPage && previousPage?.id && this.api.switchPage) {
+      await this.api.switchPage(previousPage).catch(() => undefined);
     }
 
     const name =
@@ -969,6 +1000,7 @@ class MockWebflowDesignerBridge implements WebflowDesignerBridge {
     return {
       siteId: "6a10876cde32438bc9f52304",
       siteName: "Relume Style Guide Clone",
+      siteDomain: "relume-style-guide-clone.webflow.io",
       pageId: currentPage?.id ?? null,
       pageName: currentPage?.name ?? null,
       mode: "design",
@@ -995,6 +1027,7 @@ class MockWebflowDesignerBridge implements WebflowDesignerBridge {
   }
 
   async createPage(input: CreatePageInput): Promise<WebflowSitePage> {
+    const previousPageId = this.currentPageId;
     const page: WebflowSitePage = {
       id: `mock-page-${Date.now().toString(36)}`,
       name: input.name,
@@ -1004,6 +1037,10 @@ class MockWebflowDesignerBridge implements WebflowDesignerBridge {
     this.pages = [...this.pages, page];
     if (input.switchToNewPage) {
       this.currentPageId = page.id;
+    } else if (previousPageId) {
+      this.currentPageId = previousPageId;
+    }
+    if (input.switchToNewPage || previousPageId) {
       this.listeners.forEach((listener) => listener());
     }
     return page;

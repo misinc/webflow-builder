@@ -35,6 +35,7 @@ export interface RepoTreeResponse {
       name: string;
       route: string;
       sourceFile: string;
+      sourceCode?: string;
       sortOrder: number;
       metadata: Record<string, unknown>;
     };
@@ -43,6 +44,7 @@ export interface RepoTreeResponse {
       name: string;
       sectionKey: string;
       sourceFile: string;
+      sourceCode?: string;
       sortOrder: number;
       componentName: string;
       metadata: Record<string, unknown>;

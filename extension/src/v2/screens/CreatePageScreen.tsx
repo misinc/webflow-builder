@@ -16,7 +16,7 @@ function slugify(value: string) {
 
 export function CreatePageScreen() {
   const { navigate } = useNavigation();
-  const { createPage, isMutating, loadingLabel, repoTree } = useAppState();
+  const { createPage, designerContext, isMutating, loadingLabel, repoTree } = useAppState();
   const [pageName, setPageName] = useState("Roadmap");
   const [slug, setSlug] = useState("/roadmap");
   const [repoPageId, setRepoPageId] = useState<string>("");
@@ -30,6 +30,7 @@ export function CreatePageScreen() {
       })),
     [repoTree?.pages]
   );
+  const siteDomain = designerContext?.siteDomain ?? "site.webflow.io";
 
   return (
     <Panel
@@ -87,7 +88,7 @@ export function CreatePageScreen() {
           <Field label="URL slug" help="Auto-generated from page name. You can change it before creating.">
             <div className="flex items-stretch bg-wb-input border border-white/[0.09] rounded-md h-9 overflow-hidden">
               <span className="font-mono text-[12px] text-wb-text-tertiary px-3 bg-white/[0.02] inline-flex items-center border-r border-white/[0.09]">
-                acme-studio.webflow.io
+                {siteDomain}
               </span>
               <input
                 type="text"

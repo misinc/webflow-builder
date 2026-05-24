@@ -80,6 +80,7 @@ function summarizeLayout(contentCount: number, layoutHints: string[]): string {
 
 function deterministicAnalysis(input: {
   metadata: SectionMetadata;
+  sourceCode: string;
   serializedSection: {
     summary: string;
     content: Array<{ kind: string; label: string; value: string }>;
@@ -158,6 +159,7 @@ function deterministicAnalysis(input: {
   return sectionAnalysisSchema.parse({
     sectionMetadata: metadata,
     summary,
+    sourceCode: input.sourceCode,
     goals,
     content,
     recommendedMode,
@@ -165,6 +167,17 @@ function deterministicAnalysis(input: {
     suggestedNewClasses,
     warnings
   });
+}
+
+function hasProviderFallbackWarning(
+  warnings: PlannerWarning[],
+  stage: "skeleton" | "styling" | "verification"
+) {
+  return warnings.some(
+    (warning) =>
+      warning.code === `${stage}-fallback` ||
+      warning.code === `${stage}-error`
+  );
 }
 
 function describeNodeTree(
@@ -182,6 +195,7 @@ function deterministicSkeleton(input: {
   metadata: SectionMetadata;
   sectionContext: SectionContext;
   sharedStyleContext: SharedStyleContext;
+  inheritedWarnings?: PlannerWarning[];
 }): SkeletonPlan {
   const planner = new HeuristicBuildPlanner();
   const plan = planner.plan({
@@ -201,7 +215,66 @@ function deterministicSkeleton(input: {
     elementTree: plan.elementTree,
     reusableClasses: reused,
     suggestedNewClasses: created,
-    warnings: plan.warnings
+    warnings: [...(input.inheritedWarnings ?? []), ...plan.warnings]
+  });
+}
+
+function deterministicStyling(input: {
+  metadata: SectionMetadata;
+  mode: WorkflowMode;
+  sectionContext: SectionContext;
+  projectContext: ReturnType<typeof createProjectContext>;
+  sharedStyleContext: SharedStyleContext;
+  inheritedWarnings?: PlannerWarning[];
+}): StylingPlan {
+  const planner = new HeuristicBuildPlanner();
+  const plan = planner.plan({
+    pageId: input.metadata.pageId,
+    sectionId: input.metadata.sectionId,
+    sectionContext: input.sectionContext,
+    projectContext: input.projectContext,
+    sharedStyleContext: input.sharedStyleContext
+  });
+
+  const reusableClasses = dedupe(
+    plan.classAssignments.flatMap((assignment) => assignment.reused)
+  );
+  const suggestedNewClasses = dedupe(
+    plan.classAssignments.flatMap((assignment) => assignment.created)
+  );
+
+  return stylingPlanSchema.parse({
+    sectionMetadata: input.metadata,
+    mode: input.mode,
+    styleDefinitions: plan.styleDefinitions,
+    variableBindings: plan.variableBindings,
+    reusableClasses,
+    suggestedNewClasses,
+    requiredClassNames: suggestedNewClasses,
+    notes: [
+      "Using deterministic styling fallback derived from repo structure and shared site classes.",
+      "Review the styled section visually before approval."
+    ],
+    warnings: [...(input.inheritedWarnings ?? []), ...plan.warnings]
+  });
+}
+
+function deterministicVerification(input: {
+  metadata: SectionMetadata;
+  inheritedWarnings?: PlannerWarning[];
+}): SectionVerification {
+  return sectionVerificationSchema.parse({
+    sectionMetadata: input.metadata,
+    summary:
+      "Automated verification fallback was used. Review the current section visually, then approve if it matches the source intent.",
+    readyForApproval: true,
+    warnings: [
+      ...(input.inheritedWarnings ?? []),
+      providerWarning(
+        "verification-manual-review",
+        "OpenAI verification was unavailable, so approval has been unlocked for manual review."
+      )
+    ]
   });
 }
 
@@ -497,7 +570,15 @@ export class WorkflowService {
       throw new Error("Selected repo section does not belong to the mapped repo page.");
     }
 
+    const snapshot = await this.getSnapshot(request.repoId);
     const sharedStyleContext = await this.getSharedStyleContext(request.webflowSiteId);
+    const sectionContext = this.extractor.buildSectionContext({
+      repoId: request.repoId,
+      page: repoPage,
+      section,
+      snapshot,
+      sharedStyleContext
+    });
     const metadata = {
       repoId: request.repoId,
       pageId: repoPage.id,
@@ -535,6 +616,7 @@ export class WorkflowService {
       state,
       section,
       metadata,
+      sectionContext,
       sharedStyleContext
     };
   }
@@ -645,6 +727,7 @@ export class WorkflowService {
     const context = await this.getLightweightSectionContext(request);
     const analysis = deterministicAnalysis({
       metadata: context.metadata,
+      sourceCode: context.sectionContext.sourceCode,
       serializedSection: this.minimalSerializedSection({
         pageName: context.queue.repoPage!.name,
         pageSourceFile: context.queue.repoPage!.sourceFile,
@@ -669,7 +752,7 @@ export class WorkflowService {
 
   async generateSkeleton(request: WorkflowSectionRequest): Promise<SkeletonPlan> {
     const context = await this.getSectionStateContext(request);
-    const skeleton = skeletonPlanSchema.parse(
+    const providerSkeleton = skeletonPlanSchema.parse(
       await this.planningProvider.generateSkeleton({
         metadata: context.metadata,
         mode: request.mode,
@@ -680,6 +763,14 @@ export class WorkflowService {
         selectedElementId: request.selectedElementId ?? null
       })
     );
+    const skeleton = hasProviderFallbackWarning(providerSkeleton.warnings, "skeleton")
+      ? deterministicSkeleton({
+          metadata: context.metadata,
+          sectionContext: context.sectionContext,
+          sharedStyleContext: context.sharedStyleContext,
+          inheritedWarnings: providerSkeleton.warnings
+        })
+      : providerSkeleton;
     const runId = await this.persistRun(
       request,
       context.queue.repoPage!.id,
@@ -693,7 +784,7 @@ export class WorkflowService {
 
   async styleSection(request: WorkflowSectionRequest): Promise<StylingPlan> {
     const context = await this.getSectionStateContext(request);
-    const styling = stylingPlanSchema.parse(
+    const providerStyling = stylingPlanSchema.parse(
       await this.planningProvider.generateStylingPlan({
         metadata: context.metadata,
         mode: request.mode,
@@ -704,6 +795,18 @@ export class WorkflowService {
         selectedElementId: request.selectedElementId ?? null
       })
     );
+    const styling =
+      providerStyling.styleDefinitions.length === 0 ||
+      hasProviderFallbackWarning(providerStyling.warnings, "styling")
+        ? deterministicStyling({
+            metadata: context.metadata,
+            mode: request.mode,
+            sectionContext: context.sectionContext,
+            projectContext: context.projectContext,
+            sharedStyleContext: context.sharedStyleContext,
+            inheritedWarnings: providerStyling.warnings
+          })
+        : providerStyling;
     const runId = await this.persistRun(
       request,
       context.queue.repoPage!.id,
@@ -717,7 +820,7 @@ export class WorkflowService {
 
   async verifySection(request: WorkflowSectionRequest): Promise<SectionVerification> {
     const context = await this.getSectionStateContext(request);
-    const verification = sectionVerificationSchema.parse(
+    const providerVerification = sectionVerificationSchema.parse(
       await this.planningProvider.verifySection({
         metadata: context.metadata,
         mode: request.mode,
@@ -728,6 +831,15 @@ export class WorkflowService {
         selectedElementId: request.selectedElementId ?? null
       })
     );
+    const verification = hasProviderFallbackWarning(
+      providerVerification.warnings,
+      "verification"
+    )
+      ? deterministicVerification({
+          metadata: context.metadata,
+          inheritedWarnings: providerVerification.warnings
+        })
+      : providerVerification;
     await this.persistRun(
       request,
       context.queue.repoPage!.id,

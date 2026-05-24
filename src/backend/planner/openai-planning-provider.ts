@@ -17,6 +17,8 @@ interface OpenAIMessage {
   content: string;
 }
 
+const OPENAI_REQUEST_TIMEOUT_MS = 20000;
+
 const WEBFLOW_SITE_BUILDER_RULES = [
   "Work on one section at a time.",
   "Preserve the site's existing design system, variables, fonts, navbar, and footer.",
@@ -319,6 +321,7 @@ function normalizeAnalysis(raw: unknown, fallback: SectionAnalysis): SectionAnal
   return {
     sectionMetadata: normalizeSectionMetadata(raw.sectionMetadata, fallback.sectionMetadata),
     summary: readString(raw.summary) ?? fallback.summary,
+    sourceCode: readString(raw.sourceCode) ?? fallback.sourceCode,
     goals: stringArray(raw.goals),
     content: contentArray(raw.content),
     recommendedMode:
@@ -485,25 +488,42 @@ export class OpenAIPlanningProvider implements PlanningProvider {
   ): Promise<T> {
     this.ensureConfigured();
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${this.apiKey}`
-      },
-      body: JSON.stringify({
-        model: this.model,
-        temperature: 0.2,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: systemPrompt },
-          {
-            role: "user",
-            content: `Return only JSON for ${name}.\n${userContext(input)}`
-          }
-        ] satisfies OpenAIMessage[]
-      })
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), OPENAI_REQUEST_TIMEOUT_MS);
+    let response: Response;
+    try {
+      response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        signal: controller.signal,
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${this.apiKey}`
+        },
+        body: JSON.stringify({
+          model: this.model,
+          temperature: 0.2,
+          response_format: { type: "json_object" },
+          messages: [
+            { role: "system", content: systemPrompt },
+            {
+              role: "user",
+              content: `Return only JSON for ${name}.\n${userContext(input)}`
+            }
+          ] satisfies OpenAIMessage[]
+        })
+      });
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        throw new Error(
+          `OpenAI ${name} timed out after ${Math.round(
+            OPENAI_REQUEST_TIMEOUT_MS / 1000
+          )} seconds.`
+        );
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     if (!response.ok) {
       const body = await response.text();
@@ -540,6 +560,7 @@ export class OpenAIPlanningProvider implements PlanningProvider {
     const fallback: SectionAnalysis = {
       sectionMetadata: input.metadata,
       summary: input.serializedSection.summary,
+      sourceCode: input.sectionContext.sourceCode,
       goals: input.serializedSection.layoutHints,
       content: input.serializedSection.content,
       recommendedMode: input.mode,

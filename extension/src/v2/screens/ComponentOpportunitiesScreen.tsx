@@ -1,73 +1,62 @@
 import { type ReactNode, useEffect, useState } from "react";
-import { LayoutPanelTop, RefreshCw, Check, Code as CodeIcon, Route } from "lucide-react";
+import {
+  CreditCard,
+  Heading1,
+  LayoutPanelTop,
+  MoveRight,
+  RefreshCw,
+  Code as CodeIcon
+} from "lucide-react";
 import { Panel } from "../components/Panel";
 import { Button } from "../components/Button";
 import { SectionDetailHeader } from "../components/Headers";
 import { AiBadge, Badge } from "../components/Badge";
 import { useNavigation } from "../context/NavigationContext";
 import { useAppState } from "../context/AppStateContext";
+import type { ComponentOpportunity } from "../../../../src/shared/contracts.js";
+
+type SuggestedPropType = "image" | "text" | "link";
+
+interface SuggestedProp {
+  name: string;
+  type: SuggestedPropType;
+  samples: string;
+  optional?: boolean;
+}
 
 export function ComponentOpportunitiesScreen() {
   const { navigate } = useNavigation();
   const {
     componentOpportunities,
-    createComponentsFromOpportunities,
-    createdComponentsByOpportunityId,
-    isMutating,
-    loadingLabel,
     refreshComponentOpportunities,
     resetComponentBanner
   } = useAppState();
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [activeId, setActiveId] = useState<string | null>(componentOpportunities[0]?.id ?? null);
 
   useEffect(() => {
-    setSelectedIds(
-      componentOpportunities
-        .filter(
-          (opportunity) =>
-            opportunity.selectedByDefault && !createdComponentsByOpportunityId[opportunity.id]
-        )
-        .map((opportunity) => opportunity.id)
-    );
-    setActiveId(componentOpportunities[0]?.id ?? null);
-  }, [componentOpportunities, createdComponentsByOpportunityId]);
-
-  const creatableSelectedIds = selectedIds.filter(
-    (id) => !createdComponentsByOpportunityId[id]
-  );
+    if (!componentOpportunities.some((opportunity) => opportunity.id === activeId)) {
+      setActiveId(componentOpportunities[0]?.id ?? null);
+    }
+  }, [activeId, componentOpportunities]);
 
   const activeOpportunity =
     componentOpportunities.find((opportunity) => opportunity.id === activeId) ??
     componentOpportunities[0] ??
     null;
-
   return (
     <Panel
       onClose={() => navigate("section-list")}
       footer={
         <>
-          <Button variant="ghost" size="sm" onClick={() => navigate("section-list")}>
-            Skip for now
-          </Button>
           <div className="flex-1" />
-          <span className="text-[11px] text-wb-text-tertiary mr-2">
-            {loadingLabel ?? `${creatableSelectedIds.length} components selected`}
-          </span>
-          <Button
-            variant="primary"
-            disabled={creatableSelectedIds.length === 0 || isMutating}
-            onClick={() => {
-              void createComponentsFromOpportunities(creatableSelectedIds);
-            }}
-          >
-            Create {creatableSelectedIds.length} components
+          <Button variant="primary" onClick={() => navigate("section-list")}>
+            Back to sections
           </Button>
         </>
       }
     >
       <SectionDetailHeader
-        eyebrow="Setup · across all pages"
+        eyebrow="Across all pages"
         title="Component opportunities"
         onBack={() => navigate("section-list")}
         badge={<AiBadge>AI scanned</AiBadge>}
@@ -76,10 +65,11 @@ export function ComponentOpportunitiesScreen() {
       <div className="px-5 py-3 bg-wb-surface-1 border-b border-white/[0.06] flex items-center gap-3 flex-shrink-0">
         <div className="flex-1">
           <div className="text-[12.5px] text-wb-text-primary font-medium">
-            {componentOpportunities.length} reusable patterns detected in the synced repo
+            {componentOpportunities.length} reusable patterns detected across{" "}
+            {countUniqueSourceFiles(componentOpportunities)} files
           </div>
           <div className="text-[11.5px] text-wb-text-tertiary mt-0.5">
-            Detected patterns can now be promoted into Webflow components from this screen.
+            Patterns worth considering as Webflow Components for easier maintenance across your site.
           </div>
         </div>
         <Button
@@ -98,38 +88,32 @@ export function ComponentOpportunitiesScreen() {
       <div className="flex flex-1 min-h-0">
         <div className="w-[42%] border-r border-white/[0.09] flex flex-col min-w-0">
           <div className="px-4 py-2.5 border-b border-white/[0.09] text-[11px] font-semibold text-wb-text-tertiary uppercase tracking-wider flex items-center justify-between flex-shrink-0 bg-black/[0.12]">
-              <span>Detected patterns</span>
-              <span className="text-[10.5px] text-wb-text-tertiary font-medium normal-case tracking-normal">
-              {creatableSelectedIds.length} of {componentOpportunities.length} selected
+            <span>Detected patterns</span>
+            <span className="text-[10.5px] text-wb-text-tertiary font-medium normal-case tracking-normal">
+              {componentOpportunities.length} found
             </span>
           </div>
           <div className="overflow-auto flex-1 px-2 py-1.5">
             {componentOpportunities.length === 0 ? (
               <div className="px-3 py-6 text-[12px] text-wb-text-tertiary">
-                No repeating component patterns met the threshold in the current repo.
+                No repeating component patterns met the current threshold in the synced repo.
               </div>
             ) : (
               componentOpportunities.map((opportunity) => (
                 <OpportunityRow
                   key={opportunity.id}
-                  active={activeId === opportunity.id}
-                  checked={selectedIds.includes(opportunity.id)}
-                  name={opportunity.name}
-                  confidence={opportunity.confidence}
-                  instances={opportunity.instances}
-                  files={opportunity.files}
-                  created={Boolean(createdComponentsByOpportunityId[opportunity.id])}
+                  opportunity={opportunity}
+                  active={opportunity.id === activeOpportunity?.id}
                   onClick={() => setActiveId(opportunity.id)}
-                  onToggle={() =>
-                    setSelectedIds((current) =>
-                      current.includes(opportunity.id)
-                        ? current.filter((id) => id !== opportunity.id)
-                        : [...current, opportunity.id]
-                    )
-                  }
                 />
               ))
             )}
+            {componentOpportunities.length > 0 ? (
+              <div className="px-3 pt-3 mt-1.5 border-t border-white/[0.06] text-[11.5px] text-wb-text-tertiary leading-relaxed">
+                Patterns with very low repetition are hidden by default. Lower the threshold when
+                you want broader suggestions.
+              </div>
+            ) : null}
           </div>
         </div>
 
@@ -140,50 +124,42 @@ export function ComponentOpportunitiesScreen() {
           <div className="overflow-y-auto flex-1 px-5 py-4.5">
             {activeOpportunity ? (
               <>
-                <Field label="Component name">
-                  <input
-                    type="text"
-                    value={activeOpportunity.name}
-                    readOnly
-                    className="w-full h-9 bg-wb-input border border-white/[0.09] rounded-md px-2.5 text-wb-text-primary text-[14px] font-medium outline-none"
-                  />
-                </Field>
-
-                <Field label="Signals">
-                  <div className="bg-wb-surface-1 border border-white/[0.09] rounded-md p-3 text-[12px] text-wb-text-secondary space-y-2">
-                    <div>
-                      Confidence:{" "}
-                      <span className="text-wb-text-primary capitalize">
-                        {activeOpportunity.confidence}
-                      </span>
-                    </div>
-                    <div>
-                      Instances:{" "}
-                      <span className="text-wb-text-primary">{activeOpportunity.instances}</span>
-                    </div>
-                    <div>
-                      Files: <span className="text-wb-text-primary">{activeOpportunity.files}</span>
-                    </div>
+                <Field label="Suggested name">
+                  <div className="w-full h-9 bg-wb-input border border-white/[0.09] rounded-md px-2.5 text-wb-text-primary text-[14px] font-medium flex items-center">
+                    {activeOpportunity.name}
                   </div>
                 </Field>
 
-                <Field label={`Routes · ${activeOpportunity.sampleRoutes.length}`}>
-                  <div className="flex flex-col gap-1.5">
-                    {activeOpportunity.sampleRoutes.map((route) => (
-                      <div
-                        key={route}
-                        className="flex items-center gap-2 px-2.5 py-1.5 bg-white/[0.02] rounded text-[11.5px] text-wb-text-secondary font-mono"
-                      >
-                        <Route size={12} className="text-wb-text-tertiary flex-shrink-0" />
-                        <span>{route}</span>
-                      </div>
+                <Field
+                  label={`Suggested props · ${buildOpportunityPreview(activeOpportunity).suggestedProps.length} detected`}
+                >
+                  <div className="bg-wb-surface-1 border border-white/[0.09] rounded-md overflow-hidden">
+                    <div className="grid grid-cols-[110px_80px_1fr] gap-2.5 px-3 py-2 bg-black/[0.12] border-b border-white/[0.06] text-[10px] font-semibold text-wb-text-tertiary uppercase tracking-wider">
+                      <div>Name</div>
+                      <div>Type</div>
+                      <div>Samples</div>
+                    </div>
+                    {buildOpportunityPreview(activeOpportunity).suggestedProps.map((prop, index) => (
+                      <PropRow
+                        key={`${prop.name}-${index}`}
+                        prop={prop}
+                        last={
+                          index ===
+                          buildOpportunityPreview(activeOpportunity).suggestedProps.length - 1
+                        }
+                      />
                     ))}
+                  </div>
+                  <div className="text-[10.5px] text-wb-text-tertiary mt-1.5">
+                    Prop suggestions are advisory. Use them when you later turn a repeated pattern
+                    into a real Webflow Component.
                   </div>
                 </Field>
 
                 <div>
                   <div className="text-[10.5px] font-semibold text-wb-text-tertiary uppercase tracking-wider mb-2">
-                    Occurrences · {activeOpportunity.sourceFiles.length} page files
+                    Occurrences · {activeOpportunity.instances} across {activeOpportunity.files}{" "}
+                    {activeOpportunity.files === 1 ? "file" : "files"}
                   </div>
                   <div className="flex flex-col gap-1 font-mono text-[11.5px] text-wb-text-secondary">
                     {activeOpportunity.sourceFiles.map((path) => (
@@ -211,63 +187,45 @@ export function ComponentOpportunitiesScreen() {
 }
 
 function OpportunityRow({
+  opportunity,
   active,
-  checked,
-  confidence,
-  files,
-  instances,
-  name,
-  created,
-  onClick,
-  onToggle
+  onClick
 }: {
+  opportunity: ComponentOpportunity;
   active: boolean;
-  checked: boolean;
-  confidence: "high" | "medium";
-  files: number;
-  instances: number;
-  name: string;
-  created: boolean;
   onClick: () => void;
-  onToggle: () => void;
 }) {
+  const preview = buildOpportunityPreview(opportunity);
+
   return (
     <div
       className={`flex items-start gap-2.5 px-3 py-2.5 rounded-md cursor-pointer border mb-1 ${
-        active ? "bg-wb-accent/10 border-wb-accent/30" : "border-transparent hover:bg-white/[0.03]"
+        active
+          ? "bg-wb-accent/10 border-wb-accent/30"
+          : "border-transparent hover:bg-white/[0.03]"
       }`}
       onClick={onClick}
     >
-      <button
-        type="button"
-        onClick={(event) => {
-          event.stopPropagation();
-          onToggle();
-        }}
-        className={`w-4 h-4 mt-0.5 rounded border inline-flex items-center justify-center ${
-          checked ? "bg-wb-accent border-wb-accent text-black" : "border-white/[0.16] text-transparent"
-        }`}
-      >
-        <Check size={11} strokeWidth={3} />
-      </button>
       <div className="w-7 h-7 rounded-md bg-wb-surface-2 inline-flex items-center justify-center text-wb-text-secondary flex-shrink-0">
-        <LayoutPanelTop size={14} />
+        {preview?.listIcon ?? <LayoutPanelTop size={14} />}
       </div>
       <div className="flex-1 min-w-0">
         <div className={`text-[12.5px] text-wb-text-primary ${active ? "font-semibold" : "font-medium"}`}>
-          {name}
+          {opportunity.name}
         </div>
         <div className="flex items-center gap-1.5 mt-1">
-          <Badge tone={confidence === "high" ? "complete" : "pending"} className="px-1.5 py-0.5 text-[10px]">
-            {confidence === "high" ? "High confidence" : "Medium"}
+          <Badge
+            tone={opportunity.confidence === "high" ? "complete" : "pending"}
+            className={
+              opportunity.confidence === "high"
+                ? "px-1.5 py-0.5 text-[10px]"
+                : "px-1.5 py-0.5 text-[10px] bg-wb-warning/10 text-[#ffd24d] border-wb-warning/30"
+            }
+          >
+            {opportunity.confidence === "high" ? "High confidence" : "Medium"}
           </Badge>
-          {created ? (
-            <Badge tone="complete" className="px-1.5 py-0.5 text-[10px]">
-              Created
-            </Badge>
-          ) : null}
           <span className="text-[11px] text-wb-text-tertiary font-mono">
-            {instances} instances · {files} files
+            {opportunity.instances} instances · {opportunity.files} files
           </span>
         </div>
       </div>
@@ -275,19 +233,111 @@ function OpportunityRow({
   );
 }
 
-function Field({
-  children,
-  label
+function PropRow({
+  prop,
+  last
 }: {
+  prop: SuggestedProp;
+  last: boolean;
+}) {
+  const tone =
+    prop.type === "image" ? "ai" : prop.type === "text" ? "complete" : "in-progress";
+
+  return (
+    <div
+      className={`grid grid-cols-[110px_80px_1fr] gap-2.5 px-3 py-2.5 items-center ${
+        !last ? "border-b border-white/[0.06]" : ""
+      }`}
+    >
+      <div className="font-mono text-[11.5px] text-[#ffd479]">
+        {prop.name}
+        {prop.optional ? <span className="text-wb-text-tertiary italic ml-1">?</span> : null}
+      </div>
+      <div>
+        <Badge tone={tone} className="px-1.5 py-0.5 text-[10px]">
+          {prop.type}
+        </Badge>
+      </div>
+      <div className="font-mono text-[11px] text-wb-text-secondary overflow-hidden text-ellipsis whitespace-nowrap">
+        {prop.samples}
+      </div>
+    </div>
+  );
+}
+
+function Field({
+  label,
+  children
+}: {
+  label: ReactNode;
   children: ReactNode;
-  label: string;
 }) {
   return (
-    <div className="mb-4">
-      <div className="text-[10.5px] font-semibold text-wb-text-tertiary uppercase tracking-wider mb-2">
+    <div className="mb-4.5">
+      <label className="text-[10.5px] font-semibold text-wb-text-tertiary uppercase tracking-wider block mb-1.5">
         {label}
-      </div>
+      </label>
       {children}
     </div>
   );
+}
+
+function countUniqueSourceFiles(opportunities: ComponentOpportunity[]) {
+  return new Set(opportunities.flatMap((opportunity) => opportunity.sourceFiles)).size;
+}
+
+function buildOpportunityPreview(opportunity: ComponentOpportunity) {
+  const normalized = opportunity.componentName.toLowerCase();
+  if (normalized.includes("card")) {
+    return {
+      listIcon: <LayoutPanelTop size={14} />,
+      suggestedProps: [
+        { name: "icon", type: "image", samples: "svg icon or CMS image" },
+        { name: "title", type: "text", samples: '"Heading copy across each card"' },
+        { name: "description", type: "text", samples: '"Short supporting description"' },
+        { name: "href", type: "link", samples: "Optional CTA destination", optional: true }
+      ] satisfies SuggestedProp[]
+    };
+  }
+
+  if (normalized.includes("button")) {
+    return {
+      listIcon: <MoveRight size={14} />,
+      suggestedProps: [
+        { name: "label", type: "text", samples: '"Learn more" · "Get started"' },
+        { name: "href", type: "link", samples: "Primary destination URL" },
+        { name: "icon", type: "image", samples: "Arrow or icon asset", optional: true }
+      ] satisfies SuggestedProp[]
+    };
+  }
+
+  if (normalized.includes("pricing") || normalized.includes("tier")) {
+    return {
+      listIcon: <CreditCard size={14} />,
+      suggestedProps: [
+        { name: "tier", type: "text", samples: '"Starter" · "Growth" · "Enterprise"' },
+        { name: "price", type: "text", samples: '"$29/mo" · "Contact sales"' },
+        { name: "features", type: "text", samples: "List of included benefits" },
+        { name: "ctaHref", type: "link", samples: "Upgrade or contact link", optional: true }
+      ] satisfies SuggestedProp[]
+    };
+  }
+
+  if (normalized.includes("eyebrow") || normalized.includes("label")) {
+    return {
+      listIcon: <Heading1 size={14} />,
+      suggestedProps: [
+        { name: "text", type: "text", samples: '"Features" · "Services" · "Case studies"' }
+      ] satisfies SuggestedProp[]
+    };
+  }
+
+  return {
+    listIcon: <LayoutPanelTop size={14} />,
+    suggestedProps: [
+      { name: "title", type: "text", samples: '"Primary repeated copy"' },
+      { name: "body", type: "text", samples: '"Supporting repeated copy"', optional: true },
+      { name: "href", type: "link", samples: "Optional destination link", optional: true }
+    ] satisfies SuggestedProp[]
+  };
 }

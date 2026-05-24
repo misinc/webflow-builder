@@ -31,7 +31,6 @@ export function SectionListScreen() {
     completeCurrentPage,
     componentBannerDismissed,
     componentOpportunities,
-    createdComponentsByOpportunityId,
     currentSections,
     designerContext,
     dismissComponentBanner,
@@ -48,9 +47,6 @@ export function SectionListScreen() {
   const isPageComplete = totalCount > 0 && remainingCount === 0;
   const progressPercent =
     totalCount > 0 ? Math.round(((builtCount + skippedCount) / totalCount) * 100) : 0;
-  const pendingOpportunities = componentOpportunities.filter(
-    (opportunity) => !createdComponentsByOpportunityId[opportunity.id]
-  );
 
   return (
     <Panel>
@@ -86,7 +82,7 @@ export function SectionListScreen() {
         }
       />
 
-      {!componentBannerDismissed && pendingOpportunities.length > 0 && !isPageComplete ? (
+      {!componentBannerDismissed && componentOpportunities.length > 0 && !isPageComplete ? (
         <div
           className="px-5 py-2.5 flex items-center gap-3 flex-shrink-0 border-b"
           style={{
@@ -106,11 +102,11 @@ export function SectionListScreen() {
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-[12.5px] text-wb-text-primary font-medium">
-              {pendingOpportunities.length} component opportunit
-              {pendingOpportunities.length === 1 ? "y" : "ies"} detected
+              {componentOpportunities.length} component opportunit
+              {componentOpportunities.length === 1 ? "y" : "ies"} detected
             </div>
             <div className="text-[11px] text-wb-text-tertiary mt-px">
-              Repeating patterns were found in the synced repo. Review them before building this page.
+              Reusable patterns worth considering as Webflow Components for easier site maintenance.
             </div>
           </div>
           <button
@@ -158,7 +154,7 @@ export function SectionListScreen() {
                 section={section}
                 onClick={() => {
                   selectSection(section.id);
-                  if (section.status === "complete" || section.status === "skipped") {
+                  if (section.status === "complete") {
                     navigate("section-complete");
                     return;
                   }
@@ -219,7 +215,7 @@ function SectionRow({
   onClick: () => void;
 }) {
   const isActive = section.status === "in-progress";
-  const clickable = section.status !== "complete" && section.status !== "skipped";
+  const clickable = section.status !== "complete";
 
   return (
     <button
@@ -246,7 +242,7 @@ function SectionRow({
         </div>
       </div>
       <div className={`flex-shrink-0 ${isActive ? "text-wb-accent" : "text-wb-text-tertiary"}`}>
-        {section.status === "complete" || section.status === "skipped" ? (
+        {section.status === "complete" ? (
           <MoreVertical size={16} />
         ) : (
           <ChevronRight size={16} />
