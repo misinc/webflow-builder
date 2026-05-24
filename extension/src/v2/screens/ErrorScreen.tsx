@@ -9,7 +9,7 @@ import { useAppState } from '../context/AppStateContext';
 
 export function ErrorScreen() {
   const { navigate } = useNavigation();
-  const { activeSectionError, regenerateSkeleton, selectedSection, skipCurrentSection } = useAppState();
+  const { activeSectionError, selectedSection, skipCurrentSection } = useAppState();
 
   return (
     <Panel onClose={() => navigate('section-list')}>
@@ -71,11 +71,7 @@ export function ErrorScreen() {
           <Button
             variant="primary"
             onClick={() => {
-              void regenerateSkeleton().then((success) => {
-                if (success) {
-                  navigate('skeleton-review');
-                }
-              });
+              navigate('generating-skeleton');
             }}
           >
             <RefreshCw size={14} />

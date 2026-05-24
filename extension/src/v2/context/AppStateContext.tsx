@@ -269,6 +269,7 @@ interface AppStateContextValue {
   hasSkeletonChanges: boolean;
   analysis: SectionAnalysis | null;
   skeleton: SkeletonPlan | null;
+  insertCurrentSkeleton: () => Promise<boolean>;
   styling: StylingPlan | null;
   verification: SectionVerification | null;
   lastExecution: ExecutionSummary | null;
@@ -1088,6 +1089,77 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const insertCurrentSkeleton = useCallback(async () => {
+    if (!skeleton) {
+      setError("Generate a skeleton before inserting it into Webflow.");
+      return false;
+    }
+    try {
+      return await withMutation("Inserting skeleton", async () => {
+        const controller = new AbortController();
+        setActiveAbortController(controller);
+        if (currentTargetNodeId) {
+          await rollbackCurrentExecution();
+        }
+        const context = await bridge.getContext();
+        if (!context.siteId) {
+          throw new Error("No active Webflow site.");
+        }
+        await ensureSiteBound();
+        const nextSkeleton =
+          isEditingSkeleton && skeletonDraft.trim()
+            ? normalizeSkeletonPlan(parseSkeletonTreeText(skeleton, skeletonDraft))
+            : normalizeSkeletonPlan(skeleton);
+        const nodeExecution = await executeSkeletonPlan({
+          bridge,
+          context,
+          plan: nextSkeleton,
+          placementMode: "append",
+          placementTarget: null,
+          signal: controller.signal
+        });
+        if (!nodeExecution.success) {
+          throw new Error(
+            nodeExecution.warnings.find((warning) => warning.level === "error")?.message ??
+              "Failed to insert the generated skeleton."
+          );
+        }
+        setSkeleton(nextSkeleton);
+        setSkeletonDraft(nextSkeleton.treeText);
+        setCurrentTargetNodeId(nodeExecution.rootNodeId ?? null);
+        setStyling(null);
+        setVerification(null);
+        const summary = mergeExecutionSummaries([nodeExecution]);
+        if (summary) {
+          const record = {
+            summary,
+            seededComponentId: null
+          } satisfies ExecutionRunRecord;
+          lastExecutionRecordRef.current = record;
+          activeExecutionRecordRef.current = null;
+          setLastExecution(summary);
+        }
+        return true;
+      });
+    } catch (err) {
+      if (isAbortError(err)) {
+        return false;
+      }
+      setError(err instanceof Error ? err.message : "Failed to insert the skeleton.");
+      return false;
+    } finally {
+      setActiveAbortController(null);
+    }
+  }, [
+    currentTargetNodeId,
+    ensureSiteBound,
+    isEditingSkeleton,
+    rollbackCurrentExecution,
+    skeleton,
+    skeletonDraft,
+    withMutation
+  ]);
+
   const applyCurrentSection = useCallback(async () => {
     if (!selectedSectionId || !skeleton) {
       setError("Generate a skeleton before applying styles.");
@@ -1593,6 +1665,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         skeletonDraft !== skeleton?.treeText,
       analysis,
       skeleton,
+      insertCurrentSkeleton,
       styling,
       verification,
       lastExecution,
@@ -1644,6 +1717,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       isBootstrapping,
       isEditingSkeleton,
       isLoadingWorkflowState,
+      insertCurrentSkeleton,
       isMutating,
       lastExecution,
       lastCompletedSection,

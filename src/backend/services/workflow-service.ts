@@ -191,32 +191,11 @@ function describeNodeTree(
   return [current, ...node.children.flatMap((child) => describeNodeTree(child, depth + 1))];
 }
 
-function deterministicSkeleton(input: {
-  metadata: SectionMetadata;
-  sectionContext: SectionContext;
-  sharedStyleContext: SharedStyleContext;
-  inheritedWarnings?: PlannerWarning[];
-}): SkeletonPlan {
-  const planner = new HeuristicBuildPlanner();
-  const plan = planner.plan({
-    pageId: input.metadata.pageId,
-    sectionId: input.metadata.sectionId,
-    sectionContext: input.sectionContext,
-    projectContext: createProjectContext(input.sharedStyleContext),
-    sharedStyleContext: input.sharedStyleContext
-  });
-
-  const reused = dedupe(plan.classAssignments.flatMap((assignment) => assignment.reused));
-  const created = dedupe(plan.classAssignments.flatMap((assignment) => assignment.created));
-
-  return skeletonPlanSchema.parse({
-    sectionMetadata: input.metadata,
-    treeText: describeNodeTree(plan.elementTree).join("\n"),
-    elementTree: plan.elementTree,
-    reusableClasses: reused,
-    suggestedNewClasses: created,
-    warnings: [...(input.inheritedWarnings ?? []), ...plan.warnings]
-  });
+function countAssignedClasses(node: BuildNode): number {
+  return (
+    node.classNames.length +
+    node.children.reduce((total, child) => total + countAssignedClasses(child), 0)
+  );
 }
 
 function deterministicStyling(input: {
@@ -752,17 +731,34 @@ export class WorkflowService {
 
   async generateSkeleton(request: WorkflowSectionRequest): Promise<SkeletonPlan> {
     const context = await this.getSectionStateContext(request);
-    const skeleton = skeletonPlanSchema.parse(
-      await this.planningProvider.generateSkeleton({
-        metadata: context.metadata,
-        mode: request.mode,
-        sectionContext: context.sectionContext,
-        serializedSection: context.serializedSection,
-        projectContext: context.projectContext,
-        sharedStyleContext: context.sharedStyleContext,
-        selectedElementId: request.selectedElementId ?? null
-      })
-    );
+    const providerInput = {
+      metadata: context.metadata,
+      mode: request.mode,
+      sectionContext: context.sectionContext,
+      serializedSection: context.serializedSection,
+      projectContext: context.projectContext,
+      sharedStyleContext: context.sharedStyleContext,
+      selectedElementId: request.selectedElementId ?? null
+    };
+    const maxAttempts = 3;
+    let skeleton: SkeletonPlan | null = null;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      const candidate = skeletonPlanSchema.parse(
+        await this.planningProvider.generateSkeleton(providerInput)
+      );
+      if (countAssignedClasses(candidate.elementTree) > 0) {
+        skeleton = candidate;
+        break;
+      }
+    }
+
+    if (!skeleton) {
+      throw new Error(
+        `OpenAI skeleton output omitted class names after ${maxAttempts} attempts. Retry generation.`
+      );
+    }
+
     const runId = await this.persistRun(
       request,
       context.queue.repoPage!.id,

@@ -1,6 +1,19 @@
 import { BuildNode, SkeletonPlan } from "../../../src/shared/contracts.js";
 
 const LEAF_TAGS = new Set(["img", "source", "br", "hr", "input", "meta", "link"]);
+const NON_CONTAINER_TAGS = new Set([
+  "p",
+  "span",
+  "label",
+  "button",
+  "a",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6"
+]);
 
 function normalizeTagToken(token: string): string {
   return token.replace(/^<\/?/, "").replace(/\/?>$/, "").trim();
@@ -161,10 +174,10 @@ export function sanitizeSkeletonPlan(plan: SkeletonPlan): SkeletonPlan {
       normalizedChildren.push(sanitizedChild.node, ...sanitizedChild.hoistedChildren);
     }
 
-    if (LEAF_TAGS.has(node.tag) && normalizedChildren.length > 0) {
+    if ((LEAF_TAGS.has(node.tag) || NON_CONTAINER_TAGS.has(node.tag)) && normalizedChildren.length > 0) {
       warnings.push({
-        code: "invalid-leaf-children",
-        message: `Moved children out of <${node.tag}> because it cannot contain nested elements.`,
+        code: "invalid-noncontainer-children",
+        message: `Moved children out of <${node.tag}> because it should not contain nested elements in the Webflow skeleton.`,
         level: "warning"
       });
       return {

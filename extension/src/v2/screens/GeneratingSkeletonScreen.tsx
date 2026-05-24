@@ -37,14 +37,6 @@ export function GeneratingSkeletonScreen() {
     }
   }, [activeSectionError, error, isMutating, navigate, skeleton, startSectionBuild]);
 
-  useEffect(() => {
-    return () => {
-      if (isMutating) {
-        void cancelActiveWorkflow();
-      }
-    };
-  }, [cancelActiveWorkflow, isMutating]);
-
   return (
     <Panel
       onClose={() => {

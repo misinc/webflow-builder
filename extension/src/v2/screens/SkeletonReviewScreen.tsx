@@ -15,6 +15,9 @@ export function SkeletonReviewScreen() {
   const {
     analysis,
     beginSkeletonEdit,
+    currentTargetNodeId,
+    error,
+    insertCurrentSkeleton,
     isMutating,
     loadingLabel,
     regenerateSkeleton,
@@ -34,6 +37,8 @@ export function SkeletonReviewScreen() {
   const classCount = displaySkeleton
     ? new Set(collectClassNames(displaySkeleton.elementTree)).size
     : 0;
+  const hasInsertedSkeleton = Boolean(currentTargetNodeId);
+  const isInsertingSkeleton = isMutating && loadingLabel === "Inserting skeleton";
   const isRefreshingSkeleton =
     Boolean(displaySkeleton) && isMutating && loadingLabel === "Generating skeleton";
   const isGeneratingSkeleton =
@@ -64,18 +69,40 @@ export function SkeletonReviewScreen() {
           </Button>
           <div className="flex-1" />
           <span className="text-[11px] text-wb-text-tertiary mr-2">
-            {isRefreshingSkeleton
+            {hasInsertedSkeleton
+              ? "Skeleton inserted into Webflow"
+              : isInsertingSkeleton
+              ? "Inserting skeleton…"
+              : isRefreshingSkeleton
               ? "Regenerating skeleton…"
               : isGeneratingSkeleton
               ? "Generating skeleton…"
               : `${elementCount} elements · ${classCount} classes`}
           </span>
           <Button
-            variant="primary"
-            disabled={!displaySkeleton || isGeneratingSkeleton || isRefreshingSkeleton}
+            variant="ghost"
+            disabled={!hasInsertedSkeleton || isMutating}
             onClick={() => navigate("applying-styles")}
           >
-            {isRefreshingSkeleton || isGeneratingSkeleton
+            Move to styling
+          </Button>
+          <Button
+            variant="primary"
+            disabled={
+              !displaySkeleton ||
+              isGeneratingSkeleton ||
+              isRefreshingSkeleton ||
+              isInsertingSkeleton
+            }
+            onClick={() => {
+              void insertCurrentSkeleton();
+            }}
+          >
+            {hasInsertedSkeleton
+              ? "Insert again"
+              : isInsertingSkeleton
+              ? "Inserting skeleton…"
+              : isRefreshingSkeleton || isGeneratingSkeleton
               ? "Generating skeleton…"
               : "Insert into Webflow"}
           </Button>
@@ -191,6 +218,11 @@ export function SkeletonReviewScreen() {
           </div>
         </div>
       </div>
+      {error && !isGeneratingSkeleton && !isRefreshingSkeleton ? (
+        <div className="px-5 py-2 text-[11.5px] text-wb-danger border-t border-white/[0.06]">
+          {error}
+        </div>
+      ) : null}
     </Panel>
   );
 }
