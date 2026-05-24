@@ -1,0 +1,37 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body, #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-feature-settings: 'cv11', 'ss01', 'ss03';
+    background: #060606;
+    color: #e4e4e4;
+  }
+
+  /* Spinning loader animation */
+  @keyframes wb-spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* Subtle pulse for "auto-advancing" pill */
+  @keyframes wb-pulse {
+    0%, 100% { opacity: 0.85; }
+    50% { opacity: 1; }
+  }
+}
+
+@layer utilities {
+  .wb-spin {
+    animation: wb-spin 0.8s linear infinite;
+  }
+  .wb-pulse {
+    animation: wb-pulse 1.8s ease-in-out infinite;
+  }
+}

@@ -220,6 +220,13 @@ export class PostgresAppRepository implements AppRepository {
     return created;
   }
 
+  async listRepos(): Promise<RepoRecord[]> {
+    const rows = await this.client.db.query.repos.findMany({
+      orderBy: [desc(repos.updatedAt)]
+    });
+    return rows.map(mapRepo);
+  }
+
   async getRepo(repoId: string): Promise<RepoRecord | null> {
     const row = await this.client.db.query.repos.findFirst({
       where: eq(repos.id, repoId)

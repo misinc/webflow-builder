@@ -454,6 +454,74 @@ export const workflowPageCompleteInputSchema = z.object({
   requestedBy: z.string().min(1)
 });
 
+export const v2SessionAccountSchema = z.object({
+  id: z.string().min(1),
+  login: z.string().min(1),
+  displayName: z.string().min(1),
+  kind: z.enum(["installation", "user", "local", "stored"])
+});
+
+export const v2SessionSchema = z.object({
+  userId: z.string().min(1),
+  displayName: z.string().min(1),
+  login: z.string().min(1),
+  source: z.enum([
+    "github-app",
+    "github-token",
+    "local-repo",
+    "stored-repo",
+    "anonymous"
+  ]),
+  canListRepos: z.boolean(),
+  accounts: z.array(v2SessionAccountSchema),
+  selectedAccountId: z.string().nullable()
+});
+
+export const v2AvailableRepoSchema = z.object({
+  id: z.string().min(1),
+  owner: z.string().min(1),
+  name: z.string().min(1),
+  fullName: z.string().min(1),
+  repoUrl: z.string().url(),
+  defaultBranch: z.string().min(1),
+  status: z.enum(["connected", "syncing", "ready", "failed", "available"]),
+  source: z.enum(["connected", "installation", "local-fixture", "fallback"]),
+  updatedAt: z.string().datetime().nullable(),
+  lastSyncedAt: z.string().datetime().nullable(),
+  pageCount: z.number().int().nonnegative().default(0),
+  sectionCount: z.number().int().nonnegative().default(0)
+});
+
+export const v2BootstrapDiagnosticsSchema = z.object({
+  repoAccessMode: z.enum(["github-app", "github-token", "local-repo", "stored-repo", "none"]),
+  repoListingError: z.string().nullable(),
+  repoListingAttempted: z.boolean()
+});
+
+export const v2BootstrapResponseSchema = z.object({
+  session: v2SessionSchema,
+  repos: z.array(v2AvailableRepoSchema),
+  diagnostics: v2BootstrapDiagnosticsSchema
+});
+
+export const componentOpportunitySchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  componentName: z.string().min(1),
+  confidence: z.enum(["high", "medium"]),
+  instances: z.number().int().positive(),
+  files: z.number().int().positive(),
+  sourceFiles: z.array(z.string().min(1)),
+  sampleRoutes: z.array(z.string().min(1)),
+  selectedByDefault: z.boolean().default(true)
+});
+
+export const componentOpportunitiesResponseSchema = z.object({
+  repoId: z.string().min(1),
+  generatedAt: z.string().datetime(),
+  opportunities: z.array(componentOpportunitySchema)
+});
+
 export type SharedClass = z.infer<typeof sharedClassSchema>;
 export type SharedVariable = z.infer<typeof sharedVariableSchema>;
 export type SharedStyleContext = z.infer<typeof sharedStyleContextSchema>;
@@ -494,4 +562,13 @@ export type WorkflowSectionDecisionInput = z.infer<
 >;
 export type WorkflowPageCompleteInput = z.infer<
   typeof workflowPageCompleteInputSchema
+>;
+export type V2SessionAccount = z.infer<typeof v2SessionAccountSchema>;
+export type V2Session = z.infer<typeof v2SessionSchema>;
+export type V2AvailableRepo = z.infer<typeof v2AvailableRepoSchema>;
+export type V2BootstrapDiagnostics = z.infer<typeof v2BootstrapDiagnosticsSchema>;
+export type V2BootstrapResponse = z.infer<typeof v2BootstrapResponseSchema>;
+export type ComponentOpportunity = z.infer<typeof componentOpportunitySchema>;
+export type ComponentOpportunitiesResponse = z.infer<
+  typeof componentOpportunitiesResponseSchema
 >;

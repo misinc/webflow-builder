@@ -51,6 +51,16 @@ to = "/.netlify/functions/debug-env-status"
 status = 200
 
 [[redirects]]
+from = "/api/v2/bootstrap"
+to = "/.netlify/functions/v2-bootstrap"
+status = 200
+
+[[redirects]]
+from = "/api/v2/component-opportunities"
+to = "/.netlify/functions/v2-component-opportunities"
+status = 200
+
+[[redirects]]
 from = "/api/workflow/site-pages"
 to = "/.netlify/functions/workflow-site-pages"
 status = 200

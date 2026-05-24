@@ -29,6 +29,7 @@ export interface AppRepository {
   createRepo(
     input: RepoConnectionInput & { defaultBranch: string }
   ): Promise<RepoRecord>;
+  listRepos(): Promise<RepoRecord[]>;
   getRepo(repoId: string): Promise<RepoRecord | null>;
   getRepoByOwnerAndName(owner: string, name: string): Promise<RepoRecord | null>;
   updateRepoStatus(repoId: string, status: RepoRecord["status"]): Promise<void>;

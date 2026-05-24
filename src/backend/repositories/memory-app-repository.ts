@@ -61,6 +61,12 @@ export class MemoryAppRepository implements AppRepository {
     return record;
   }
 
+  async listRepos(): Promise<RepoRecord[]> {
+    return [...this.repos.values()].sort((left, right) =>
+      right.updatedAt.localeCompare(left.updatedAt)
+    );
+  }
+
   async getRepo(repoId: string): Promise<RepoRecord | null> {
     return this.repos.get(repoId) ?? null;
   }

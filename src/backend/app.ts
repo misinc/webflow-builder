@@ -11,6 +11,7 @@ import { BuildJobService } from "./services/build-job-service.js";
 import { BuildPlanService } from "./services/build-plan-service.js";
 import { RepoSyncService } from "./services/repo-sync-service.js";
 import { SiteBindingService } from "./services/site-binding-service.js";
+import { V2ReadService } from "./services/v2-read-service.js";
 import { WorkflowService } from "./services/workflow-service.js";
 import { BuildPlanValidator } from "./validation/build-plan-validator.js";
 
@@ -56,6 +57,7 @@ function createServices() {
     ),
     siteBindingService: new SiteBindingService(repository),
     buildJobService: new BuildJobService(repository),
+    v2ReadService: new V2ReadService(repository, githubClient, env),
     workflowService: new WorkflowService(
       repository,
       blobStore,

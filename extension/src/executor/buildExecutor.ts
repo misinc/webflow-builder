@@ -55,6 +55,89 @@ async function buildNodeTree(params: {
   }
 }
 
+export async function executeSkeletonPlanIntoRoot(params: {
+  bridge: WebflowDesignerBridge;
+  rootNodeId: string;
+  plan: SkeletonPlan;
+}): Promise<ExecutionSummary> {
+  const createdNodeIds: string[] = [];
+  const nodeIdMap = new Map<string, string>();
+  let lastChildId: string | null = null;
+
+  try {
+    await params.bridge.configureNode(params.rootNodeId, {
+      tag: params.plan.elementTree.tag,
+      classNames: params.plan.elementTree.classNames,
+      textContent: params.plan.elementTree.textContent
+    });
+
+    for (const child of params.plan.elementTree.children) {
+      await buildNodeTree({
+        bridge: params.bridge,
+        node: child,
+        parentId: params.rootNodeId,
+        afterId: lastChildId,
+        createdNodeIds,
+        nodeIdMap
+      });
+      lastChildId = nodeIdMap.get(child.id) ?? null;
+    }
+
+    return {
+      success: true,
+      createdNodeIds,
+      createdStyleIds: [],
+      reusedClasses: params.plan.reusableClasses,
+      createdClasses: [],
+      warnings: params.plan.warnings,
+      missingAssets: [],
+      rollbackOutcome: null,
+      rootNodeId: params.rootNodeId
+    };
+  } catch (error) {
+    let rollbackOutcome: ExecutionSummary["rollbackOutcome"] = null;
+    try {
+      if (createdNodeIds.length > 0) {
+        await params.bridge.deleteNodes([...createdNodeIds].reverse());
+      }
+      rollbackOutcome = {
+        attempted: true,
+        successful: true,
+        details: "Created component nodes were removed after failure."
+      };
+    } catch (rollbackError) {
+      rollbackOutcome = {
+        attempted: true,
+        successful: false,
+        details:
+          rollbackError instanceof Error
+            ? rollbackError.message
+            : "Rollback failed."
+      };
+    }
+
+    return {
+      success: false,
+      createdNodeIds,
+      createdStyleIds: [],
+      reusedClasses: [],
+      createdClasses: [],
+      warnings: [
+        ...params.plan.warnings,
+        {
+          code: "component-seed-failure",
+          message:
+            error instanceof Error ? error.message : "Failed to seed the component.",
+          level: "error"
+        }
+      ],
+      missingAssets: [],
+      rollbackOutcome,
+      rootNodeId: params.rootNodeId
+    };
+  }
+}
+
 export async function executeBuildPlan(params: {
   bridge: WebflowDesignerBridge;
   context: DesignerContext;

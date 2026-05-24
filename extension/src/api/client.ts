@@ -1,5 +1,7 @@
 import {
+  componentOpportunitiesResponseSchema,
   BindSiteInput,
+  ComponentOpportunitiesResponse,
   PageMappingsUpsertInput,
   RepoConnectionInput,
   RepoRecord,
@@ -16,6 +18,8 @@ import {
   skeletonPlanSchema,
   StylingPlan,
   stylingPlanSchema,
+  V2BootstrapResponse,
+  v2BootstrapResponseSchema,
   workflowQueueResponseSchema,
   WorkflowQueueResponse,
   WorkflowSectionDecisionInput,
@@ -49,12 +53,14 @@ export interface RepoTreeResponse {
 async function request<T>(
   url: string,
   options: RequestInit,
-  userId?: string
+  userId?: string,
+  signal?: AbortSignal
 ): Promise<T> {
   let response: Response;
   try {
     response = await fetch(url, {
       ...options,
+      signal,
       headers: {
         "content-type": "application/json",
         ...(userId ? { "x-user-id": userId } : {}),
@@ -118,6 +124,24 @@ export class BackendClient {
 
   private functionUrl(functionName: string) {
     return `${this.functionBaseUrl}/${functionName}`;
+  }
+
+  async getV2Bootstrap(): Promise<V2BootstrapResponse> {
+    const response = await request<V2BootstrapResponse>(
+      this.functionUrl("v2-bootstrap"),
+      { method: "GET" }
+    );
+    return v2BootstrapResponseSchema.parse(response);
+  }
+
+  async getComponentOpportunities(
+    repoId: string
+  ): Promise<ComponentOpportunitiesResponse> {
+    const response = await request<ComponentOpportunitiesResponse>(
+      withQuery(this.functionUrl("v2-component-opportunities"), { repoId }),
+      { method: "GET" }
+    );
+    return componentOpportunitiesResponseSchema.parse(response);
   }
 
   connectRepo(input: RepoConnectionInput) {
@@ -218,7 +242,10 @@ export class BackendClient {
     return workflowQueueResponseSchema.parse(response);
   }
 
-  async analyzeSection(input: WorkflowSectionRequest): Promise<SectionAnalysis> {
+  async analyzeSection(
+    input: WorkflowSectionRequest,
+    signal?: AbortSignal
+  ): Promise<SectionAnalysis> {
     const validated = workflowSectionRequestSchema.parse(input);
     const response = await request<SectionAnalysis>(
       this.functionUrl("workflow-section-analyze"),
@@ -226,12 +253,16 @@ export class BackendClient {
         method: "POST",
         body: JSON.stringify(validated)
       },
-      input.requestedBy
+      input.requestedBy,
+      signal
     );
     return sectionAnalysisSchema.parse(response);
   }
 
-  async generateSkeleton(input: WorkflowSectionRequest): Promise<SkeletonPlan> {
+  async generateSkeleton(
+    input: WorkflowSectionRequest,
+    signal?: AbortSignal
+  ): Promise<SkeletonPlan> {
     const validated = workflowSectionRequestSchema.parse(input);
     const response = await request<SkeletonPlan>(
       this.functionUrl("workflow-section-generate-skeleton"),
@@ -239,12 +270,16 @@ export class BackendClient {
         method: "POST",
         body: JSON.stringify(validated)
       },
-      input.requestedBy
+      input.requestedBy,
+      signal
     );
     return skeletonPlanSchema.parse(response);
   }
 
-  async styleSection(input: WorkflowSectionRequest): Promise<StylingPlan> {
+  async styleSection(
+    input: WorkflowSectionRequest,
+    signal?: AbortSignal
+  ): Promise<StylingPlan> {
     const validated = workflowSectionRequestSchema.parse(input);
     const response = await request<StylingPlan>(
       this.functionUrl("workflow-section-style"),
@@ -252,12 +287,16 @@ export class BackendClient {
         method: "POST",
         body: JSON.stringify(validated)
       },
-      input.requestedBy
+      input.requestedBy,
+      signal
     );
     return stylingPlanSchema.parse(response);
   }
 
-  async verifySection(input: WorkflowSectionRequest): Promise<SectionVerification> {
+  async verifySection(
+    input: WorkflowSectionRequest,
+    signal?: AbortSignal
+  ): Promise<SectionVerification> {
     const validated = workflowSectionRequestSchema.parse(input);
     const response = await request<SectionVerification>(
       this.functionUrl("workflow-section-verify"),
@@ -265,7 +304,8 @@ export class BackendClient {
         method: "POST",
         body: JSON.stringify(validated)
       },
-      input.requestedBy
+      input.requestedBy,
+      signal
     );
     return sectionVerificationSchema.parse(response);
   }

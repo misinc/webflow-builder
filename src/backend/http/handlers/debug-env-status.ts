@@ -17,6 +17,7 @@ export const handler: Handler = async (event) => {
       githubAppClientId: Boolean(env.githubAppClientId),
       githubAppClientSecret: Boolean(env.githubAppClientSecret),
       githubAppInstallationId: Boolean(env.githubAppInstallationId),
+      githubAppInstallationToken: Boolean(env.githubAppInstallationToken),
       githubAppPrivateKey: Boolean(env.githubAppPrivateKey),
       githubAppPrivateKeyLength: env.githubAppPrivateKey?.length ?? 0,
       githubAccessToken: Boolean(env.githubAccessToken),

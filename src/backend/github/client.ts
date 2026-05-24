@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { RepoConnectionInput } from "../../shared/contracts.js";
 import { stableId } from "../utils.js";
 
@@ -17,11 +18,21 @@ export interface RepositorySnapshot {
   files: RepoFile[];
 }
 
+export interface AvailableRepository {
+  owner: string;
+  name: string;
+  fullName: string;
+  repoUrl: string;
+  defaultBranch: string;
+  updatedAt: string | null;
+}
+
 export interface GitHubRepositoryClient {
   connectRepo(
     input: RepoConnectionInput
   ): Promise<{ defaultBranch: string; remoteId: string }>;
   fetchSnapshot(owner: string, name: string): Promise<RepositorySnapshot>;
+  listAvailableRepos(): Promise<AvailableRepository[]>;
 }
 
 interface GitHubAppCredentials {
@@ -39,18 +50,21 @@ function isRelevantRepoFile(filePath: string): boolean {
   );
 }
 
-async function readFilesRecursive(root: string): Promise<RepoFile[]> {
+async function readFilesRecursive(
+  root: string,
+  baseRoot = root
+): Promise<RepoFile[]> {
   const entries = await fs.readdir(root, { withFileTypes: true });
   const files: RepoFile[] = [];
 
   for (const entry of entries) {
     const fullPath = path.join(root, entry.name);
     if (entry.isDirectory()) {
-      files.push(...(await readFilesRecursive(fullPath)));
+      files.push(...(await readFilesRecursive(fullPath, baseRoot)));
       continue;
     }
 
-    const relative = path.relative(root, fullPath);
+    const relative = path.relative(baseRoot, fullPath);
     const normalized = relative.split(path.sep).join("/");
     if (!isRelevantRepoFile(normalized)) {
       continue;
@@ -85,6 +99,20 @@ class LocalFixtureGitHubClient implements GitHubRepositoryClient {
       commitSha: stableId(owner, name, "local-snapshot"),
       files: await readFilesRecursive(this.repoRoot)
     };
+  }
+
+  async listAvailableRepos(): Promise<AvailableRepository[]> {
+    const repoName = path.basename(this.repoRoot) || "local-repo";
+    return [
+      {
+        owner: "local",
+        name: repoName,
+        fullName: `local/${repoName}`,
+        repoUrl: pathToFileURL(this.repoRoot).toString(),
+        defaultBranch: "main",
+        updatedAt: null
+      }
+    ];
   }
 }
 
@@ -208,6 +236,87 @@ class GitHubHttpRepositoryClient implements GitHubRepositoryClient {
       files: files.sort((left, right) => left.path.localeCompare(right.path))
     };
   }
+
+  async listAvailableRepos(): Promise<AvailableRepository[]> {
+    const repos = await this.request<
+      Array<{
+        owner?: { login?: string };
+        name: string;
+        full_name: string;
+        html_url: string;
+        default_branch: string;
+        updated_at?: string;
+      }>
+    >("/user/repos?per_page=100&sort=updated");
+
+    return repos.map((repo) => ({
+      owner: repo.owner?.login ?? repo.full_name.split("/")[0] ?? "unknown",
+      name: repo.name,
+      fullName: repo.full_name,
+      repoUrl: repo.html_url,
+      defaultBranch: repo.default_branch,
+      updatedAt: repo.updated_at ?? null
+    }));
+  }
+}
+
+class GitHubInstallationTokenRepositoryClient implements GitHubRepositoryClient {
+  private readonly delegate: GitHubHttpRepositoryClient;
+
+  constructor(private readonly getAccessToken: () => Promise<string>) {
+    this.delegate = new GitHubHttpRepositoryClient(getAccessToken);
+  }
+
+  async connectRepo(
+    input: RepoConnectionInput
+  ): Promise<{ defaultBranch: string; remoteId: string }> {
+    return this.delegate.connectRepo(input);
+  }
+
+  async fetchSnapshot(owner: string, name: string): Promise<RepositorySnapshot> {
+    return this.delegate.fetchSnapshot(owner, name);
+  }
+
+  async listAvailableRepos(): Promise<AvailableRepository[]> {
+    const accessToken = await this.getAccessToken();
+    const response = await fetch(
+      "https://api.github.com/installation/repositories?per_page=100",
+      {
+        headers: {
+          Accept: "application/vnd.github+json",
+          Authorization: `Bearer ${accessToken}`,
+          "User-Agent": "webflow-builder"
+        }
+      }
+    );
+
+    if (!response.ok) {
+      const message = await response.text();
+      throw new Error(
+        `GitHub installation repositories request failed (${response.status} ${response.statusText}): ${message}`
+      );
+    }
+
+    const payload = (await response.json()) as {
+      repositories: Array<{
+        owner?: { login?: string };
+        name: string;
+        full_name: string;
+        html_url: string;
+        default_branch: string;
+        updated_at?: string;
+      }>;
+    };
+
+    return payload.repositories.map((repo) => ({
+      owner: repo.owner?.login ?? repo.full_name.split("/")[0] ?? "unknown",
+      name: repo.name,
+      fullName: repo.full_name,
+      repoUrl: repo.html_url,
+      defaultBranch: repo.default_branch,
+      updatedAt: repo.updated_at ?? null
+    }));
+  }
 }
 
 class GitHubAppRepositoryClient implements GitHubRepositoryClient {
@@ -269,6 +378,47 @@ class GitHubAppRepositoryClient implements GitHubRepositoryClient {
   async fetchSnapshot(owner: string, name: string): Promise<RepositorySnapshot> {
     return this.delegate.fetchSnapshot(owner, name);
   }
+
+  async listAvailableRepos(): Promise<AvailableRepository[]> {
+    const accessToken = await this.getInstallationToken();
+    const response = await fetch(
+      "https://api.github.com/installation/repositories?per_page=100",
+      {
+        headers: {
+          Accept: "application/vnd.github+json",
+          Authorization: `Bearer ${accessToken}`,
+          "User-Agent": "webflow-builder"
+        }
+      }
+    );
+
+    if (!response.ok) {
+      const message = await response.text();
+      throw new Error(
+        `GitHub installation repositories request failed (${response.status} ${response.statusText}): ${message}`
+      );
+    }
+
+    const payload = (await response.json()) as {
+      repositories: Array<{
+        owner?: { login?: string };
+        name: string;
+        full_name: string;
+        html_url: string;
+        default_branch: string;
+        updated_at?: string;
+      }>;
+    };
+
+    return payload.repositories.map((repo) => ({
+      owner: repo.owner?.login ?? repo.full_name.split("/")[0] ?? "unknown",
+      name: repo.name,
+      fullName: repo.full_name,
+      repoUrl: repo.html_url,
+      defaultBranch: repo.default_branch,
+      updatedAt: repo.updated_at ?? null
+    }));
+  }
 }
 
 class UnsupportedGitHubClient implements GitHubRepositoryClient {
@@ -283,12 +433,17 @@ class UnsupportedGitHubClient implements GitHubRepositoryClient {
       "GitHub access is not configured. Set GitHub App credentials, GITHUB_ACCESS_TOKEN, or LOCAL_MIS_REPO_PATH."
     );
   }
+
+  async listAvailableRepos(): Promise<AvailableRepository[]> {
+    return [];
+  }
 }
 
 export function createGitHubRepositoryClient(config: {
   githubAppId?: string;
   githubAppClientId?: string;
   githubAppInstallationId?: string;
+  githubAppInstallationToken?: string;
   githubAppPrivateKey?: string;
   githubAccessToken?: string;
   localMisRepoPath?: string;
@@ -303,6 +458,11 @@ export function createGitHubRepositoryClient(config: {
       installationId: config.githubAppInstallationId,
       privateKey: config.githubAppPrivateKey
     });
+  }
+  if (config.githubAppInstallationToken) {
+    return new GitHubInstallationTokenRepositoryClient(
+      async () => config.githubAppInstallationToken as string
+    );
   }
   if (config.githubAccessToken) {
     return new GitHubHttpRepositoryClient(async () => config.githubAccessToken as string);

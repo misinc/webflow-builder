@@ -23,11 +23,53 @@ export interface CreateNodeInput {
   node: BuildNode;
 }
 
+export interface CreatePageInput {
+  name: string;
+  slug?: string | null;
+  switchToNewPage?: boolean;
+}
+
+export interface RegisteredComponent {
+  id: string;
+  name: string;
+}
+
+export interface CreateComponentInstanceInput {
+  componentId: string;
+  parentId: string | null;
+  afterId?: string | null;
+}
+
 export interface WebflowDesignerBridge {
   getContext(): Promise<DesignerContext>;
   getSitePages(siteId: string): Promise<WebflowSitePage[]>;
+  subscribeToCurrentPage(listener: () => void): () => void;
+  switchToPage(pageId: string): Promise<void>;
+  createPage(input: CreatePageInput): Promise<WebflowSitePage>;
   inspectSharedStyles(siteId: string): Promise<SharedStyleContext>;
   createNode(input: CreateNodeInput): Promise<{ id: string }>;
+  createComponentInstance(input: CreateComponentInstanceInput): Promise<{ id: string }>;
+  openComponentCanvas(componentId: string): Promise<void>;
+  exitComponentCanvas(): Promise<void>;
+  getComponentRootElement(componentId: string): Promise<{ id: string } | null>;
+  configureNode(
+    nodeId: string,
+    node: Pick<BuildNode, "tag" | "classNames" | "textContent">
+  ): Promise<void>;
+  registerBlankComponent(input: {
+    name: string;
+    group?: string;
+    description?: string;
+  }): Promise<RegisteredComponent>;
+  registerComponentFromNode(
+    nodeId: string,
+    input: {
+      name: string;
+      group?: string;
+      description?: string;
+      replace?: boolean;
+    }
+  ): Promise<RegisteredComponent>;
   applyClasses(nodeId: string, classNames: string[]): Promise<void>;
   ensureStyle(
     className: string,
@@ -107,8 +149,16 @@ interface WebflowPage {
   slug?: string | null;
   getName?(): Promise<string>;
   getSlug?(): Promise<string | null>;
+  setName?(name: string): Promise<null>;
+  setSlug?(slug: string): Promise<null>;
   isHomepage?: boolean;
   getIsHomepage?(): Promise<boolean>;
+}
+
+interface WebflowComponent {
+  id: string;
+  getName(): Promise<string>;
+  getRootElement?(): Promise<WebflowElement | null>;
 }
 
 interface WebflowApi {
@@ -119,7 +169,31 @@ interface WebflowApi {
   };
   getSiteInfo(): Promise<Record<string, unknown> & { siteId: string }>;
   getCurrentPage(): Promise<WebflowPage | null>;
+  createPage?(): Promise<WebflowPage>;
   getAllPagesAndFolders?(): Promise<unknown[]>;
+  switchPage?(page: WebflowPage): Promise<void>;
+  openCanvas?(target: WebflowComponent | WebflowElement | WebflowPage | { componentId: string } | { pageId: string }): Promise<void>;
+  exitComponent?(): Promise<null>;
+  getAllComponents?(): Promise<WebflowComponent[]>;
+  registerComponent?(
+    options:
+      | string
+      | {
+          name: string;
+          group?: string;
+          description?: string;
+          replace?: boolean;
+        },
+    rootOrSource?: WebflowElement
+  ): Promise<WebflowComponent>;
+  subscribe?(
+    eventName: string,
+    listener: (...args: unknown[]) => void
+  ):
+    | void
+    | (() => void)
+    | { unsubscribe?: () => void }
+    | Promise<void | (() => void) | { unsubscribe?: () => void }>;
   getCurrentMode(): Promise<string | null>;
   getSelectedElement(): Promise<WebflowElement | null>;
   getAllStyles(): Promise<WebflowStyle[]>;
@@ -308,6 +382,35 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
     return null;
   }
 
+  private async findPageById(pageId: string): Promise<WebflowPage | null> {
+    const liveItems = this.api.getAllPagesAndFolders
+      ? await this.api.getAllPagesAndFolders().catch(() => [])
+      : [];
+    const queue = [...liveItems];
+
+    while (queue.length > 0) {
+      const item = queue.shift();
+      if (!isRecord(item)) {
+        continue;
+      }
+      if (typeof item.id === "string" && item.id === pageId) {
+        return item as unknown as WebflowPage;
+      }
+      if (Array.isArray(item.pages)) {
+        queue.push(...item.pages);
+      }
+    }
+
+    return null;
+  }
+
+  private async findComponentById(componentId: string): Promise<WebflowComponent | null> {
+    const components = this.api.getAllComponents
+      ? await this.api.getAllComponents().catch(() => [])
+      : [];
+    return components.find((component) => component.id === componentId) ?? null;
+  }
+
   private async createPlaceholderAsset(): Promise<WebflowAsset | null> {
     if (!this.api.createAsset) {
       return null;
@@ -434,6 +537,100 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
     );
   }
 
+  subscribeToCurrentPage(listener: () => void): () => void {
+    if (!this.api.subscribe) {
+      return () => {};
+    }
+
+    let disposed = false;
+    let cleanup: (() => void) | null = null;
+
+    void Promise.resolve(
+      this.api.subscribe("currentpage", () => {
+        if (!disposed) {
+          listener();
+        }
+      })
+    )
+      .then((subscription) => {
+        if (typeof subscription === "function") {
+          cleanup = subscription;
+        } else if (
+          subscription &&
+          typeof subscription === "object" &&
+          "unsubscribe" in subscription &&
+          typeof subscription.unsubscribe === "function"
+        ) {
+          cleanup = () => subscription.unsubscribe?.();
+        }
+
+        if (disposed) {
+          cleanup?.();
+        }
+      })
+      .catch(() => undefined);
+
+    return () => {
+      disposed = true;
+      cleanup?.();
+    };
+  }
+
+  async switchToPage(pageId: string): Promise<void> {
+    if (!this.api.switchPage) {
+      return;
+    }
+    const currentPage = await this.api.getCurrentPage().catch(() => null);
+    if (currentPage?.id === pageId) {
+      return;
+    }
+    const targetPage = await this.findPageById(pageId);
+    if (!targetPage) {
+      throw new Error("Unable to find the requested Webflow page.");
+    }
+    await this.api.switchPage(targetPage);
+  }
+
+  async createPage(input: CreatePageInput): Promise<WebflowSitePage> {
+    if (!this.api.createPage) {
+      throw new Error("This version of the Webflow Designer API cannot create pages.");
+    }
+    const page = await this.api.createPage();
+    if (!page) {
+      throw new Error("Webflow did not return the created page.");
+    }
+    if (page.setName) {
+      await page.setName(input.name);
+    }
+    if (input.slug && page.setSlug) {
+      await page.setSlug(input.slug.replace(/^\/+/, ""));
+    }
+    if (input.switchToNewPage && this.api.switchPage) {
+      await this.api.switchPage(page);
+    }
+
+    const name =
+      (await page.getName?.().catch(() => null)) ??
+      page.name ??
+      input.name;
+    const slug =
+      (await page.getSlug?.().catch(() => null)) ??
+      page.slug ??
+      input.slug ??
+      null;
+    const isHomepage =
+      (await page.getIsHomepage?.().catch(() => false)) ??
+      page.isHomepage ??
+      false;
+
+    return {
+      id: page.id,
+      name,
+      route: slugToRoute(slug, isHomepage),
+      isHomepage
+    };
+  }
+
   async inspectSharedStyles(siteId: string): Promise<SharedStyleContext> {
     const [styles, collection] = await Promise.all([
       this.api.getAllStyles(),
@@ -515,6 +712,121 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
       throw new Error("Created Webflow element is missing an id.");
     }
     return { id };
+  }
+
+  async createComponentInstance(
+    input: CreateComponentInstanceInput
+  ): Promise<{ id: string }> {
+    const component = await this.findComponentById(input.componentId);
+    if (!component) {
+      throw new Error("Unable to find the requested Webflow component.");
+    }
+    const { parent, after } = await this.resolveAnchor({
+      parentId: input.parentId,
+      afterId: input.afterId,
+      node: {
+        id: input.componentId,
+        type: "box",
+        tag: "div",
+        classNames: [],
+        children: []
+      }
+    });
+    const created =
+      after ? await after.after(component) : await parent?.append(component);
+    const id = this.registerElement(created ?? null);
+    if (!id) {
+      throw new Error("Webflow did not return a created component instance.");
+    }
+    return { id };
+  }
+
+  async openComponentCanvas(componentId: string): Promise<void> {
+    if (!this.api.openCanvas) {
+      throw new Error("This version of the Webflow Designer API cannot open component canvases.");
+    }
+    await this.api.openCanvas({ componentId });
+  }
+
+  async exitComponentCanvas(): Promise<void> {
+    if (!this.api.exitComponent) {
+      return;
+    }
+    await this.api.exitComponent();
+  }
+
+  async getComponentRootElement(componentId: string): Promise<{ id: string } | null> {
+    const component = await this.findComponentById(componentId);
+    const root = await component?.getRootElement?.().catch(() => null);
+    const id = this.registerElement(root ?? null);
+    return id ? { id } : null;
+  }
+
+  async configureNode(
+    nodeId: string,
+    node: Pick<BuildNode, "tag" | "classNames" | "textContent">
+  ): Promise<void> {
+    const element = this.elementsById.get(nodeId);
+    if (!element) {
+      throw new Error("Unable to find the requested Webflow element.");
+    }
+    await element.setTag?.(node.tag);
+    if (typeof node.textContent === "string") {
+      await element.setTextContent?.(node.textContent);
+    }
+    if (node.classNames.length > 0) {
+      await this.applyClasses(nodeId, node.classNames);
+    }
+  }
+
+  async registerBlankComponent(input: {
+    name: string;
+    group?: string;
+    description?: string;
+  }): Promise<RegisteredComponent> {
+    if (!this.api.registerComponent) {
+      throw new Error("This version of the Webflow Designer API cannot create components.");
+    }
+    const component = await this.api.registerComponent({
+      name: input.name,
+      group: input.group,
+      description: input.description
+    });
+    return {
+      id: component.id,
+      name: (await component.getName().catch(() => input.name)) ?? input.name
+    };
+  }
+
+  async registerComponentFromNode(
+    nodeId: string,
+    input: {
+      name: string;
+      group?: string;
+      description?: string;
+      replace?: boolean;
+    }
+  ): Promise<RegisteredComponent> {
+    if (!this.api.registerComponent) {
+      throw new Error("This version of the Webflow Designer API cannot create components.");
+    }
+    const node = this.elementsById.get(nodeId);
+    if (!node) {
+      throw new Error("Unable to find the Webflow element for component registration.");
+    }
+    const component = await this.api.registerComponent(
+      {
+        name: input.name,
+        group: input.group,
+        description: input.description,
+        replace: input.replace ?? false
+      },
+      node
+    );
+    return {
+      id: component.id,
+      name: (await component.getName().catch(() => input.name)) ?? input.name
+    };
   }
 
   async applyClasses(nodeId: string, classNames: string[]): Promise<void> {
@@ -633,34 +945,68 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
 class MockWebflowDesignerBridge implements WebflowDesignerBridge {
   private readonly createdNodes = new Map<string, BuildNode>();
   private readonly createdStyles = new Set<string>();
+  private readonly listeners = new Set<() => void>();
   private nodeCount = 0;
+  private currentPageId = "mock-page-home";
+  private pages: WebflowSitePage[] = [
+    {
+      id: "mock-page-home",
+      name: "Home",
+      route: "/",
+      isHomepage: true
+    },
+    {
+      id: "mock-page-services",
+      name: "Services",
+      route: "/services",
+      isHomepage: false
+    }
+  ];
 
   async getContext(): Promise<DesignerContext> {
+    const currentPage =
+      this.pages.find((page) => page.id === this.currentPageId) ?? this.pages[0];
     return {
       siteId: "6a10876cde32438bc9f52304",
       siteName: "Relume Style Guide Clone",
-      pageId: "mock-page-home",
-      pageName: "Home",
+      pageId: currentPage?.id ?? null,
+      pageName: currentPage?.name ?? null,
       mode: "design",
       selectedElementId: "mock-selected-section"
     };
   }
 
   async getSitePages(): Promise<WebflowSitePage[]> {
-    return [
-      {
-        id: "mock-page-home",
-        name: "Home",
-        route: "/",
-        isHomepage: true
-      },
-      {
-        id: "mock-page-services",
-        name: "Services",
-        route: "/services",
-        isHomepage: false
-      }
-    ];
+    return this.pages;
+  }
+
+  subscribeToCurrentPage(listener: () => void): () => void {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  async switchToPage(pageId: string): Promise<void> {
+    if (this.pages.some((page) => page.id === pageId)) {
+      this.currentPageId = pageId;
+      this.listeners.forEach((listener) => listener());
+    }
+  }
+
+  async createPage(input: CreatePageInput): Promise<WebflowSitePage> {
+    const page: WebflowSitePage = {
+      id: `mock-page-${Date.now().toString(36)}`,
+      name: input.name,
+      route: slugToRoute(input.slug ?? input.name.toLowerCase().replace(/\s+/g, "-")),
+      isHomepage: false
+    };
+    this.pages = [...this.pages, page];
+    if (input.switchToNewPage) {
+      this.currentPageId = page.id;
+      this.listeners.forEach((listener) => listener());
+    }
+    return page;
   }
 
   async inspectSharedStyles(siteId: string): Promise<SharedStyleContext> {
@@ -692,6 +1038,48 @@ class MockWebflowDesignerBridge implements WebflowDesignerBridge {
     const id = `mock-node-${++this.nodeCount}`;
     this.createdNodes.set(id, input.node);
     return { id };
+  }
+
+  async createComponentInstance(
+    _input: CreateComponentInstanceInput
+  ): Promise<{ id: string }> {
+    return { id: `mock-component-instance-${++this.nodeCount}` };
+  }
+
+  async openComponentCanvas(): Promise<void> {}
+
+  async exitComponentCanvas(): Promise<void> {}
+
+  async getComponentRootElement(componentId: string): Promise<{ id: string } | null> {
+    return { id: `mock-component-root-${componentId}` };
+  }
+
+  async configureNode(): Promise<void> {}
+
+  async registerBlankComponent(input: {
+    name: string;
+    group?: string;
+    description?: string;
+  }): Promise<RegisteredComponent> {
+    return {
+      id: `mock-component-${Date.now().toString(36)}`,
+      name: input.name
+    };
+  }
+
+  async registerComponentFromNode(
+    _nodeId: string,
+    input: {
+      name: string;
+      group?: string;
+      description?: string;
+      replace?: boolean;
+    }
+  ): Promise<RegisteredComponent> {
+    return {
+      id: `mock-component-${Date.now().toString(36)}`,
+      name: input.name
+    };
   }
 
   async applyClasses(): Promise<void> {}
@@ -728,7 +1116,50 @@ class MockWebflowDesignerBridge implements WebflowDesignerBridge {
 
 export function getWebflowBridge(): WebflowDesignerBridge {
   if (window.__WEBFLOW_SECTION_BUILDER_BRIDGE__) {
-    return window.__WEBFLOW_SECTION_BUILDER_BRIDGE__;
+    const injected = window.__WEBFLOW_SECTION_BUILDER_BRIDGE__;
+    return {
+      ...injected,
+      subscribeToCurrentPage:
+        injected.subscribeToCurrentPage ?? (() => () => {}),
+      switchToPage: injected.switchToPage ?? (async () => undefined),
+      createPage:
+        injected.createPage ??
+        (async () => {
+          throw new Error("Injected bridge does not implement createPage().");
+        }),
+      createComponentInstance:
+        injected.createComponentInstance ??
+        (async () => {
+          throw new Error("Injected bridge does not implement createComponentInstance().");
+        }),
+      openComponentCanvas:
+        injected.openComponentCanvas ??
+        (async () => {
+          throw new Error("Injected bridge does not implement openComponentCanvas().");
+        }),
+      exitComponentCanvas:
+        injected.exitComponentCanvas ?? (async () => undefined),
+      getComponentRootElement:
+        injected.getComponentRootElement ??
+        (async () => {
+          throw new Error("Injected bridge does not implement getComponentRootElement().");
+        }),
+      configureNode:
+        injected.configureNode ??
+        (async () => {
+          throw new Error("Injected bridge does not implement configureNode().");
+        }),
+      registerBlankComponent:
+        injected.registerBlankComponent ??
+        (async () => {
+          throw new Error("Injected bridge does not implement registerBlankComponent().");
+        }),
+      registerComponentFromNode:
+        injected.registerComponentFromNode ??
+        (async () => {
+          throw new Error("Injected bridge does not implement registerComponentFromNode().");
+        })
+    };
   }
 
   const api = window.webflow ?? window.Webflow;

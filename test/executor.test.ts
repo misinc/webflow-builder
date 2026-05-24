@@ -38,8 +38,45 @@ class FailingBridge implements WebflowDesignerBridge {
     return [];
   }
 
+  subscribeToCurrentPage() {
+    return () => {};
+  }
+
+  async switchToPage() {}
+
+  async createPage() {
+    return {
+      id: "page-2",
+      name: "Created page",
+      route: "/created-page",
+      isHomepage: false
+    };
+  }
+
   async createNode() {
     return { id: "node-1" };
+  }
+
+  async createComponentInstance() {
+    return { id: "component-instance-1" };
+  }
+
+  async openComponentCanvas() {}
+
+  async exitComponentCanvas() {}
+
+  async getComponentRootElement() {
+    return { id: "component-root-1" };
+  }
+
+  async configureNode() {}
+
+  async registerBlankComponent() {
+    return { id: "component-1", name: "Component" };
+  }
+
+  async registerComponentFromNode() {
+    return { id: "component-1", name: "Component" };
   }
 
   async applyClasses() {}

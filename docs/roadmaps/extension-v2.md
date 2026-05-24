@@ -1,130 +1,188 @@
-# Guided Webflow Builder V2 Plan
+# Webflow Builder Extension V2 Roadmap
 
 ## Summary
-Replace the current one-shot `Build Section` extension with a guided, section-by-section workflow that mirrors the successful `webflow-site-builder` process and follows Webflow’s Designer App standards from the start. The extension becomes a native-feeling page workspace: configure once, map Webflow pages to repo pages site-wide, then for any current Webflow page automatically load the mapped repo page, walk its sections in order, build/style one section at a time, and advance through approve/skip actions.
+Ship V2 in phases, starting with a clickable prototype inside the real extension rather than attempting the full UI, auth, backend, and Webflow-runtime rewrite in one pass.
+
+The immediate goal is to replace the current extension shell with the new 16-screen HyperAgent flow, backed by realistic mock state and in-extension navigation. After the UX is stable in the real 800×600 extension surface, progressively wire it to live data and then to mutating workflows.
 
 This file is the canonical continuation plan for future threads.
 
+## Delivery Strategy
+### Phase 1: clickable V2 shell in the real extension
+- Port the `new-ui/` design system, primitives, and screen structure into `extension/src`.
+- Replace the current `settings | mappings | workspace` shell with the V2 route/state model.
+- Implement all 16 screens as a clickable in-extension prototype:
+  - onboarding: screens `01–04`
+  - section flow: screens `05–11`
+  - settings and progress: screens `12–13`
+  - edge cases: screens `14–15`
+  - component opportunities: screen `16`
+- Keep state local for this phase, but shape it like the final product:
+  - signed-in user
+  - selected GitHub account/org
+  - selected repo
+  - page mappings
+  - current Webflow page
+  - section statuses and progress
+  - component-opportunities banner visibility and dismiss state
+  - selected detected component opportunities
+- Use realistic mock data derived from the current product model, not placeholder lorem states.
+- Preserve the actual extension size and runtime entrypoint so the UI can be validated inside the Webflow extension surface.
+
+### Phase 2: read-only dynamic data
+- Keep the V2 shell and replace static demo state with live read paths incrementally.
+- Wire session bootstrap and signed-in account state first.
+- Wire repo list and repo metadata next.
+- Wire Designer context and current page detection next.
+- Wire page mappings, section queue, progress rollups, and unmapped-page behavior after that.
+- Add read-only component-opportunity detection so the Section List banner and screen 16 are driven by real codebase analysis.
+- Keep this phase non-destructive where possible: users should be able to inspect real data before any new mutating workflows are turned on.
+
+#### Phase 2 task breakdown
+- Session and identity
+  - Replace mock signed-in user/account data with real session bootstrap.
+  - Surface the authenticated GitHub/App identity in onboarding and settings.
+  - Remove prototype-only identity assumptions from the V2 state store.
+- Repository selection
+  - Load real org/account choices for the repo picker.
+  - Load real repositories, search/filter them, and show actual metadata such as default branch, language, and updated-at values.
+  - Keep repo selection read-only in this phase aside from choosing which already-available repo to inspect.
+- Webflow Designer context
+  - Read the active site/page from the real bridge.
+  - Subscribe to page changes so the V2 shell reacts when the user navigates in Designer.
+  - Load the real site page list for mapping and site progress screens.
+- Page mappings
+  - Replace mocked mapping rows with persisted mapping data.
+  - Drive screens `03`, `12`, `13`, and `14` from real mapping state.
+  - Show accurate mapped/unmapped counts and real current-page unmapped behavior.
+- Section queue and progress
+  - Replace mocked section rows and counts with the real workflow queue.
+  - Drive Section List, Section Complete, Page Complete, and Site Progress from persisted workflow state.
+  - Preserve the UI-only shell behavior for now: no new write paths from the V2 shell in this phase.
+- Component opportunities, read-only
+  - Add a detection/read model for repeated patterns in the repo/codebase.
+  - Drive the Section List banner from real detected opportunities.
+  - Populate screen `16` with real candidate patterns, confidence, file counts, instance counts, and inferred props where available.
+  - Keep component creation disabled or non-mutating until Phase 3.
+- Out of scope for Phase 2
+  - No page creation write path from screen `04`.
+  - No skeleton insertion/styling mutations from the new shell.
+  - No approve/skip persistence triggered from the new shell.
+  - No Webflow Component creation from screen `16`.
+
+### Phase 3: mutating workflows
+- Turn on write paths after the V2 shell and read models are stable.
+- Implement page creation from screen `04`.
+- Implement section actions in the V2 flow:
+  - generate skeleton
+  - edit and save/discard skeleton changes
+  - insert into Webflow
+  - apply styles
+  - approve
+  - skip
+- Implement component creation from screen `16` so promoted opportunities become real Webflow Components used by later builds.
+- Add cancellation and rollback behavior for skeleton/style runs.
+- Keep approval final for V2 unless a later roadmap explicitly adds rebuild/undo affordances.
+
+## Product Flow
+### Core UX
+- The extension opens into the new V2 shell, not the old utility workspace.
+- On first run, the user moves through:
+  - `01 Welcome`
+  - `02 Choose repository`
+  - `03 Map Webflow pages to repo pages`
+  - optional `04 Create a new Webflow page`
+- After setup, the default home base is `05 Section list`.
+- The section build loop remains:
+  - `06 Generating skeleton`
+  - `07 Skeleton review`
+  - `08 Skeleton edit`
+  - `09 Applying styles`
+  - `10 Section complete`
+  - `11 Page complete`
+- Settings and bird’s-eye progress remain separate destinations:
+  - `12 Site progress`
+  - `13 Settings`
+- Edge states remain first-class:
+  - `14 Not mapped`
+  - `15 Error`
+
+### Component opportunities
+- The V2 flow now includes screen `16 Component opportunities`.
+- Screen `05 Section list` shows a dismissible banner between the page header and the section list when repeated patterns are detected in the repo/codebase.
+- The banner is the entry point to screen `16`.
+- Screen `16` is an optional pre-build setup step across pages:
+  - detected reusable patterns on the left
+  - selected pattern detail on the right
+  - confidence, occurrence counts, and inferred props
+  - multi-select via checkboxes
+  - create-selected-components action
+- The intended product behavior is:
+  - if a pattern is promoted to a Webflow Component before build, later section builds should instance that component instead of inserting duplicated raw structures
+  - if the user skips or dismisses the banner, normal section building still works
+- Banner dismiss state should be local in Phase 1 and then tied to persisted workflow/setup state in later phases.
+
 ## Implementation Changes
-### Product workflow
-- Replace the primary UI flow with a guided page workflow:
-  - `Settings`: connect repo, sync repo, bind Webflow site, configure provider/model, choose default workflow mode.
-  - `Page mappings`: show all Webflow pages for the bound site and a repo-page dropdown for each one.
-  - `Section workspace`: show the ordered queue for the mapped repo page and focus the user on one current section.
-  - `Review`: present skeleton/styling output, warnings, and actions to approve, skip, retry, or continue.
-- Support three modes, with `Full Assist` as the default:
-  - `Full Assist`: generate skeleton, insert/build it, style it, stop for approval.
-  - `Skeleton Then Style`: propose skeleton first, then style after approval/build confirmation.
-  - `Style Existing Section`: inspect an existing Webflow section and style only.
-- Remove the current one-shot `Build Section` product surface entirely.
-- Add section actions:
-  - `Generate skeleton`
-  - `Insert skeleton`
-  - `Style current section`
-  - `Refine styling`
-  - `Approve and next`
-  - `Skip section`
-  - `Mark page complete`
-- After approval or skip, automatically advance to the next section in source order.
-- When all sections on a mapped page are complete, show a page-complete state and prompt for the next mapped Webflow page.
+### Frontend architecture
+- Introduce a V2 app state/store dedicated to the new flow instead of extending the current monolithic `App.tsx` state tree further.
+- Separate:
+  - navigation state
+  - session/repo state
+  - mapping state
+  - queue/progress state
+  - active section-run state
+  - component-opportunity state
+- Reuse the prototype’s component decomposition where practical:
+  - panel chrome
+  - headers
+  - buttons
+  - badges
+  - stepper
+  - loading states
+- Keep Tailwind as the styling system for V2 so the shipped UI stays close to `new-ui/`.
 
-### Site-wide page mapping
-- Move page mapping from an ad hoc per-page choice into a persistent site configuration screen.
-- Show every Webflow page in the bound site in a table/list with:
-  - Webflow page name
-  - Webflow page ID or route
-  - repo page dropdown
-  - mapping status
-- Allow pages to remain intentionally unmapped.
-  - Unmapped pages are excluded from the guided workflow.
-  - Mapped pages participate in section queues and page completion tracking.
-- Auto-load the mapped repo page whenever the user opens the extension on a Webflow page that already has a saved mapping.
-- Provide bulk actions:
-  - save mappings
-  - clear mapping for a page
-  - filter to mapped/unmapped pages
-- Treat the site-wide mapping screen as part of setup, but allow it to be revisited at any time.
+### Backend and contracts
+- Do not block Phase 1 on backend/auth completion.
+- Backend changes still needed for later phases:
+  - session/auth bootstrap for GitHub App sign-in
+  - repo listing for the signed-in user/installations
+  - existing repo connect/sync/tree reuse after selection
+  - mapping, queue, section-run, and progress endpoints remain part of the final shape
+  - component-opportunity analysis endpoint(s) and component-creation workflow will be needed for screen `16`
+- Existing workflow persistence remains the source of truth once dynamic wiring begins.
 
-### UI and Webflow design standards
-- Redesign the extension UI to follow Webflow Designer App guidance:
-  - vertical stacked layout
-  - full-width controls and primary actions
-  - sentence-case copy
-  - no horizontal scrolling
-  - consistent 4px-based spacing rhythm
-  - Inter typography
-  - Webflow-hosted CSS variables for colors so the app follows Designer appearance settings
-- Replace the current branded landing-page aesthetic with a native-feeling utility UI.
-- Use Webflow-style panels, grouped settings, compact status rows, helpful empty states, and actionable error banners.
-- Keep the extension at Webflow’s large app size and design within that constraint.
-- Add UI states for:
-  - repo not connected
-  - repo synced but site not bound
-  - site bound but mappings incomplete
-  - current Webflow page unmapped
-  - no section selected
-  - selected section ready for styling
-  - section approved
-  - section skipped
-  - page complete
-- Add app-intent-ready structure so the extension can later be launched contextually from relevant Designer workflows.
-
-### Backend and persistence
-- Introduce persistent workflow tables in Postgres:
-  - `webflow_page_mappings`
-    - `webflowSiteId`, `webflowPageId`, `repoId`, `repoPageId`, `userId`
-  - `section_workflow_states`
-    - `webflowPageId`, `repoPageId`, `repoSectionId`, `userId`, `status`, `sortOrder`, timestamps
-  - `section_runs`
-    - section analysis input snapshot, generated skeleton plan, styling plan, execution summary, approval outcome
-- Keep repo sync, shared-style context, and repo snapshot persistence, but treat them as workflow inputs rather than the final build artifact.
-- Add workflow endpoints:
-  - `GET /api/workflow/site-pages`
-  - `POST /api/workflow/page-mappings`
-  - `GET /api/workflow/page-mappings`
-  - `GET /api/workflow/queue`
-  - `POST /api/workflow/section/analyze`
-  - `POST /api/workflow/section/generate-skeleton`
-  - `POST /api/workflow/section/style`
-  - `POST /api/workflow/section/approve`
-  - `POST /api/workflow/section/skip`
-  - `POST /api/workflow/page/complete`
-- Keep build-job/result tracking only for concrete Webflow mutations. Analysis-only and skeleton-only passes should be stored as section runs.
-
-### Planner and AI architecture
-- Replace `HeuristicBuildPlanner` as the primary path with a pluggable provider interface.
-- Implement only one provider initially:
-  - `OpenAIPlanningProvider`
-  - default model: `gpt-5.4`
-- Use a provider abstraction from the start so OpenAI is the default implementation but not hardwired into the rest of the system.
-- Split planning into distinct passes:
-  - `SectionAnalysis`
-  - `SkeletonPlan`
-  - `StylingPlan`
-  - `SectionVerification`
-- Use OpenAI structured outputs for the OpenAI adapter, but keep provider-facing contracts provider-neutral.
-- Stop relying on regex-only `contentHints` as the main section representation. Add a richer MIS serializer that extracts:
-  - real headings and copy
-  - card/list item structures
-  - icon and asset references
-  - CTA/button intent
-  - layout groups and content hierarchy
-- Keep validation and execution safeguards after model output. Invalid model output should be rejected or downgraded to warnings before mutation.
-- Remove the heuristic planner from the user-facing flow rather than keeping it as an alternate mode.
-
-### Webflow runtime behavior
-- Extend the current real Designer bridge with better section-target inspection:
-  - detect selected section wrapper
-  - inspect selected subtree
-  - inspect neighboring sections
-  - inspect reusable classes and variables
-- For `Style Existing Section`, require an explicit selected section root or a user-confirmed target wrapper.
-- For `Full Assist`, insert only the approved skeleton before styling.
-- Before every mutating step, verify editable mode, active site, active page, selected target, and user capability.
-- Keep rollback, but scope it only to the current section action.
+### Webflow bridge
+- Do not block Phase 1 on full Designer API coverage.
+- Later phases still need bridge support for:
+  - current page detection
+  - page-change subscription
+  - page enumeration
+  - page creation
+  - page switching
+  - component creation/instancing hooks for promoted opportunities
+- The production bridge should continue to wrap raw Webflow APIs instead of letting screens call `window.webflow` directly.
 
 ## Public Interfaces and Types
-- Replace the single-plan mental model with separate contracts:
+- V2 frontend state should explicitly model:
+  - `currentScreen`
+  - `session`
+  - `selectedRepo`
+  - `pageMappings`
+  - `workflowQueue`
+  - `pageProgress`
+  - `siteProgress`
+  - `componentOpportunities`
+  - `componentBanner`
+- `componentOpportunities` should support:
+  - detected pattern id
+  - label/name
+  - confidence
+  - instance count
+  - file count
+  - inferred props
+  - selected state
+  - promoted/created state
+- Final backend-facing contracts should still preserve the earlier V2 workflow types:
   - `SectionAnalysis`
   - `SkeletonPlan`
   - `StylingPlan`
@@ -132,53 +190,31 @@ This file is the canonical continuation plan for future threads.
   - `WorkflowQueueItem`
   - `PageMapping`
   - `SectionWorkflowState`
-  - `SitePageMappingRow`
-- `SitePageMappingRow` should include:
-  - `webflowPageId`
-  - `webflowPageName`
-  - `webflowPageRoute` when available
-  - `repoPageId | null`
-  - `repoPageName | null`
-  - `mappingStatus`
-- `WorkflowQueueItem` should include:
-  - `repoSectionId`
-  - `sectionName`
-  - `sortOrder`
-  - `status`
-  - `recommendedMode`
-  - `lastRunId`
-- `SectionWorkflowState.status` values:
-  - `not_started`
-  - `in_progress`
-  - `skeleton_ready`
-  - `styled`
-  - `approved`
-  - `skipped`
-- The extension should auto-load the next unfinished section for the mapped page.
+  - plus new component-opportunity analysis/result types
 
 ## Test Plan
-- Repo connection, sync, and site binding still work after the workflow refactor.
-- Site-wide page mappings persist and reload for the same user + Webflow site.
-- The mappings screen lists all Webflow pages and allows any page to remain unmapped.
-- The current Webflow page automatically resolves to its mapped repo page when a mapping exists.
-- Unmapped pages are excluded from the workflow and show a clear unmapped state instead of blocking the whole app.
-- Section queue loads in repo order and auto-advances after `approve` and `skip`.
-- `Style Existing Section` refuses to run without a valid selected section target.
-- `Full Assist` generates skeleton first, then styles only after the approved sequence.
-- OpenAI provider output parses into valid `SectionAnalysis`, `SkeletonPlan`, `StylingPlan`, and `SectionVerification` contracts.
-- Invalid or partial model output fails safely and does not mutate Webflow.
-- Existing shared classes and variables are preferred over new ones during styling.
-- New classes remain Client-First and function-based, never page-prefixed.
-- Approved and skipped sections remain persisted after reload and in a new browser session.
-- Section-scoped rollback removes only nodes/styles created during the current action.
-- The redesigned UI uses Webflow-native layout patterns, full-width controls, sentence-case copy, no horizontal scroll, and hosted CSS variables.
-- Legacy one-shot `Build Section` UI is no longer exposed.
+- Phase 1:
+  - all 16 screens render inside the real extension
+  - screen-to-screen navigation matches the prototype
+  - section header, list, footer, and status states match the spec visually
+  - the component-opportunities banner appears on Section List when enabled
+  - the banner dismisses correctly
+  - the Review button reaches screen `16`
+  - screen `16` supports selection and back/skip/create CTA flows at the prototype level
+- Phase 2:
+  - signed-in session state loads correctly
+  - repo listing, page mappings, queue, progress, and unmapped states render from live data
+  - component-opportunity detection drives the Section List banner and screen `16`
+- Phase 3:
+  - page creation works
+  - section build flow works end-to-end
+  - component creation works and later builds use promoted components
+  - cancellation and rollback behave correctly
 
 ## Assumptions and Defaults
-- Default workflow mode is `Full Assist`, but all three modes are supported.
-- Persistent workflow state lives in Postgres, not local-only storage.
-- OpenAI is the only provider implemented initially, via a pluggable provider interface, with `gpt-5.4` as the default model.
-- The redesign targets Marketplace-grade Webflow app standards from the start.
-- Page mappings are configured site-wide and can intentionally leave some Webflow pages unmapped.
-- The current heuristic planner is removed from the user-facing flow.
-- The extension remains section-scoped and preserves the site’s existing design system, variables, fonts, navbar, and footer.
+- The recommended path is UI-first, then read-only data, then mutating workflows.
+- V2 remains the active naming for this rewrite in branches, PRs, and roadmap references.
+- Tailwind is adopted for the V2 extension UI.
+- Phase 1 is intentionally allowed to use mock data, but the mock state must mirror the final product shape closely enough that later wiring is mostly data substitution rather than UI redesign.
+- The new component-opportunities flow is part of V2, not a post-V2 enhancement.
+- The current end-to-end rewrite plan is superseded by this phased delivery strategy.
