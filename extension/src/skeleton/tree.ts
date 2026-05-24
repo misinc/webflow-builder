@@ -46,6 +46,10 @@ function lineIndent(rawLine: string): number {
   return indentProbe.match(/^ */)?.[0].length ?? 0;
 }
 
+function collectClassNames(node: BuildNode): string[] {
+  return [node.classNames, ...node.children.map(collectClassNames)].flat();
+}
+
 export function parseSkeletonTreeText(
   plan: SkeletonPlan,
   treeText: string
@@ -190,4 +194,20 @@ export function sanitizeSkeletonPlan(plan: SkeletonPlan): SkeletonPlan {
     elementTree: sanitizedRoot.node,
     warnings
   };
+}
+
+export function normalizeSkeletonPlan(plan: SkeletonPlan): SkeletonPlan {
+  const sanitized = sanitizeSkeletonPlan(plan);
+  const existingClassCount = new Set(collectClassNames(sanitized.elementTree)).size;
+  if (existingClassCount > 0) {
+    return sanitized;
+  }
+
+  try {
+    const reparsed = sanitizeSkeletonPlan(parseSkeletonTreeText(sanitized, sanitized.treeText));
+    const reparsedClassCount = new Set(collectClassNames(reparsed.elementTree)).size;
+    return reparsedClassCount > 0 ? reparsed : sanitized;
+  } catch {
+    return sanitized;
+  }
 }

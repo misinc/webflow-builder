@@ -37,7 +37,11 @@ import {
   executeSkeletonPlanIntoRoot,
   type ExecutionSummary
 } from "../../executor/buildExecutor.js";
-import { parseSkeletonTreeText, sanitizeSkeletonPlan } from "../../skeleton/tree.js";
+import {
+  normalizeSkeletonPlan,
+  parseSkeletonTreeText,
+  sanitizeSkeletonPlan
+} from "../../skeleton/tree.js";
 import {
   mergeExecutionSummaries,
   rollbackExecutionSummary
@@ -249,7 +253,12 @@ interface AppStateContextValue {
   lastCompletedSection: SectionOutcomeSummary | null;
   activeSectionError: string | null;
   selectSection: (sectionId: string) => void;
-  startSectionBuild: (sectionId?: string) => Promise<boolean>;
+  startSectionBuild: (
+    sectionId?: string,
+    options?: {
+      preserveState?: boolean;
+    }
+  ) => Promise<boolean>;
   regenerateSkeleton: () => Promise<boolean>;
   beginSkeletonEdit: () => void;
   discardSkeletonChanges: () => void;
@@ -941,17 +950,25 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     session?.userId
   ]);
 
-  const startSectionBuild = useCallback(async (sectionId?: string) => {
+  const startSectionBuild = useCallback(async (
+    sectionId?: string,
+    options?: {
+      preserveState?: boolean;
+    }
+  ) => {
     const nextSectionId = sectionId ?? selectedSectionId ?? nextSectionIdFromQueue(activeQueue);
     if (!nextSectionId) {
       setError("Choose a section first.");
       return false;
     }
+    const preserveState = options?.preserveState === true;
     try {
       return await withMutation("Generating skeleton", async () => {
         const controller = new AbortController();
         setActiveAbortController(controller);
-        resetSectionRunState(nextSectionId);
+        if (!preserveState) {
+          resetSectionRunState(nextSectionId);
+        }
         setSectionErrorsById((current) => {
           const next = { ...current };
           delete next[nextSectionId];
@@ -968,7 +985,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         const request = currentWorkflowRequest(nextSectionId);
         const nextAnalysis = await backend.analyzeSection(request, controller.signal);
         setAnalysis(nextAnalysis);
-        const nextSkeleton = sanitizeSkeletonPlan(
+        const nextSkeleton = normalizeSkeletonPlan(
           await backend.generateSkeleton(request, controller.signal)
         );
         setSkeleton(nextSkeleton);
@@ -1003,7 +1020,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   ]);
 
   const regenerateSkeleton = useCallback(async () => {
-    return startSectionBuild(selectedSectionId ?? undefined);
+    return startSectionBuild(selectedSectionId ?? undefined, { preserveState: true });
   }, [selectedSectionId, startSectionBuild]);
 
   const beginSkeletonEdit = useCallback(() => {
@@ -1028,7 +1045,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       return false;
     }
     try {
-      const parsed = sanitizeSkeletonPlan(
+      const parsed = normalizeSkeletonPlan(
         parseSkeletonTreeText(skeleton, skeletonDraft || skeleton.treeText)
       );
       setSkeleton(parsed);
@@ -1096,8 +1113,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
         const editableSkeleton =
           isEditingSkeleton && skeletonDraft.trim()
-            ? sanitizeSkeletonPlan(parseSkeletonTreeText(skeleton, skeletonDraft))
-            : skeleton;
+            ? normalizeSkeletonPlan(parseSkeletonTreeText(skeleton, skeletonDraft))
+            : normalizeSkeletonPlan(skeleton);
         let targetNodeId = currentTargetNodeId;
         const executionParts: ExecutionSummary[] = [];
 
@@ -1116,7 +1133,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                 "Failed to insert the generated skeleton."
             );
           }
-          setSkeleton(editableSkeleton);
+          setSkeleton(normalizeSkeletonPlan(editableSkeleton));
           targetNodeId = nodeExecution.rootNodeId ?? null;
           setCurrentTargetNodeId(targetNodeId);
           executionParts.push(nodeExecution);

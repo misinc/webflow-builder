@@ -71,8 +71,11 @@ export function ErrorScreen() {
           <Button
             variant="primary"
             onClick={() => {
-              navigate('generating-skeleton');
-              void regenerateSkeleton();
+              void regenerateSkeleton().then((success) => {
+                if (success) {
+                  navigate('skeleton-review');
+                }
+              });
             }}
           >
             <RefreshCw size={14} />

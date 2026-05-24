@@ -70,10 +70,11 @@ async function request<T>(
       }
     });
   } catch (error) {
+    const pathname = new URL(url, window.location.origin).pathname;
+    const message =
+      error instanceof Error ? error.message : `Network request failed for ${pathname}`;
     throw new Error(
-      error instanceof Error
-        ? error.message
-        : `Network request failed for ${new URL(url).pathname}`
+      message === "Failed to fetch" ? `Failed to fetch ${pathname}` : message
     );
   }
 

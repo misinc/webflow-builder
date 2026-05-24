@@ -19,6 +19,7 @@ import {
   SkippedBadge,
   StatusDot
 } from "../components/Badge";
+import { Spinner } from "../components/Spinner";
 import { useNavigation } from "../context/NavigationContext";
 import { useAppState } from "../context/AppStateContext";
 import type { SectionStatus } from "../types";
@@ -34,8 +35,12 @@ export function SectionListScreen() {
     currentSections,
     designerContext,
     dismissComponentBanner,
+    isMutating,
+    loadingLabel,
     refreshComponentOpportunities,
-    selectSection
+    selectSection,
+    selectedSectionId,
+    startSectionBuild
   } = useAppState();
   const builtCount =
     activeQueue?.items.filter((item) => item.status === "approved").length ?? 0;
@@ -47,6 +52,12 @@ export function SectionListScreen() {
   const isPageComplete = totalCount > 0 && remainingCount === 0;
   const progressPercent =
     totalCount > 0 ? Math.round(((builtCount + skippedCount) / totalCount) * 100) : 0;
+  const isGeneratingSkeleton = isMutating && loadingLabel === "Generating skeleton";
+
+  async function openSection(sectionId?: string) {
+    const success = await startSectionBuild(sectionId);
+    navigate(success ? "skeleton-review" : "error");
+  }
 
   return (
     <Panel>
@@ -152,13 +163,14 @@ export function SectionListScreen() {
               <SectionRow
                 key={section.id}
                 section={section}
+                busy={isGeneratingSkeleton && selectedSectionId === section.id}
                 onClick={() => {
                   selectSection(section.id);
                   if (section.status === "complete") {
                     navigate("section-complete");
                     return;
                   }
-                  navigate("generating-skeleton");
+                  void openSection(section.id);
                 }}
               />
             ))
@@ -174,6 +186,7 @@ export function SectionListScreen() {
         <div className="flex-1" />
         <Button
           variant="primary"
+          disabled={isMutating}
           onClick={() => {
             if (!isMapped) {
               navigate("not-mapped");
@@ -187,13 +200,15 @@ export function SectionListScreen() {
               });
               return;
             }
-            navigate("generating-skeleton");
+            void openSection();
           }}
         >
           {isMapped
             ? isPageComplete
               ? "See page summary"
-              : "Continue building"
+              : isGeneratingSkeleton
+                ? "Generating skeleton..."
+                : "Continue building"
             : "Resolve mapping"}
         </Button>
       </div>
@@ -203,6 +218,7 @@ export function SectionListScreen() {
 
 function SectionRow({
   section,
+  busy = false,
   onClick
 }: {
   section: {
@@ -212,10 +228,11 @@ function SectionRow({
     elements: number | null;
     status: SectionStatus | "in-progress";
   };
+  busy?: boolean;
   onClick: () => void;
 }) {
   const isActive = section.status === "in-progress";
-  const clickable = section.status !== "complete";
+  const clickable = section.status !== "complete" && !busy;
 
   return (
     <button
@@ -234,6 +251,7 @@ function SectionRow({
         <div className="flex items-center gap-2 text-[13px] font-medium text-wb-text-primary mb-0.5">
           <StatusDot status={section.status} />
           {section.title}
+          {busy ? <Badge tone="in-progress">Generating</Badge> : null}
           {renderBadge(section.status)}
         </div>
         <div className="text-[11.5px] text-wb-text-tertiary font-mono">
@@ -242,7 +260,9 @@ function SectionRow({
         </div>
       </div>
       <div className={`flex-shrink-0 ${isActive ? "text-wb-accent" : "text-wb-text-tertiary"}`}>
-        {section.status === "complete" ? (
+        {busy ? (
+          <Spinner size={14} thickness={1.75} />
+        ) : section.status === "complete" ? (
           <MoreVertical size={16} />
         ) : (
           <ChevronRight size={16} />

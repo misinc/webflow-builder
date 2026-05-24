@@ -8,7 +8,7 @@ import { Spinner } from "../components/Spinner";
 import { useNavigation } from "../context/NavigationContext";
 import { useAppState } from "../context/AppStateContext";
 import type { BuildNode } from "../../../../src/shared/contracts.js";
-import { parseSkeletonTreeText, sanitizeSkeletonPlan } from "../../skeleton/tree.js";
+import { normalizeSkeletonPlan } from "../../skeleton/tree.js";
 
 export function SkeletonReviewScreen() {
   const { navigate } = useNavigation();
@@ -28,22 +28,14 @@ export function SkeletonReviewScreen() {
     if (!skeleton) {
       return null;
     }
-    const existingClassCount = new Set(collectClassNames(skeleton.elementTree)).size;
-    if (existingClassCount > 0) {
-      return skeleton;
-    }
-    try {
-      const reparsed = sanitizeSkeletonPlan(parseSkeletonTreeText(skeleton, skeleton.treeText));
-      const reparsedClassCount = new Set(collectClassNames(reparsed.elementTree)).size;
-      return reparsedClassCount > 0 ? reparsed : skeleton;
-    } catch {
-      return skeleton;
-    }
+    return normalizeSkeletonPlan(skeleton);
   }, [skeleton]);
   const elementCount = displaySkeleton ? countNodes(displaySkeleton.elementTree) : 0;
   const classCount = displaySkeleton
     ? new Set(collectClassNames(displaySkeleton.elementTree)).size
     : 0;
+  const isRefreshingSkeleton =
+    Boolean(displaySkeleton) && isMutating && loadingLabel === "Generating skeleton";
   const isGeneratingSkeleton =
     !displaySkeleton &&
     isMutating &&
@@ -72,16 +64,20 @@ export function SkeletonReviewScreen() {
           </Button>
           <div className="flex-1" />
           <span className="text-[11px] text-wb-text-tertiary mr-2">
-            {isGeneratingSkeleton
+            {isRefreshingSkeleton
+              ? "Regenerating skeleton…"
+              : isGeneratingSkeleton
               ? "Generating skeleton…"
               : `${elementCount} elements · ${classCount} classes`}
           </span>
           <Button
             variant="primary"
-            disabled={!displaySkeleton || isGeneratingSkeleton}
+            disabled={!displaySkeleton || isGeneratingSkeleton || isRefreshingSkeleton}
             onClick={() => navigate("applying-styles")}
           >
-            {isGeneratingSkeleton ? "Generating skeleton…" : "Insert into Webflow"}
+            {isRefreshingSkeleton || isGeneratingSkeleton
+              ? "Generating skeleton…"
+              : "Insert into Webflow"}
           </Button>
         </>
       }
@@ -94,7 +90,7 @@ export function SkeletonReviewScreen() {
           <Button
             variant="ghost"
             size="sm"
-            disabled={isGeneratingSkeleton}
+            disabled={isGeneratingSkeleton || isRefreshingSkeleton}
             onClick={() => {
               void regenerateSkeleton();
             }}
@@ -114,6 +110,7 @@ export function SkeletonReviewScreen() {
             actions={
               <>
                 <IconButton
+                  disabled={isRefreshingSkeleton}
                   onClick={() => {
                     beginSkeletonEdit();
                     navigate("skeleton-edit");
@@ -123,6 +120,7 @@ export function SkeletonReviewScreen() {
                   <Plus size={13} />
                 </IconButton>
                 <IconButton
+                  disabled={isRefreshingSkeleton}
                   onClick={() => {
                     beginSkeletonEdit();
                     navigate("skeleton-edit");
