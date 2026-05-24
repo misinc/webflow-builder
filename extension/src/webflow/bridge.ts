@@ -148,6 +148,8 @@ interface WebflowPage {
   id: string;
   name?: string;
   slug?: string | null;
+  append?(presetOrTag: unknown): Promise<WebflowElement | null>;
+  children?: boolean;
   getName?(): Promise<string>;
   getSlug?(): Promise<string | null>;
   setName?(name: string): Promise<null>;
@@ -344,6 +346,7 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
     const explicitAfter = input.afterId
       ? this.elementsById.get(input.afterId) ?? null
       : null;
+    const currentPage = await this.api.getCurrentPage().catch(() => null);
 
     if (explicitAfter) {
       return { parent: null, after: explicitAfter };
@@ -351,6 +354,17 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
 
     if (canAppendChildren(explicitParent)) {
       return { parent: explicitParent, after: null };
+    }
+
+    if (
+      input.parentId &&
+      currentPage?.id === input.parentId &&
+      canAppendChildren(currentPage as unknown as WebflowElement | null)
+    ) {
+      return {
+        parent: currentPage as unknown as WebflowElement,
+        after: null
+      };
     }
 
     const selected = await this.getSelectedElement();

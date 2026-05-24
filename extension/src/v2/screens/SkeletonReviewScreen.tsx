@@ -4,6 +4,7 @@ import { Panel } from "../components/Panel";
 import { Button, IconButton } from "../components/Button";
 import { Stepper, buildStepper } from "../components/Stepper";
 import { SectionDetailHeader } from "../components/Headers";
+import { Spinner } from "../components/Spinner";
 import { useNavigation } from "../context/NavigationContext";
 import { useAppState } from "../context/AppStateContext";
 import type { BuildNode } from "../../../../src/shared/contracts.js";
@@ -14,6 +15,8 @@ export function SkeletonReviewScreen() {
   const {
     analysis,
     beginSkeletonEdit,
+    isMutating,
+    loadingLabel,
     regenerateSkeleton,
     selectedSection,
     skipCurrentSection,
@@ -41,6 +44,10 @@ export function SkeletonReviewScreen() {
   const classCount = displaySkeleton
     ? new Set(collectClassNames(displaySkeleton.elementTree)).size
     : 0;
+  const isGeneratingSkeleton =
+    !displaySkeleton &&
+    isMutating &&
+    (loadingLabel === "Generating skeleton" || loadingLabel === "Analyzing section" || !loadingLabel);
   const sourceLines = sourceText
     .replace(/\t/g, "  ")
     .split("\n");
@@ -65,10 +72,16 @@ export function SkeletonReviewScreen() {
           </Button>
           <div className="flex-1" />
           <span className="text-[11px] text-wb-text-tertiary mr-2">
-            {elementCount} elements · {classCount} classes
+            {isGeneratingSkeleton
+              ? "Generating skeleton…"
+              : `${elementCount} elements · ${classCount} classes`}
           </span>
-          <Button variant="primary" onClick={() => navigate("applying-styles")}>
-            Insert into Webflow
+          <Button
+            variant="primary"
+            disabled={!displaySkeleton || isGeneratingSkeleton}
+            onClick={() => navigate("applying-styles")}
+          >
+            {isGeneratingSkeleton ? "Generating skeleton…" : "Insert into Webflow"}
           </Button>
         </>
       }
@@ -81,6 +94,7 @@ export function SkeletonReviewScreen() {
           <Button
             variant="ghost"
             size="sm"
+            disabled={isGeneratingSkeleton}
             onClick={() => {
               void regenerateSkeleton();
             }}
@@ -138,8 +152,24 @@ export function SkeletonReviewScreen() {
                 }
               />
             ) : (
-              <div className="font-mono text-[12px] text-wb-text-tertiary">
-                No skeleton generated yet.
+              <div className="h-full flex items-center justify-center">
+                {isGeneratingSkeleton ? (
+                  <div className="flex flex-col items-center justify-center gap-3 text-center">
+                    <Spinner size={28} thickness={2.5} />
+                    <div>
+                      <div className="text-[15px] font-medium text-wb-text-primary">
+                        {loadingLabel ?? "Generating skeleton"}
+                      </div>
+                      <div className="text-[12px] text-wb-text-tertiary mt-1">
+                        Reading the repo section and building a Webflow-friendly tree with class names.
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="font-mono text-[12px] text-wb-text-tertiary">
+                    No skeleton generated yet.
+                  </div>
+                )}
               </div>
             )}
           </div>
