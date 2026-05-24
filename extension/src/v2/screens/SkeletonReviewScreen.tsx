@@ -21,19 +21,9 @@ export function SkeletonReviewScreen() {
   } = useAppState();
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
   const sourceText = (analysis?.sourceCode?.trim() || selectedSection?.sourceCode?.trim() || "");
-  const sourceDerivedTree = useMemo(
-    () => (sourceText ? buildPreviewTreeFromSource(sourceText) : null),
-    [sourceText]
-  );
   const displaySkeleton = useMemo(() => {
     if (!skeleton) {
       return null;
-    }
-    if (sourceDerivedTree) {
-      return {
-        ...skeleton,
-        elementTree: sourceDerivedTree
-      };
     }
     const existingClassCount = new Set(collectClassNames(skeleton.elementTree)).size;
     if (existingClassCount > 0) {
@@ -46,7 +36,7 @@ export function SkeletonReviewScreen() {
     } catch {
       return skeleton;
     }
-  }, [skeleton, sourceDerivedTree]);
+  }, [skeleton]);
   const elementCount = displaySkeleton ? countNodes(displaySkeleton.elementTree) : 0;
   const classCount = displaySkeleton
     ? new Set(collectClassNames(displaySkeleton.elementTree)).size
@@ -282,93 +272,6 @@ function CodePreview({ lines }: { lines: string[] }) {
       ))}
     </>
   );
-}
-
-function buildPreviewTreeFromSource(sourceText: string): BuildNode | null {
-  const tagPattern = /<(\/?)([A-Za-z][A-Za-z0-9-]*)\b([^>]*)>/g;
-  const root: BuildNode = {
-    id: "preview-root",
-    type: "box",
-    tag: "root",
-    classNames: [],
-    children: []
-  };
-  const stack: BuildNode[] = [root];
-  let match: RegExpExecArray | null;
-  let index = 0;
-
-  while ((match = tagPattern.exec(sourceText)) !== null) {
-    const [, closing, rawTag, attrs] = match;
-    const tag = rawTag.toLowerCase();
-    if (closing) {
-      while (stack.length > 1) {
-        const current = stack.pop()!;
-        if (current.tag === tag) {
-          break;
-        }
-      }
-      continue;
-    }
-
-    const classValue = readClassValue(attrs);
-    const node: BuildNode = {
-      id: `preview-node-${index++}`,
-      type: inferPreviewNodeType(tag),
-      tag,
-      classNames: classValue ? classValue.split(/\s+/).filter(Boolean) : [],
-      children: []
-    };
-
-    const parent = stack[stack.length - 1] ?? root;
-    parent.children.push(node);
-
-    const selfClosing =
-      /\/\s*$/.test(attrs) ||
-      ["img", "source", "br", "hr", "input", "meta", "link"].includes(tag);
-    if (!selfClosing) {
-      stack.push(node);
-    }
-  }
-
-  return root.children.find((child) => child.tag === "section") ?? root.children[0] ?? null;
-}
-
-function readClassValue(attrs: string): string | null {
-  const patterns = [
-    /className\s*=\s*"([^"]+)"/,
-    /className\s*=\s*'([^']+)'/,
-    /class\s*=\s*"([^"]+)"/,
-    /class\s*=\s*'([^']+)'/
-  ];
-  for (const pattern of patterns) {
-    const match = attrs.match(pattern);
-    if (match?.[1]) {
-      return match[1];
-    }
-  }
-  return null;
-}
-
-function inferPreviewNodeType(tag: string): BuildNode["type"] {
-  if (tag === "img" || tag === "video" || tag === "source") {
-    return "image";
-  }
-  if (tag === "button" || tag === "a") {
-    return "button";
-  }
-  if (tag === "ul" || tag === "ol") {
-    return "list";
-  }
-  if (tag === "li" || tag === "article") {
-    return "listItem";
-  }
-  if (/^h[1-6]$/i.test(tag)) {
-    return "heading";
-  }
-  if (tag === "p" || tag === "span" || tag === "label") {
-    return "text";
-  }
-  return "box";
 }
 
 function highlightSourceLine(line: string) {

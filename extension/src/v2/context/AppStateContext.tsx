@@ -9,20 +9,15 @@ import {
   useState
 } from "react";
 import {
-  type BuildNode,
   ComponentOpportunity,
   type RepoConnectionInput,
   type PageMappingsUpsertInput,
-  type PlannerWarning,
   type SectionAnalysis,
-  type SectionContext,
   type SectionVerification,
   type SharedStyleContext,
   SitePageMappingRow,
   type SkeletonPlan,
-  skeletonPlanSchema,
   type StylingPlan,
-  stylingPlanSchema,
   V2AvailableRepo,
   type V2BootstrapDiagnostics,
   V2Session,
@@ -36,8 +31,6 @@ import {
   BackendClient,
   RepoTreeResponse
 } from "../../api/client.js";
-import { HeuristicBuildPlanner } from "../../../../src/backend/planner/heuristic-planner.js";
-import { createProjectContext } from "../../../../src/backend/services/project-context.js";
 import {
   applyStylingPlan,
   executeSkeletonPlan,
@@ -59,158 +52,6 @@ import {
 const backend = new BackendClient();
 const bridge = getWebflowBridge();
 const SELECTED_REPO_STORAGE_KEY = "wb-v2-selected-repo-id";
-const heuristicPlanner = new HeuristicBuildPlanner();
-
-function dedupe(values: string[]) {
-  return [...new Set(values)];
-}
-
-function contentHintsFromSource(sourceCode: string): string[] {
-  return dedupe(
-    [...sourceCode.matchAll(/>([^<>{]{3,80})</g)]
-      .map((match) => match[1]?.trim() ?? "")
-      .filter(Boolean)
-      .slice(0, 6)
-  );
-}
-
-function assetReferencesFromSource(sourceCode: string): string[] {
-  return dedupe(
-    [...sourceCode.matchAll(/(?:src|image|poster)=["']([^"']+)["']/g)].map(
-      (match) => match[1]
-    )
-  );
-}
-
-function describeNodeTree(node: BuildNode, depth = 0): string[] {
-  const indent = "  ".repeat(depth);
-  const classSuffix = node.classNames.length ? `.${node.classNames.join(".")}` : "";
-  const labelSuffix = node.textContent ? ` "${node.textContent}"` : "";
-  const current = `${indent}${node.tag}${classSuffix}${labelSuffix}`;
-  return [current, ...node.children.flatMap((child) => describeNodeTree(child, depth + 1))];
-}
-
-function buildFallbackSectionContext(input: {
-  repoId: string;
-  pageName: string;
-  pageSourceFile: string;
-  section: RepoTreeResponse["pages"][number]["sections"][number];
-  analysis: SectionAnalysis;
-  sharedStyleContext: SharedStyleContext;
-}): SectionContext {
-  return {
-    repoId: input.repoId,
-    pageName: input.pageName,
-    pageSourceFile: input.pageSourceFile,
-    sectionName: input.section.name,
-    sectionSourceFile: input.section.sourceFile,
-    componentName: input.section.componentName,
-    sectionOrder: input.section.sortOrder,
-    sourceCode: input.analysis.sourceCode || "deterministic skeleton fallback",
-    relevantStylesheets: [],
-    assetReferences: assetReferencesFromSource(input.analysis.sourceCode),
-    contentHints: contentHintsFromSource(input.analysis.sourceCode),
-    relatedSharedClasses: input.sharedStyleContext.classes
-      .filter((item) =>
-        item.name.toLowerCase().includes(input.section.sectionKey.toLowerCase()) ||
-        ["heading", "text", "button", "spacing", "layout"].includes(item.category)
-      )
-      .map((item) => item.name)
-      .slice(0, 20)
-  };
-}
-
-function localFallbackWarning(message: string): PlannerWarning {
-  return {
-    code: "local-fallback",
-    level: "warning",
-    message
-  };
-}
-
-function buildFallbackSkeletonPlan(input: {
-  request: WorkflowSectionRequest;
-  page: RepoTreeResponse["pages"][number]["page"];
-  section: RepoTreeResponse["pages"][number]["sections"][number];
-  analysis: SectionAnalysis;
-  sharedStyleContext: SharedStyleContext;
-  reason: string;
-}): SkeletonPlan {
-  const sectionContext = buildFallbackSectionContext({
-    repoId: input.request.repoId,
-    pageName: input.page.name,
-    pageSourceFile: input.page.sourceFile,
-    section: input.section,
-    analysis: input.analysis,
-    sharedStyleContext: input.sharedStyleContext
-  });
-  const plan = heuristicPlanner.plan({
-    pageId: input.page.id,
-    sectionId: input.section.id,
-    sectionContext,
-    projectContext: createProjectContext(input.sharedStyleContext),
-    sharedStyleContext: input.sharedStyleContext
-  });
-
-  return skeletonPlanSchema.parse({
-    sectionMetadata: plan.sectionMetadata,
-    treeText: describeNodeTree(plan.elementTree).join("\n"),
-    elementTree: plan.elementTree,
-    reusableClasses: dedupe(plan.classAssignments.flatMap((assignment) => assignment.reused)),
-    suggestedNewClasses: dedupe(plan.classAssignments.flatMap((assignment) => assignment.created)),
-    warnings: [
-      ...plan.warnings,
-      localFallbackWarning(
-        `Remote skeleton generation failed, so a deterministic local skeleton was used instead (${input.reason}).`
-      )
-    ]
-  });
-}
-
-function buildFallbackStylingPlan(input: {
-  request: WorkflowSectionRequest;
-  page: RepoTreeResponse["pages"][number]["page"];
-  section: RepoTreeResponse["pages"][number]["sections"][number];
-  analysis: SectionAnalysis;
-  sharedStyleContext: SharedStyleContext;
-  reason: string;
-}): StylingPlan {
-  const sectionContext = buildFallbackSectionContext({
-    repoId: input.request.repoId,
-    pageName: input.page.name,
-    pageSourceFile: input.page.sourceFile,
-    section: input.section,
-    analysis: input.analysis,
-    sharedStyleContext: input.sharedStyleContext
-  });
-  const plan = heuristicPlanner.plan({
-    pageId: input.page.id,
-    sectionId: input.section.id,
-    sectionContext,
-    projectContext: createProjectContext(input.sharedStyleContext),
-    sharedStyleContext: input.sharedStyleContext
-  });
-
-  return stylingPlanSchema.parse({
-    sectionMetadata: plan.sectionMetadata,
-    mode: input.request.mode,
-    styleDefinitions: plan.styleDefinitions,
-    variableBindings: plan.variableBindings,
-    reusableClasses: dedupe(plan.classAssignments.flatMap((assignment) => assignment.reused)),
-    suggestedNewClasses: dedupe(plan.classAssignments.flatMap((assignment) => assignment.created)),
-    requiredClassNames: dedupe(plan.classAssignments.flatMap((assignment) => assignment.created)),
-    notes: [
-      "Applied a deterministic local styling fallback because the remote styling plan failed.",
-      "Review the styled section visually before approval."
-    ],
-    warnings: [
-      ...plan.warnings,
-      localFallbackWarning(
-        `Remote styling generation failed, so a deterministic local styling plan was used instead (${input.reason}).`
-      )
-    ]
-  });
-}
 
 function mergeMappingRows(params: {
   livePages: WebflowSitePage[];
@@ -1119,39 +960,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         const request = currentWorkflowRequest(nextSectionId);
         const nextAnalysis = await backend.analyzeSection(request, controller.signal);
         setAnalysis(nextAnalysis);
-        const fallbackPage = activeQueue?.repoPage ?? null;
-        const fallbackSection = repoSectionById.get(nextSectionId) ?? null;
-        const fallbackSharedStyleContext =
-          stylesForFallback
-            ? stylesForFallback
-            : designerContext?.siteId
-              ? {
-                  siteId: designerContext.siteId,
-                  capturedAt: new Date().toISOString(),
-                  classes: [],
-                  variables: [],
-                  styleIds: []
-                }
-              : null;
-        let nextSkeleton: SkeletonPlan;
-        try {
-          nextSkeleton = await backend.generateSkeleton(request, controller.signal);
-        } catch (error) {
-          if (isAbortError(error)) {
-            throw error;
-          }
-          if (!fallbackPage || !fallbackSection || !fallbackSharedStyleContext) {
-            throw error;
-          }
-          nextSkeleton = buildFallbackSkeletonPlan({
-            request,
-            page: fallbackPage,
-            section: fallbackSection,
-            analysis: nextAnalysis,
-            sharedStyleContext: fallbackSharedStyleContext,
-            reason: error instanceof Error ? error.message : "remote fetch failed"
-          });
-        }
+        const nextSkeleton = await backend.generateSkeleton(request, controller.signal);
         setSkeleton(nextSkeleton);
         setSkeletonDraft(nextSkeleton.treeText);
         return true;
@@ -1177,11 +986,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     currentWorkflowRequest,
     designerContext?.siteId,
     ensureSiteBound,
-    repoSectionById,
     resetSectionRunState,
     selectedSectionId,
     sharedStyleContext?.siteId,
-    sharedStyleContext,
     withMutation
   ]);
 
@@ -1317,28 +1124,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           ...request,
           selectedElementId: targetNodeId
         };
-        let nextStyling: StylingPlan;
-        try {
-          nextStyling = await backend.styleSection(stylingRequest, controller.signal);
-        } catch (error) {
-          if (isAbortError(error)) {
-            throw error;
-          }
-          const fallbackPage = activeQueue?.repoPage ?? null;
-          const fallbackSection = selectedSectionRecord;
-          const fallbackSharedStyleContext = styles;
-          if (!analysis || !fallbackPage || !fallbackSection || !fallbackSharedStyleContext) {
-            throw error;
-          }
-          nextStyling = buildFallbackStylingPlan({
-            request: stylingRequest,
-            page: fallbackPage,
-            section: fallbackSection,
-            analysis,
-            sharedStyleContext: fallbackSharedStyleContext,
-            reason: error instanceof Error ? error.message : "remote fetch failed"
-          });
-        }
+        const nextStyling = await backend.styleSection(stylingRequest, controller.signal);
         setStyling(nextStyling);
 
         const stylingExecution = await applyStylingPlan({
@@ -1411,14 +1197,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setActiveAbortController(null);
     }
   }, [
-    activeQueue,
-    analysis,
     captureSharedStyles,
     currentTargetNodeId,
     currentWorkflowRequest,
-    designerContext?.siteId,
     isEditingSkeleton,
-    selectedSectionRecord,
     selectedSectionId,
     sharedStyleContext,
     skeleton,

@@ -38,6 +38,11 @@ const WEBFLOW_SITE_BUILDER_RULES = [
 
 const SKELETON_TREE_RULES = [
   "Return a faithful section skeleton tree in the style: section.section-name -> div.padding-global -> div.container-large -> div.padding-section-medium -> div.section-name_component -> div.section-name_content / div.section-name_visual.",
+  "This skeleton tree is the actual Webflow insertion plan, not a JSX or source-code preview.",
+  "Only use Webflow-safe HTML elements such as section, div, header, footer, nav, h1-h6, p, span, ul, ol, li, article, figure, img, video, source, a, and button.",
+  "Never return React-only or framework-only tags such as motion, Fragment, Link, component names, or custom JSX elements.",
+  "Never copy Tailwind utility classes, arbitrary value utilities, or source-framework class dumps into the skeleton.",
+  "Normalize source structure into Client-First-compatible, reusable class names and prefer existing shared classes whenever possible.",
   "Prefer existing shared wrappers such as padding-global, container-large, and padding-section-medium when they exist in the shared class inventory.",
   "If the shared class inventory contains a more exact match such as text-size-small, text-size-medium, heading-style-h2, or is-text-small, prefer that exact class over broader fuzzy matches.",
   "Do not invent navbar-specific or unrelated layout classes such as navbar wrappers for a body section unless the source section genuinely reuses them.",
@@ -625,16 +630,9 @@ export class OpenAIPlanningProvider implements PlanningProvider {
       );
       return normalizeSkeleton(raw, fallback);
     } catch (error) {
-      return {
-        ...fallback,
-        warnings: [
-          ...fallback.warnings,
-          providerWarning(
-            "skeleton-error",
-            error instanceof Error ? error.message : "OpenAI skeleton generation failed."
-          )
-        ]
-      };
+      throw new Error(
+        error instanceof Error ? error.message : "OpenAI skeleton generation failed."
+      );
     }
   }
 
@@ -670,16 +668,9 @@ export class OpenAIPlanningProvider implements PlanningProvider {
       );
       return normalizeStyling(raw, fallback);
     } catch (error) {
-      return {
-        ...fallback,
-        warnings: [
-          ...fallback.warnings,
-          providerWarning(
-            "styling-error",
-            error instanceof Error ? error.message : "OpenAI styling generation failed."
-          )
-        ]
-      };
+      throw new Error(
+        error instanceof Error ? error.message : "OpenAI styling generation failed."
+      );
     }
   }
 

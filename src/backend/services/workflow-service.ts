@@ -752,7 +752,7 @@ export class WorkflowService {
 
   async generateSkeleton(request: WorkflowSectionRequest): Promise<SkeletonPlan> {
     const context = await this.getSectionStateContext(request);
-    const providerSkeleton = skeletonPlanSchema.parse(
+    const skeleton = skeletonPlanSchema.parse(
       await this.planningProvider.generateSkeleton({
         metadata: context.metadata,
         mode: request.mode,
@@ -763,14 +763,6 @@ export class WorkflowService {
         selectedElementId: request.selectedElementId ?? null
       })
     );
-    const skeleton = hasProviderFallbackWarning(providerSkeleton.warnings, "skeleton")
-      ? deterministicSkeleton({
-          metadata: context.metadata,
-          sectionContext: context.sectionContext,
-          sharedStyleContext: context.sharedStyleContext,
-          inheritedWarnings: providerSkeleton.warnings
-        })
-      : providerSkeleton;
     const runId = await this.persistRun(
       request,
       context.queue.repoPage!.id,
@@ -784,7 +776,7 @@ export class WorkflowService {
 
   async styleSection(request: WorkflowSectionRequest): Promise<StylingPlan> {
     const context = await this.getSectionStateContext(request);
-    const providerStyling = stylingPlanSchema.parse(
+    const styling = stylingPlanSchema.parse(
       await this.planningProvider.generateStylingPlan({
         metadata: context.metadata,
         mode: request.mode,
@@ -795,18 +787,6 @@ export class WorkflowService {
         selectedElementId: request.selectedElementId ?? null
       })
     );
-    const styling =
-      providerStyling.styleDefinitions.length === 0 ||
-      hasProviderFallbackWarning(providerStyling.warnings, "styling")
-        ? deterministicStyling({
-            metadata: context.metadata,
-            mode: request.mode,
-            sectionContext: context.sectionContext,
-            projectContext: context.projectContext,
-            sharedStyleContext: context.sharedStyleContext,
-            inheritedWarnings: providerStyling.warnings
-          })
-        : providerStyling;
     const runId = await this.persistRun(
       request,
       context.queue.repoPage!.id,
