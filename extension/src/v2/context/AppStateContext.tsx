@@ -1099,25 +1099,16 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             ? sanitizeSkeletonPlan(parseSkeletonTreeText(skeleton, skeletonDraft))
             : skeleton;
         let targetNodeId = currentTargetNodeId;
-        let nodeExecution: ExecutionSummary | null = null;
         const executionParts: ExecutionSummary[] = [];
-        const updatePendingExecution = () => {
-          const summary = mergeExecutionSummaries(executionParts);
-          activeExecutionRecordRef.current = summary
-            ? {
-                summary,
-                seededComponentId: null
-              }
-            : null;
-        };
 
         if (!targetNodeId) {
-          nodeExecution = await executeSkeletonPlan({
+          const nodeExecution = await executeSkeletonPlan({
             bridge,
             context,
             plan: editableSkeleton,
             placementMode: "append",
-            placementTarget: null
+            placementTarget: null,
+            signal: controller.signal
           });
           if (!nodeExecution.success) {
             throw new Error(
@@ -1129,7 +1120,16 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           targetNodeId = nodeExecution.rootNodeId ?? null;
           setCurrentTargetNodeId(targetNodeId);
           executionParts.push(nodeExecution);
-          updatePendingExecution();
+          const insertedSummary = mergeExecutionSummaries(executionParts);
+          if (insertedSummary) {
+            const record = {
+              summary: insertedSummary,
+              seededComponentId: null
+            } satisfies ExecutionRunRecord;
+            lastExecutionRecordRef.current = record;
+            activeExecutionRecordRef.current = null;
+            setLastExecution(insertedSummary);
+          }
         }
 
         const stylingRequest = {
@@ -1143,7 +1143,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           bridge,
           context,
           plan: nextStyling,
-          targetNodeId
+          targetNodeId,
+          signal: controller.signal
         });
         if (!stylingExecution.success) {
           throw new Error(
@@ -1152,7 +1153,16 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           );
         }
         executionParts.push(stylingExecution);
-        updatePendingExecution();
+        const styledSummary = mergeExecutionSummaries(executionParts);
+        if (styledSummary) {
+          const record = {
+            summary: styledSummary,
+            seededComponentId: null
+          } satisfies ExecutionRunRecord;
+          lastExecutionRecordRef.current = record;
+          activeExecutionRecordRef.current = null;
+          setLastExecution(styledSummary);
+        }
 
         const verificationResult = await backend.verifySection(
           {

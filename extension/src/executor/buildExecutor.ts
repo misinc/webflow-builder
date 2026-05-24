@@ -24,6 +24,15 @@ export interface ExecutionSummary {
   rootNodeId?: string | null;
 }
 
+function throwIfAborted(signal?: AbortSignal | null): void {
+  if (!signal?.aborted) {
+    return;
+  }
+  const error = new Error("The operation was aborted.");
+  error.name = "AbortError";
+  throw error;
+}
+
 async function buildNodeTree(params: {
   bridge: WebflowDesignerBridge;
   node: BuildNode;
@@ -31,7 +40,9 @@ async function buildNodeTree(params: {
   afterId: string | null;
   createdNodeIds: string[];
   nodeIdMap: Map<string, string>;
+  signal?: AbortSignal | null;
 }): Promise<void> {
+  throwIfAborted(params.signal);
   const created = await params.bridge.createNode({
     parentId: params.parentId,
     afterId: params.afterId,
@@ -39,17 +50,20 @@ async function buildNodeTree(params: {
   });
   params.createdNodeIds.push(created.id);
   params.nodeIdMap.set(params.node.id, created.id);
+  throwIfAborted(params.signal);
   await params.bridge.applyClasses(created.id, params.node.classNames);
 
   let lastChildId: string | null = null;
   for (const child of params.node.children) {
+    throwIfAborted(params.signal);
     await buildNodeTree({
       bridge: params.bridge,
       node: child,
       parentId: created.id,
       afterId: lastChildId,
       createdNodeIds: params.createdNodeIds,
-      nodeIdMap: params.nodeIdMap
+      nodeIdMap: params.nodeIdMap,
+      signal: params.signal
     });
     lastChildId = params.nodeIdMap.get(child.id) ?? null;
   }
@@ -59,12 +73,14 @@ export async function executeSkeletonPlanIntoRoot(params: {
   bridge: WebflowDesignerBridge;
   rootNodeId: string;
   plan: SkeletonPlan;
+  signal?: AbortSignal | null;
 }): Promise<ExecutionSummary> {
   const createdNodeIds: string[] = [];
   const nodeIdMap = new Map<string, string>();
   let lastChildId: string | null = null;
 
   try {
+    throwIfAborted(params.signal);
     await params.bridge.configureNode(params.rootNodeId, {
       tag: params.plan.elementTree.tag,
       classNames: params.plan.elementTree.classNames,
@@ -72,13 +88,15 @@ export async function executeSkeletonPlanIntoRoot(params: {
     });
 
     for (const child of params.plan.elementTree.children) {
+      throwIfAborted(params.signal);
       await buildNodeTree({
         bridge: params.bridge,
         node: child,
         parentId: params.rootNodeId,
         afterId: lastChildId,
         createdNodeIds,
-        nodeIdMap
+        nodeIdMap,
+        signal: params.signal
       });
       lastChildId = nodeIdMap.get(child.id) ?? null;
     }
@@ -144,6 +162,7 @@ export async function executeBuildPlan(params: {
   plan: BuildPlan;
   placementMode: PlacementMode;
   placementTarget: string | null;
+  signal?: AbortSignal | null;
 }): Promise<ExecutionSummary> {
   if (!params.context.siteId || !params.context.pageId) {
     throw new Error("No active Webflow site or page.");
@@ -166,16 +185,19 @@ export async function executeBuildPlan(params: {
   const executionWarnings: PlannerWarning[] = [];
   const nodeIdMap = new Map<string, string>();
   try {
+    throwIfAborted(params.signal);
     await buildNodeTree({
       bridge: params.bridge,
       node: params.plan.elementTree,
       parentId: params.context.pageId,
       afterId: anchorId,
       createdNodeIds,
-      nodeIdMap
+      nodeIdMap,
+      signal: params.signal
     });
 
     for (const styleDefinition of params.plan.styleDefinitions) {
+      throwIfAborted(params.signal);
       const style = await params.bridge.ensureStyle(
         styleDefinition.className,
         styleDefinition.properties
@@ -184,6 +206,7 @@ export async function executeBuildPlan(params: {
     }
 
     for (const binding of params.plan.variableBindings) {
+      throwIfAborted(params.signal);
       const runtimeNodeId = nodeIdMap.get(binding.nodeId);
       if (!runtimeNodeId) continue;
       try {
@@ -205,6 +228,7 @@ export async function executeBuildPlan(params: {
     }
 
     for (const assetBinding of params.plan.assetBindings) {
+      throwIfAborted(params.signal);
       const runtimeNodeId = nodeIdMap.get(assetBinding.nodeId);
       if (!runtimeNodeId) continue;
       const result = await params.bridge.bindAsset(
@@ -277,6 +301,7 @@ export async function executeSkeletonPlan(params: {
   plan: SkeletonPlan;
   placementMode: PlacementMode;
   placementTarget: string | null;
+  signal?: AbortSignal | null;
 }): Promise<ExecutionSummary> {
   const collectAssignments = (node: BuildNode): Array<{
     nodeId: string;
@@ -298,6 +323,7 @@ export async function executeSkeletonPlan(params: {
     context: params.context,
     placementMode: params.placementMode,
     placementTarget: params.placementTarget,
+    signal: params.signal,
     plan: {
       sectionMetadata: params.plan.sectionMetadata,
       elementTree: params.plan.elementTree,
@@ -315,6 +341,7 @@ export async function applyStylingPlan(params: {
   context: DesignerContext;
   plan: StylingPlan;
   targetNodeId: string | null;
+  signal?: AbortSignal | null;
 }): Promise<ExecutionSummary> {
   if (!params.context.siteId || !params.context.pageId) {
     throw new Error("No active Webflow site or page.");
@@ -331,6 +358,7 @@ export async function applyStylingPlan(params: {
 
   try {
     for (const styleDefinition of params.plan.styleDefinitions) {
+      throwIfAborted(params.signal);
       const style = await params.bridge.ensureStyle(
         styleDefinition.className,
         styleDefinition.properties
@@ -339,6 +367,7 @@ export async function applyStylingPlan(params: {
     }
 
     if (params.plan.requiredClassNames.length > 0) {
+      throwIfAborted(params.signal);
       await params.bridge.applyClasses(
         params.targetNodeId,
         params.plan.requiredClassNames
@@ -346,6 +375,7 @@ export async function applyStylingPlan(params: {
     }
 
     for (const binding of params.plan.variableBindings) {
+      throwIfAborted(params.signal);
       try {
         await params.bridge.bindVariable(
           params.targetNodeId,

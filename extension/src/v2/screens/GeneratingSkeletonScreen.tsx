@@ -37,9 +37,19 @@ export function GeneratingSkeletonScreen() {
     }
   }, [activeSectionError, error, isMutating, navigate, skeleton, startSectionBuild]);
 
+  useEffect(() => {
+    return () => {
+      if (isMutating) {
+        void cancelActiveWorkflow();
+      }
+    };
+  }, [cancelActiveWorkflow, isMutating]);
+
   return (
     <Panel
-      onClose={() => navigate("section-list")}
+      onClose={() => {
+        void cancelActiveWorkflow().then(() => navigate("section-list"));
+      }}
       footer={
         <Button
           variant="ghost"
@@ -64,7 +74,9 @@ export function GeneratingSkeletonScreen() {
           </>
         }
         badge={<AiBadge>AI working</AiBadge>}
-        onBack={() => navigate("section-list")}
+        onBack={() => {
+          void cancelActiveWorkflow().then(() => navigate("section-list"));
+        }}
       />
 
       <Stepper steps={buildStepper("skeleton")} />

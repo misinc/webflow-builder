@@ -34,10 +34,18 @@ export function ApplyingStylesScreen() {
   } = useAppState();
 
   useEffect(() => {
-    if (!styling && !verification && !isMutating) {
+    if (!styling && !verification && !isMutating && !error) {
       void applyCurrentSection();
     }
-  }, [applyCurrentSection, isMutating, styling, verification]);
+  }, [applyCurrentSection, error, isMutating, styling, verification]);
+
+  useEffect(() => {
+    return () => {
+      if (isMutating) {
+        void cancelActiveWorkflow();
+      }
+    };
+  }, [cancelActiveWorkflow, isMutating]);
 
   const appliedLines: StyleLine[] =
     styling?.styleDefinitions.slice(0, 18).map((definition) => {
@@ -62,7 +70,9 @@ export function ApplyingStylesScreen() {
 
   return (
     <Panel
-      onClose={() => navigate("section-list")}
+      onClose={() => {
+        void cancelActiveWorkflow().then(() => navigate("section-list"));
+      }}
       footer={
         <>
           <Button
@@ -76,6 +86,17 @@ export function ApplyingStylesScreen() {
             Reject & redo
           </Button>
           <div className="flex-1" />
+          {error && !isMutating && !verification ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                void applyCurrentSection();
+              }}
+            >
+              Retry styling
+            </Button>
+          ) : null}
           <span className="text-[11px] text-wb-text-tertiary mr-2">
             {loadingLabel ?? (verification ? "Ready for approval" : "Applying styles…")}
           </span>
@@ -98,7 +119,9 @@ export function ApplyingStylesScreen() {
       <SectionDetailHeader
         eyebrow="Build flow"
         title={selectedSection?.title ?? "Current section"}
-        onBack={() => navigate("section-list")}
+        onBack={() => {
+          void cancelActiveWorkflow().then(() => navigate("section-list"));
+        }}
         badge={<AiBadge>{verification ? "Ready" : "Styling"}</AiBadge>}
       />
 

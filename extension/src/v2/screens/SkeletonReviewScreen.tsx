@@ -7,7 +7,7 @@ import { SectionDetailHeader } from "../components/Headers";
 import { useNavigation } from "../context/NavigationContext";
 import { useAppState } from "../context/AppStateContext";
 import type { BuildNode } from "../../../../src/shared/contracts.js";
-import { parseSkeletonTreeText } from "../../skeleton/tree.js";
+import { parseSkeletonTreeText, sanitizeSkeletonPlan } from "../../skeleton/tree.js";
 
 export function SkeletonReviewScreen() {
   const { navigate } = useNavigation();
@@ -30,7 +30,7 @@ export function SkeletonReviewScreen() {
       return skeleton;
     }
     try {
-      const reparsed = parseSkeletonTreeText(skeleton, skeleton.treeText);
+      const reparsed = sanitizeSkeletonPlan(parseSkeletonTreeText(skeleton, skeleton.treeText));
       const reparsedClassCount = new Set(collectClassNames(reparsed.elementTree)).size;
       return reparsedClassCount > 0 ? reparsed : skeleton;
     } catch {

@@ -17,7 +17,7 @@ interface OpenAIMessage {
   content: string;
 }
 
-const OPENAI_REQUEST_TIMEOUT_MS = 20000;
+const OPENAI_REQUEST_TIMEOUT_MS = 60000;
 
 const WEBFLOW_SITE_BUILDER_RULES = [
   "Work on one section at a time.",

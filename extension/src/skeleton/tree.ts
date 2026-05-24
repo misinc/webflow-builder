@@ -2,6 +2,10 @@ import { BuildNode, SkeletonPlan } from "../../../src/shared/contracts.js";
 
 const LEAF_TAGS = new Set(["img", "source", "br", "hr", "input", "meta", "link"]);
 
+function normalizeTagToken(token: string): string {
+  return token.replace(/^<\/?/, "").replace(/\/?>$/, "").trim();
+}
+
 function inferNodeType(tag: string): BuildNode["type"] {
   if (tag === "img") return "image";
   if (tag === "button" || tag === "a") return "button";
@@ -72,14 +76,21 @@ export function parseSkeletonTreeText(
       content = content.slice(0, textMatch.index).trim();
     }
 
-    const structureToken = content.split(/\s+/)[0];
+    const tokens = content.split(/\s+/).filter(Boolean);
+    const structureToken = tokens[0];
     if (!structureToken) {
       throw new Error(`Invalid skeleton line ${index + 1}.`);
     }
 
     const parts = structureToken.split(".").filter(Boolean);
-    const tag = parts[0];
-    const classNames = parts.slice(1);
+    const tag = normalizeTagToken(parts[0] ?? "");
+    const classNames = [
+      ...parts.slice(1),
+      ...tokens
+        .slice(1)
+        .map((token) => token.replace(/^\./, "").trim())
+        .filter((token) => Boolean(token) && token !== "/" && token !== "->")
+    ];
     if (!tag) {
       throw new Error(`Missing element tag on line ${index + 1}.`);
     }
@@ -122,11 +133,24 @@ export function parseSkeletonTreeText(
 
 export function sanitizeSkeletonPlan(plan: SkeletonPlan): SkeletonPlan {
   const warnings = [...plan.warnings];
+  const seenIds = new Set<string>();
 
   function sanitizeNode(node: BuildNode): {
     node: BuildNode;
     hoistedChildren: BuildNode[];
   } {
+    const fallbackId = `${plan.sectionMetadata.sectionId}-node-${seenIds.size}`;
+    let nextId = node.id?.trim() || fallbackId;
+    if (seenIds.has(nextId)) {
+      nextId = `${fallbackId}-dup`;
+      warnings.push({
+        code: "duplicate-node-id",
+        message: `Reassigned a duplicate skeleton node id for <${node.tag}>.`,
+        level: "warning"
+      });
+    }
+    seenIds.add(nextId);
+
     const normalizedChildren: BuildNode[] = [];
     for (const child of node.children) {
       const sanitizedChild = sanitizeNode(child);
@@ -142,6 +166,7 @@ export function sanitizeSkeletonPlan(plan: SkeletonPlan): SkeletonPlan {
       return {
         node: {
           ...node,
+          id: nextId,
           children: []
         },
         hoistedChildren: normalizedChildren
@@ -151,6 +176,7 @@ export function sanitizeSkeletonPlan(plan: SkeletonPlan): SkeletonPlan {
     return {
       node: {
         ...node,
+        id: nextId,
         children: normalizedChildren
       },
       hoistedChildren: []
