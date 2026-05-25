@@ -321,6 +321,20 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
       .trim() || "Imported asset";
   }
 
+  private async setSafeImageAlt(
+    element: WebflowElement,
+    altText: string | null | undefined
+  ): Promise<void> {
+    const normalized = altText?.trim();
+    if (!normalized) {
+      return;
+    }
+
+    if (element.setAltText) {
+      await element.setAltText(normalized);
+    }
+  }
+
   private registerElement(element: WebflowElement | null): string | null {
     const id = normalizeElementId(element?.id);
     if (!element || !id) {
@@ -748,8 +762,11 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
       await created.setTextContent(input.node.textContent);
     }
 
-    if (created.setAttribute && input.node.tag === "img") {
-      await created.setAttribute("alt", input.node.label ?? input.node.textContent ?? "");
+    if (input.node.tag === "img") {
+      await this.setSafeImageAlt(
+        created,
+        input.node.label ?? input.node.textContent ?? ""
+      );
     }
 
     const id = this.registerElement(created);
@@ -934,13 +951,13 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
     if (asset) {
       if (element.type === "Image" && element.setAsset) {
         await element.setAsset(asset);
-        await element.setAltText?.(altText);
+        await this.setSafeImageAlt(element, altText);
         return { resolved: true };
       }
 
       if (element.setAttribute) {
         await element.setAttribute("src", await asset.getUrl());
-        await element.setAttribute("alt", altText);
+        await this.setSafeImageAlt(element, altText);
         return { resolved: true };
       }
     }
@@ -950,7 +967,7 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
         element.type === "Image" ? await this.createPlaceholderAsset() : null;
       if (placeholderAsset && element.setAsset) {
         await element.setAsset(placeholderAsset);
-        await element.setAltText?.("Missing asset placeholder");
+        await this.setSafeImageAlt(element, "Missing asset placeholder");
         return { resolved: false };
       }
 
@@ -959,7 +976,7 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
           "src",
           "https://placehold.co/1200x800/png?text=Asset+Missing"
         );
-        await element.setAttribute("alt", "Missing asset placeholder");
+        await this.setSafeImageAlt(element, "Missing asset placeholder");
       }
     }
 

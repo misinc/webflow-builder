@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState, type ReactNode } from "react";
-import { ChevronDown, ChevronRight, Code2, RefreshCw } from "lucide-react";
+import { ChevronDown, ChevronRight, Copy, RefreshCw } from "lucide-react";
 import { Panel } from "../components/Panel";
 import { Button } from "../components/Button";
 import { Stepper, buildStepper } from "../components/Stepper";
@@ -50,8 +50,15 @@ export function DebugSkeletonScreen() {
   const [isMutating, setIsMutating] = useState(false);
   const [loadingLabel, setLoadingLabel] = useState<string | null>(null);
   const [insertedRootNodeId, setInsertedRootNodeId] = useState<string | null>(null);
+  const [copyLabel, setCopyLabel] = useState("Copy skeleton");
+  const [lastGeneratedInput, setLastGeneratedInput] = useState<{
+    code: string;
+    inputType: DebugSkeletonRequest["inputType"];
+    sectionName: string;
+  } | null>(null);
   const insertedNodeIdsRef = useRef<string[]>([]);
   const activeAbortControllerRef = useRef<AbortController | null>(null);
+  const copyResetTimeoutRef = useRef<number | null>(null);
 
   const displaySkeleton = useMemo(() => {
     if (!skeleton) {
@@ -66,9 +73,25 @@ export function DebugSkeletonScreen() {
   const isGenerating = isMutating && loadingLabel === "Generating skeleton";
   const isInserting = isMutating && loadingLabel === "Inserting skeleton";
   const hasInsertedSkeleton = Boolean(insertedRootNodeId);
+  const normalizedSectionName = sectionName.trim() || "Debug section";
+  const normalizedCode = code.trim();
+  const hasDraftChanges =
+    Boolean(displaySkeleton) &&
+    (
+      !lastGeneratedInput ||
+      lastGeneratedInput.code !== normalizedCode ||
+      lastGeneratedInput.inputType !== inputType ||
+      lastGeneratedInput.sectionName !== normalizedSectionName
+    );
+  const canGenerate = !isMutating && Boolean(normalizedCode);
+  const generateLabel = displaySkeleton
+    ? hasDraftChanges
+      ? "Generate new skeleton"
+      : "Regenerate"
+    : "Generate skeleton";
 
   const generateSkeleton = async () => {
-    if (!code.trim()) {
+    if (!normalizedCode) {
       setError("Paste some HTML or TSX first.");
       return;
     }
@@ -87,9 +110,9 @@ export function DebugSkeletonScreen() {
       const nextSkeleton = normalizeSkeletonPlan(
         await backend.generateDebugSkeleton(
           {
-            code: code.trim(),
+            code: normalizedCode,
             inputType,
-            sectionName: sectionName.trim() || "Debug section",
+            sectionName: normalizedSectionName,
             pageName: "Debug playground",
             sharedStyleContext
           },
@@ -98,6 +121,11 @@ export function DebugSkeletonScreen() {
       );
       setSkeleton(nextSkeleton);
       setCollapsedIds(new Set());
+      setLastGeneratedInput({
+        code: normalizedCode,
+        inputType,
+        sectionName: normalizedSectionName
+      });
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") {
         return;
@@ -115,6 +143,10 @@ export function DebugSkeletonScreen() {
   const insertSkeleton = async () => {
     if (!displaySkeleton) {
       setError("Generate a skeleton before inserting it into Webflow.");
+      return;
+    }
+    if (hasDraftChanges) {
+      setError("Generate a new skeleton for the latest pasted code before inserting.");
       return;
     }
     const controller = new AbortController();
@@ -157,6 +189,31 @@ export function DebugSkeletonScreen() {
     }
   };
 
+  const copySkeleton = async () => {
+    if (!displaySkeleton) {
+      setError("Generate a skeleton before copying it.");
+      return;
+    }
+    if (hasDraftChanges) {
+      setError("Generate a new skeleton for the latest pasted code before copying.");
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(serializeSkeletonForClipboard(displaySkeleton));
+      setCopyLabel("Copied");
+      if (copyResetTimeoutRef.current) {
+        window.clearTimeout(copyResetTimeoutRef.current);
+      }
+      copyResetTimeoutRef.current = window.setTimeout(() => {
+        setCopyLabel("Copy skeleton");
+        copyResetTimeoutRef.current = null;
+      }, 2000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to copy the skeleton.");
+    }
+  };
+
   return (
     <Panel
       onClose={() => navigate("welcome")}
@@ -173,22 +230,34 @@ export function DebugSkeletonScreen() {
               ? "Inserting skeleton…"
               : isGenerating
               ? "Generating skeleton…"
+              : hasDraftChanges
+              ? "Pasted code changed · generate a new skeleton"
               : displaySkeleton
               ? `${elementCount} elements · ${classCount} classes`
               : "Paste code to generate a skeleton"}
           </span>
           <Button
             variant="ghost"
-            disabled={isMutating || !code.trim()}
+            disabled={!canGenerate}
             onClick={() => {
               void generateSkeleton();
             }}
           >
-            {displaySkeleton ? "Regenerate" : "Generate skeleton"}
+            {generateLabel}
+          </Button>
+          <Button
+            variant="ghost"
+            disabled={!displaySkeleton || isMutating || hasDraftChanges}
+            onClick={() => {
+              void copySkeleton();
+            }}
+          >
+            <Copy size={12} />
+            {copyLabel}
           </Button>
           <Button
             variant="primary"
-            disabled={!displaySkeleton || isMutating}
+            disabled={!displaySkeleton || isMutating || hasDraftChanges}
             onClick={() => {
               void insertSkeleton();
             }}
@@ -206,13 +275,13 @@ export function DebugSkeletonScreen() {
           <Button
             variant="ghost"
             size="sm"
-            disabled={isMutating || !code.trim()}
+            disabled={!canGenerate}
             onClick={() => {
               void generateSkeleton();
             }}
           >
             <RefreshCw size={12} />
-            Regenerate
+            {generateLabel}
           </Button>
         }
       />
@@ -290,7 +359,10 @@ export function DebugSkeletonScreen() {
           <div className="flex-1 overflow-hidden bg-black/[0.18]">
             <textarea
               value={code}
-              onChange={(event) => setCode(event.target.value)}
+              onChange={(event) => {
+                setCode(event.target.value);
+                setError(null);
+              }}
               spellCheck={false}
               className="w-full h-full resize-none bg-transparent p-4 font-mono text-[11.5px] text-wb-text-secondary leading-relaxed outline-none"
               placeholder="Paste a section in HTML or TSX here."
@@ -410,4 +482,24 @@ function extractExecutionError(execution: ExecutionSummary): string {
     execution.warnings.find((warning) => warning.level === "error")?.message ??
     "Failed to insert the generated skeleton."
   );
+}
+
+function serializeSkeletonForClipboard(plan: SkeletonPlan): string {
+  return [
+    "# Skeleton Tree",
+    plan.treeText.trim(),
+    "",
+    "# Skeleton JSON",
+    JSON.stringify(
+      {
+        sectionMetadata: plan.sectionMetadata,
+        elementTree: plan.elementTree,
+        reusableClasses: plan.reusableClasses,
+        suggestedNewClasses: plan.suggestedNewClasses,
+        warnings: plan.warnings
+      },
+      null,
+      2
+    )
+  ].join("\n");
 }
