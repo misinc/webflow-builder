@@ -1,5 +1,7 @@
 import {
   BuildNode,
+  debugSkeletonRequestSchema,
+  DebugSkeletonRequest,
   pageMappingsUpsertInputSchema,
   PageMappingsUpsertInput,
   PlannerWarning,
@@ -758,6 +760,69 @@ export class WorkflowService {
       skeleton
     );
     await this.updateState(context.state, "skeleton_ready", runId);
+    return skeleton;
+  }
+
+  async generateDebugSkeleton(input: DebugSkeletonRequest): Promise<SkeletonPlan> {
+    const request = debugSkeletonRequestSchema.parse(input);
+    const sharedStyleContext =
+      request.sharedStyleContext ?? emptySharedStyleContext("debug-site");
+    const componentName = request.sectionName
+      .replace(/[^a-z0-9]+/gi, " ")
+      .trim()
+      .split(/\s+/)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join("") || "DebugSection";
+    const sourceFile =
+      request.inputType === "html"
+        ? "debug://pasted-section.html"
+        : "debug://PastedSection.tsx";
+    const assetReferences = dedupe(
+      [...request.code.matchAll(/(?:src|image|poster)=["'`]([^"'`]+)["'`]/g)].map(
+        (match) => match[1]
+      )
+    );
+    const sectionContext = {
+      repoId: "debug-playground",
+      pageName: request.pageName,
+      pageSourceFile: "debug://page",
+      sectionName: request.sectionName,
+      sectionSourceFile: sourceFile,
+      componentName,
+      sectionOrder: 0,
+      sourceCode: request.code,
+      relevantStylesheets: [],
+      assetReferences,
+      contentHints: [],
+      relatedSharedClasses: sharedStyleContext.classes.map((item) => item.name).slice(0, 60)
+    } satisfies SectionContext;
+    const metadata = {
+      repoId: "debug-playground",
+      pageId: stableId("debug-page", request.pageName),
+      sectionId: stableId("debug-section", request.sectionName, request.inputType, request.code),
+      pageName: request.pageName,
+      sectionName: request.sectionName,
+      sourceFile
+    };
+    const providerInput = {
+      metadata,
+      mode: "fullAssist" as const,
+      sectionContext,
+      serializedSection: serializeSectionContext(sectionContext),
+      projectContext: createProjectContext(sharedStyleContext),
+      sharedStyleContext,
+      selectedElementId: null
+    };
+    const skeleton = skeletonPlanSchema.parse(
+      await this.planningProvider.generateSkeleton(providerInput)
+    );
+
+    if (countAssignedClasses(skeleton.elementTree) === 0) {
+      throw new Error(
+        "OpenAI skeleton output omitted class names. Use Regenerate to retry."
+      );
+    }
+
     return skeleton;
   }
 

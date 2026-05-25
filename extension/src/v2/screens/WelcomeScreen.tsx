@@ -122,6 +122,13 @@ export function WelcomeScreen() {
           <p className="text-[11.5px] text-wb-text-tertiary m-0 text-center max-w-[520px]">
             {helperText}
           </p>
+          <button
+            type="button"
+            onClick={() => navigate('debug-skeleton')}
+            className="text-[11.5px] text-wb-accent hover:text-[#5da8ff] transition-colors"
+          >
+            Open debug skeleton playground
+          </button>
           {!hasRepoChoices && !isBootstrapping ? (
             <div className="w-full max-w-[520px] mt-2 rounded-lg border border-white/[0.09] bg-wb-surface-1 p-4 text-left">
               <div className="text-[12.5px] font-semibold text-wb-text-primary mb-1.5">

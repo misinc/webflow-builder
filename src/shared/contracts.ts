@@ -442,6 +442,14 @@ export const workflowSectionRequestSchema = z.object({
   sharedStyleContext: sharedStyleContextSchema.optional()
 });
 
+export const debugSkeletonRequestSchema = z.object({
+  code: z.string().min(1),
+  inputType: z.enum(["html", "jsx"]),
+  sectionName: z.string().min(1).default("Debug section"),
+  pageName: z.string().min(1).default("Debug playground"),
+  sharedStyleContext: sharedStyleContextSchema.optional()
+});
+
 export const workflowSectionDecisionInputSchema = z.object({
   repoId: z.string().min(1),
   webflowSiteId: z.string().min(1),
@@ -560,6 +568,7 @@ export type WorkflowQueueResponse = z.infer<typeof workflowQueueResponseSchema>;
 export type PageMappingsUpsertInput = z.infer<typeof pageMappingsUpsertInputSchema>;
 export type WorkflowQueueRequest = z.infer<typeof workflowQueueRequestSchema>;
 export type WorkflowSectionRequest = z.infer<typeof workflowSectionRequestSchema>;
+export type DebugSkeletonRequest = z.infer<typeof debugSkeletonRequestSchema>;
 export type WorkflowSectionDecisionInput = z.infer<
   typeof workflowSectionDecisionInputSchema
 >;

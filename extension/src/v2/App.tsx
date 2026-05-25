@@ -3,6 +3,7 @@ import { NavigationProvider, useNavigation } from './context/NavigationContext';
 import { AppStateProvider, useAppState } from './context/AppStateContext';
 import { WelcomeScreen } from './screens/WelcomeScreen';
 import { ChooseRepoScreen } from './screens/ChooseRepoScreen';
+import { DebugSkeletonScreen } from './screens/DebugSkeletonScreen';
 import { MapPagesScreen } from './screens/MapPagesScreen';
 import { CreatePageScreen } from './screens/CreatePageScreen';
 import { SectionListScreen } from './screens/SectionListScreen';
@@ -22,6 +23,7 @@ import type { ScreenName } from './types';
 const SCREEN_COMPONENTS: Record<ScreenName, ComponentType> = {
   'welcome': WelcomeScreen,
   'choose-repo': ChooseRepoScreen,
+  'debug-skeleton': DebugSkeletonScreen,
   'map-pages': MapPagesScreen,
   'create-page': CreatePageScreen,
   'section-list': SectionListScreen,

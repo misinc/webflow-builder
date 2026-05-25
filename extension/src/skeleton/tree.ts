@@ -170,6 +170,14 @@ export function sanitizeSkeletonPlan(plan: SkeletonPlan): SkeletonPlan {
     seenIds.add(nextId);
 
     if (REMOVED_TAGS.has(node.tag)) {
+      const normalizedChildren: BuildNode[] = [];
+      for (const child of node.children) {
+        const sanitizedChild = sanitizeNode(child);
+        if (sanitizedChild.node) {
+          normalizedChildren.push(sanitizedChild.node);
+        }
+        normalizedChildren.push(...sanitizedChild.hoistedChildren);
+      }
       warnings.push({
         code: "removed-unsupported-tag",
         message: `Removed <${node.tag}> from the Webflow skeleton because it should not be inserted as a standalone element.`,
@@ -177,7 +185,7 @@ export function sanitizeSkeletonPlan(plan: SkeletonPlan): SkeletonPlan {
       });
       return {
         node: null,
-        hoistedChildren: []
+        hoistedChildren: normalizedChildren
       };
     }
 

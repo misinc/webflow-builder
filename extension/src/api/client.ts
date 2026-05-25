@@ -2,6 +2,8 @@ import {
   componentOpportunitiesResponseSchema,
   BindSiteInput,
   ComponentOpportunitiesResponse,
+  debugSkeletonRequestSchema,
+  DebugSkeletonRequest,
   PageMappingsUpsertInput,
   RepoConnectionInput,
   RepoRecord,
@@ -274,6 +276,23 @@ export class BackendClient {
         body: JSON.stringify(validated)
       },
       input.requestedBy,
+      signal
+    );
+    return skeletonPlanSchema.parse(response);
+  }
+
+  async generateDebugSkeleton(
+    input: DebugSkeletonRequest,
+    signal?: AbortSignal
+  ): Promise<SkeletonPlan> {
+    const validated = debugSkeletonRequestSchema.parse(input);
+    const response = await request<SkeletonPlan>(
+      this.functionUrl("workflow-debug-generate-skeleton"),
+      {
+        method: "POST",
+        body: JSON.stringify(validated)
+      },
+      undefined,
       signal
     );
     return skeletonPlanSchema.parse(response);

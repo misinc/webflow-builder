@@ -88,6 +88,11 @@ to = "/.netlify/functions/workflow-section-analyze"
 status = 200
 
 [[redirects]]
+from = "/api/workflow/debug/generate-skeleton"
+to = "/.netlify/functions/workflow-debug-generate-skeleton"
+status = 200
+
+[[redirects]]
 from = "/api/workflow/section/generate-skeleton"
 to = "/.netlify/functions/workflow-section-generate-skeleton"
 status = 200
