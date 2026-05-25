@@ -348,12 +348,12 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
       : null;
     const currentPage = await this.api.getCurrentPage().catch(() => null);
 
-    if (explicitAfter) {
-      return { parent: null, after: explicitAfter };
-    }
-
     if (canAppendChildren(explicitParent)) {
       return { parent: explicitParent, after: null };
+    }
+
+    if (explicitAfter) {
+      return { parent: null, after: explicitAfter };
     }
 
     if (

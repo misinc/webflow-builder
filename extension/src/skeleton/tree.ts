@@ -1,6 +1,7 @@
 import { BuildNode, SkeletonPlan } from "../../../src/shared/contracts.js";
 
 const LEAF_TAGS = new Set(["img", "source", "br", "hr", "input", "meta", "link"]);
+const REMOVED_TAGS = new Set(["source"]);
 const NON_CONTAINER_TAGS = new Set([
   "p",
   "span",
@@ -153,7 +154,7 @@ export function sanitizeSkeletonPlan(plan: SkeletonPlan): SkeletonPlan {
   const seenIds = new Set<string>();
 
   function sanitizeNode(node: BuildNode): {
-    node: BuildNode;
+    node: BuildNode | null;
     hoistedChildren: BuildNode[];
   } {
     const fallbackId = `${plan.sectionMetadata.sectionId}-node-${seenIds.size}`;
@@ -168,10 +169,25 @@ export function sanitizeSkeletonPlan(plan: SkeletonPlan): SkeletonPlan {
     }
     seenIds.add(nextId);
 
+    if (REMOVED_TAGS.has(node.tag)) {
+      warnings.push({
+        code: "removed-unsupported-tag",
+        message: `Removed <${node.tag}> from the Webflow skeleton because it should not be inserted as a standalone element.`,
+        level: "warning"
+      });
+      return {
+        node: null,
+        hoistedChildren: []
+      };
+    }
+
     const normalizedChildren: BuildNode[] = [];
     for (const child of node.children) {
       const sanitizedChild = sanitizeNode(child);
-      normalizedChildren.push(sanitizedChild.node, ...sanitizedChild.hoistedChildren);
+      if (sanitizedChild.node) {
+        normalizedChildren.push(sanitizedChild.node);
+      }
+      normalizedChildren.push(...sanitizedChild.hoistedChildren);
     }
 
     if ((LEAF_TAGS.has(node.tag) || NON_CONTAINER_TAGS.has(node.tag)) && normalizedChildren.length > 0) {
@@ -201,6 +217,9 @@ export function sanitizeSkeletonPlan(plan: SkeletonPlan): SkeletonPlan {
   }
 
   const sanitizedRoot = sanitizeNode(plan.elementTree);
+  if (!sanitizedRoot.node) {
+    throw new Error("Skeleton root cannot be removed.");
+  }
 
   return {
     ...plan,
