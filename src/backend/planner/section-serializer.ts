@@ -1,5 +1,4 @@
 import { SectionContext } from "../../shared/contracts.js";
-import { JSDOM } from "jsdom";
 
 export interface SerializedSectionContentItem {
   kind: string;
@@ -28,6 +27,23 @@ function isHtmlLike(sourceCode: string): boolean {
   return /^<([a-z][a-z0-9-]*)\b/i.test(trimmed);
 }
 
+interface HtmlOutlineNode {
+  tag: string;
+  id?: string;
+  classNames: string[];
+  textContent?: string;
+  children: HtmlOutlineNode[];
+}
+
+function decodeHtmlEntities(value: string): string {
+  return value
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+}
+
 function looksLikeUtilityClass(className: string): boolean {
   return (
     className.includes(":") ||
@@ -39,144 +55,223 @@ function looksLikeUtilityClass(className: string): boolean {
   );
 }
 
-function outlineNodeLabel(element: Element): string {
-  const tag = element.tagName.toLowerCase();
-  const id = element.getAttribute("id")?.trim();
-  const classList = Array.from(element.classList).filter((name) => !looksLikeUtilityClass(name));
+function parseAttributeValue(tagSource: string, attributeName: string): string | undefined {
+  const match = tagSource.match(
+    new RegExp(`${attributeName}\\s*=\\s*("([^"]*)"|'([^']*)'|([^\\s>]+))`, "i")
+  );
+  const raw = match?.[2] ?? match?.[3] ?? match?.[4];
+  return raw ? decodeHtmlEntities(raw.trim()) : undefined;
+}
+
+function outlineNodeLabel(node: HtmlOutlineNode): string {
+  const tag = node.tag;
+  const id = node.id?.trim();
+  const classList = node.classNames.filter((name) => !looksLikeUtilityClass(name));
   const classSuffix = classList.slice(0, 3).map((name) => `.${name}`).join("");
   const idSuffix = id ? `#${id}` : "";
-  const textSource =
-    tag === "img"
-      ? element.getAttribute("alt")?.trim()
-      : element.children.length === 0
-        ? cleanText(element.textContent ?? "")
-        : "";
+  const textSource = node.children.length === 0 ? cleanText(node.textContent ?? "") : "";
   const textSuffix = textSource ? ` "${textSource.slice(0, 80)}"` : "";
   return `${tag}${idSuffix}${classSuffix}${textSuffix}`;
 }
 
-function signatureForElement(element: Element): string {
-  const tag = element.tagName.toLowerCase();
-  const classList = Array.from(element.classList)
+function signatureForElement(node: HtmlOutlineNode): string {
+  const tag = node.tag;
+  const classList = node.classNames
     .filter((name) => !looksLikeUtilityClass(name))
     .sort()
     .join(".");
-  const childTags = Array.from(element.children)
+  const childTags = node.children
     .slice(0, 4)
-    .map((child) => child.tagName.toLowerCase())
+    .map((child) => child.tag)
     .join(",");
   return `${tag}|${classList}|${childTags}`;
 }
 
+function parseHtmlOutline(sourceCode: string): HtmlOutlineNode | null {
+  const tagPattern = /<!--[\s\S]*?-->|<\/?([a-z][a-z0-9-]*)\b[^>]*>/gi;
+  const banned = new Set([
+    "script",
+    "style",
+    "svg",
+    "path",
+    "rect",
+    "circle",
+    "line",
+    "polyline",
+    "polygon",
+    "ellipse",
+    "g",
+    "defs"
+  ]);
+  const selfClosing = new Set(["img", "source", "br", "hr", "input", "meta", "link"]);
+  const roots: HtmlOutlineNode[] = [];
+  const stack: HtmlOutlineNode[] = [];
+  let skipDepth = 0;
+  let cursor = 0;
+
+  function attachText(nextIndex: number): void {
+    if (skipDepth > 0 || stack.length === 0) {
+      cursor = nextIndex;
+      return;
+    }
+    const text = cleanText(decodeHtmlEntities(sourceCode.slice(cursor, nextIndex).replace(/<[^>]+>/g, " ")));
+    if (text) {
+      const current = stack[stack.length - 1];
+      current.textContent = current.textContent ? `${current.textContent} ${text}` : text;
+    }
+    cursor = nextIndex;
+  }
+
+  let match: RegExpExecArray | null;
+  while ((match = tagPattern.exec(sourceCode))) {
+    const rawTag = match[0];
+    const tag = (match[1] ?? "").toLowerCase();
+    const tagIndex = match.index;
+    attachText(tagIndex);
+
+    if (!tag || rawTag.startsWith("<!--")) {
+      cursor = tagPattern.lastIndex;
+      continue;
+    }
+
+    const isClosing = rawTag.startsWith("</");
+    const isSelfClosing = selfClosing.has(tag) || /\/>$/.test(rawTag);
+
+    if (skipDepth > 0) {
+      if (!isClosing && !isSelfClosing) {
+        skipDepth += 1;
+      } else if (isClosing) {
+        skipDepth -= 1;
+      }
+      cursor = tagPattern.lastIndex;
+      continue;
+    }
+
+    if (banned.has(tag)) {
+      if (!isClosing && !isSelfClosing) {
+        skipDepth = 1;
+      }
+      cursor = tagPattern.lastIndex;
+      continue;
+    }
+
+    if (isClosing) {
+      while (stack.length > 0) {
+        const current = stack.pop()!;
+        if (current.tag === tag) {
+          break;
+        }
+      }
+      cursor = tagPattern.lastIndex;
+      continue;
+    }
+
+    const classNames = (parseAttributeValue(rawTag, "class") ?? "")
+      .split(/\s+/)
+      .map((value) => value.trim())
+      .filter(Boolean);
+    const node: HtmlOutlineNode = {
+      tag,
+      id: parseAttributeValue(rawTag, "id"),
+      classNames,
+      textContent: tag === "img" ? parseAttributeValue(rawTag, "alt") : undefined,
+      children: []
+    };
+
+    if (stack.length > 0) {
+      stack[stack.length - 1].children.push(node);
+    } else {
+      roots.push(node);
+    }
+
+    if (!isSelfClosing) {
+      stack.push(node);
+    }
+    cursor = tagPattern.lastIndex;
+  }
+
+  attachText(sourceCode.length);
+  return roots[0] ?? null;
+}
+
 function outlineHtmlSource(sourceCode: string): string {
-  try {
-    const dom = new JSDOM(`<body>${sourceCode}</body>`);
-    const root = dom.window.document.body.firstElementChild;
-    if (!root) {
-      return sourceCode.slice(0, 12000);
-    }
-
-    const lines: string[] = [];
-    const banned = new Set([
-      "script",
-      "style",
-      "svg",
-      "path",
-      "rect",
-      "circle",
-      "line",
-      "polyline",
-      "polygon",
-      "ellipse",
-      "g",
-      "defs"
-    ]);
-
-    function visit(element: Element, depth: number): void {
-      const tag = element.tagName.toLowerCase();
-      if (banned.has(tag)) {
-        return;
-      }
-
-      lines.push(`${"  ".repeat(depth)}${outlineNodeLabel(element)}`);
-
-      const children = Array.from(element.children).filter(
-        (child) => !banned.has(child.tagName.toLowerCase())
-      );
-      if (children.length === 0) {
-        return;
-      }
-
-      let index = 0;
-      while (index < children.length) {
-        const current = children[index];
-        const signature = signatureForElement(current);
-        let runLength = 1;
-        while (
-          index + runLength < children.length &&
-          signatureForElement(children[index + runLength]) === signature
-        ) {
-          runLength += 1;
-        }
-
-        if (runLength >= 3) {
-          lines.push(
-            `${"  ".repeat(depth + 1)}${outlineNodeLabel(current)} [repeats x${runLength}]`
-          );
-          visit(current, depth + 2);
-        } else {
-          for (let offset = 0; offset < runLength; offset += 1) {
-            visit(children[index + offset], depth + 1);
-          }
-        }
-        index += runLength;
-      }
-    }
-
-    visit(root, 0);
-    return lines.join("\n").slice(0, 12000);
-  } catch {
+  const root = parseHtmlOutline(sourceCode);
+  if (!root) {
     return sourceCode.slice(0, 12000);
   }
+
+  const lines: string[] = [];
+
+  function visit(node: HtmlOutlineNode, depth: number): void {
+    lines.push(`${"  ".repeat(depth)}${outlineNodeLabel(node)}`);
+
+    if (node.children.length === 0) {
+      return;
+    }
+
+    let index = 0;
+    while (index < node.children.length) {
+      const current = node.children[index];
+      const signature = signatureForElement(current);
+      let runLength = 1;
+      while (
+        index + runLength < node.children.length &&
+        signatureForElement(node.children[index + runLength]) === signature
+      ) {
+        runLength += 1;
+      }
+
+      if (runLength >= 3) {
+        lines.push(`${"  ".repeat(depth + 1)}${outlineNodeLabel(current)} [repeats x${runLength}]`);
+        visit(current, depth + 2);
+      } else {
+        for (let offset = 0; offset < runLength; offset += 1) {
+          visit(node.children[index + offset], depth + 1);
+        }
+      }
+      index += runLength;
+    }
+  }
+
+  visit(root, 0);
+  return lines.join("\n").slice(0, 12000);
 }
 
 function collectHtmlContent(sourceCode: string): SerializedSectionContentItem[] {
-  try {
-    const dom = new JSDOM(`<body>${sourceCode}</body>`);
-    const document = dom.window.document;
-    const selectors = ["h1", "h2", "h3", "h4", "p", "button", "a", "li", "img"];
-    const items: SerializedSectionContentItem[] = [];
+  const items: SerializedSectionContentItem[] = [];
 
-    for (const selector of selectors) {
-      const elements = Array.from(document.querySelectorAll(selector)).slice(0, 12);
-      for (const element of elements) {
-        const rawValue =
-          selector === "img"
-            ? element.getAttribute("alt") ?? ""
-            : element.textContent ?? "";
-        const value = cleanText(rawValue);
-        if (!looksLikeContent(value)) {
-          continue;
-        }
-        items.push({
-          kind: selector,
-          label: selector,
-          value
-        });
-      }
+  for (const match of sourceCode.matchAll(/<(h[1-6]|p|button|a|li)[^>]*>\s*([^<]{3,180})\s*<\/\1>/gi)) {
+    const value = cleanText(decodeHtmlEntities(match[2]));
+    if (!looksLikeContent(value)) {
+      continue;
     }
-
-    return items
-      .filter(
-        (item, index, array) =>
-          array.findIndex(
-            (candidate) => candidate.kind === item.kind && candidate.value === item.value
-          ) === index
-      )
-      .slice(0, 24);
-  } catch {
-    return [];
+    items.push({
+      kind: match[1].toLowerCase(),
+      label: match[1].toLowerCase(),
+      value
+    });
   }
+
+  for (const match of sourceCode.matchAll(/<img[^>]*alt\s*=\s*("([^"]*)"|'([^']*)')[^>]*>/gi)) {
+    const value = cleanText(decodeHtmlEntities(match[2] ?? match[3] ?? ""));
+    if (!looksLikeContent(value)) {
+      continue;
+    }
+    items.push({
+      kind: "img",
+      label: "img",
+      value
+    });
+  }
+
+  return items
+    .filter(
+      (item, index, array) =>
+        array.findIndex(
+          (candidate) => candidate.kind === item.kind && candidate.value === item.value
+        ) === index
+    )
+    .slice(0, 24);
 }
 
 function looksLikeContent(value: string): boolean {
