@@ -313,7 +313,7 @@ function collectHtmlContent(
     walkHtmlNodes(root, (node) => {
       const value = cleanText(decodeHtmlEntities(node.textContent ?? ""));
       if (node.tag === "img") {
-        if (looksLikeContent(value)) {
+        if (looksLikeContent(value) || looksLikeStatValue(value)) {
           items.push({
             kind: "img",
             label: "img",
@@ -327,7 +327,7 @@ function collectHtmlContent(
         return;
       }
 
-      if (!looksLikeContent(value)) {
+      if (!looksLikeContent(value) && !looksLikeStatValue(value)) {
         return;
       }
 
@@ -356,7 +356,7 @@ function collectHtmlContent(
 
   for (const match of sourceCode.matchAll(/<(h[1-6]|p|button|a|li)[^>]*>\s*([^<]{3,180})\s*<\/\1>/gi)) {
     const value = cleanText(decodeHtmlEntities(match[2]));
-    if (!looksLikeContent(value)) {
+    if (!looksLikeContent(value) && !looksLikeStatValue(value)) {
       continue;
     }
     items.push({
@@ -368,7 +368,7 @@ function collectHtmlContent(
 
   for (const match of sourceCode.matchAll(/<img[^>]*alt\s*=\s*("([^"]*)"|'([^']*)')[^>]*>/gi)) {
     const value = cleanText(decodeHtmlEntities(match[2] ?? match[3] ?? ""));
-    if (!looksLikeContent(value)) {
+    if (!looksLikeContent(value) && !looksLikeStatValue(value)) {
       continue;
     }
     items.push({
@@ -405,6 +405,14 @@ function looksLikeContent(value: string): boolean {
     return false;
   }
   return /[a-z]/i.test(trimmed);
+}
+
+function looksLikeStatValue(value: string): boolean {
+  const trimmed = cleanText(value);
+  if (trimmed.length < 1 || trimmed.length > 40) {
+    return false;
+  }
+  return /^\d[\d+.,%xX/-]*$/.test(trimmed);
 }
 
 function placeholderForContentKind(kind: string): SerializedSectionContentItem {
