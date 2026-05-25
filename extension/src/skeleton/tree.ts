@@ -30,6 +30,9 @@ const NON_CONTAINER_TAGS = new Set([
   "h5",
   "h6"
 ]);
+const ICON_IMAGE_CLASS_PATTERN = /^icon-embed(?:-|$)/;
+const MEDIA_WRAPPER_CLASS_PATTERN = /(background|media|video|image|scrim|visual|canvas)/i;
+const PADDING_WRAPPER_CLASS_PATTERN = /^padding-(?!global$)/;
 
 function normalizeTagToken(token: string): string {
   return token.replace(/^<\/?/, "").replace(/\/?>$/, "").trim().toLowerCase();
@@ -133,6 +136,57 @@ function countInvalidClassNames(node: BuildNode): number {
     node.classNames.filter((className) => !isClientFirstName(className)).length +
     node.children.reduce((total, child) => total + countInvalidClassNames(child), 0)
   );
+}
+
+function patchTopLevelSectionWrapper(node: BuildNode, warnings: SkeletonPlan["warnings"]): BuildNode {
+  if (node.tag !== "section" || node.children.length === 0) {
+    return node;
+  }
+
+  const firstChild = node.children[0];
+  if (firstChild.tag !== "div") {
+    return node;
+  }
+
+  const alreadyHasPaddingGlobal = node.children.some((child) =>
+    child.classNames.includes("padding-global")
+  );
+  if (alreadyHasPaddingGlobal) {
+    return node;
+  }
+
+  const hasSpacingWrapperClass = firstChild.classNames.some((className) =>
+    PADDING_WRAPPER_CLASS_PATTERN.test(className)
+  );
+  const looksLikeMediaWrapper = firstChild.classNames.some((className) =>
+    MEDIA_WRAPPER_CLASS_PATTERN.test(className)
+  );
+
+  if (!hasSpacingWrapperClass || looksLikeMediaWrapper) {
+    return node;
+  }
+
+  const nextClassNames = [
+    "padding-global",
+    ...firstChild.classNames.filter((className) => !PADDING_WRAPPER_CLASS_PATTERN.test(className))
+  ];
+
+  warnings.push({
+    code: "normalized-section-wrapper",
+    message: "Normalized the first section wrapper to .padding-global for Client-First consistency.",
+    level: "warning"
+  });
+
+  return {
+    ...node,
+    children: [
+      {
+        ...firstChild,
+        classNames: nextClassNames
+      },
+      ...node.children.slice(1)
+    ]
+  };
 }
 
 export function parseSkeletonTreeText(
@@ -277,35 +331,60 @@ export function sanitizeSkeletonPlan(plan: SkeletonPlan): SkeletonPlan {
       normalizedChildren.push(...sanitizedChild.hoistedChildren);
     }
 
+    const filteredClassNames = node.classNames.filter((className) => isClientFirstName(className));
     const safeTag = WRAPPER_TO_DIV_TAGS.has(normalizedTag) ? "div" : normalizedTag;
-    if (safeTag !== normalizedTag) {
+    let retagged = safeTag !== normalizedTag;
+    let nextTag = safeTag;
+
+    if (nextTag === "span") {
+      if (!node.textContent?.trim() && filteredClassNames.length === 0 && normalizedChildren.length === 0) {
+        warnings.push({
+          code: "removed-empty-span",
+          message: "Removed an empty <span> wrapper from the Webflow skeleton.",
+          level: "warning"
+        });
+        return {
+          node: null,
+          hoistedChildren: []
+        };
+      }
+      nextTag = "div";
+      retagged = true;
+    }
+
+    if (filteredClassNames.some((className) => ICON_IMAGE_CLASS_PATTERN.test(className))) {
+      nextTag = "img";
+      retagged = true;
+    }
+
+    if (retagged) {
       warnings.push({
-        code: "converted-semantic-wrapper",
-        message: `Converted <${normalizedTag}> to <div> for safer Webflow insertion.`,
+        code: "converted-unsupported-wrapper",
+        message: `Converted <${normalizedTag}> to <${nextTag}> for safer Webflow insertion.`,
         level: "warning"
       });
     }
 
-    const filteredClassNames = node.classNames.filter((className) => isClientFirstName(className));
     if (filteredClassNames.length !== node.classNames.length) {
       warnings.push({
         code: "removed-invalid-class-name",
-        message: `Removed invalid class tokens from <${safeTag}> before Webflow insertion.`,
+        message: `Removed invalid class tokens from <${nextTag}> before Webflow insertion.`,
         level: "warning"
       });
     }
 
-    if ((LEAF_TAGS.has(safeTag) || NON_CONTAINER_TAGS.has(safeTag)) && normalizedChildren.length > 0) {
+    if ((LEAF_TAGS.has(nextTag) || NON_CONTAINER_TAGS.has(nextTag)) && normalizedChildren.length > 0) {
       warnings.push({
         code: "invalid-noncontainer-children",
-        message: `Moved children out of <${safeTag}> because it should not contain nested elements in the Webflow skeleton.`,
+        message: `Moved children out of <${nextTag}> because it should not contain nested elements in the Webflow skeleton.`,
         level: "warning"
       });
       return {
         node: {
           ...node,
           id: nextId,
-          tag: safeTag,
+          type: inferNodeType(nextTag),
+          tag: nextTag,
           classNames: filteredClassNames,
           children: []
         },
@@ -317,7 +396,8 @@ export function sanitizeSkeletonPlan(plan: SkeletonPlan): SkeletonPlan {
       node: {
         ...node,
         id: nextId,
-        tag: safeTag,
+        type: inferNodeType(nextTag),
+        tag: nextTag,
         classNames: filteredClassNames,
         children: normalizedChildren
       },
@@ -332,7 +412,7 @@ export function sanitizeSkeletonPlan(plan: SkeletonPlan): SkeletonPlan {
 
   return {
     ...plan,
-    elementTree: sanitizedRoot.node,
+    elementTree: patchTopLevelSectionWrapper(sanitizedRoot.node, warnings),
     warnings
   };
 }

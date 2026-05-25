@@ -1,0 +1,31 @@
+[
+  {
+    "name": "services-debug-normalization",
+    "sectionName": "Services",
+    "treeText": "section.section_services\n  div.padding-top\n    div.container-medium\n      div.services_component\n        div.services_intro\n          h2.heading-style-h2 \"Technology Solutions for Growing Businesses\"\n          p.text-size-medium \"We design, develop, and optimize digital systems.\"\n          div.button-group\n            button.button \"Book a Free Strategy Call\"\n            span\n            div.icon-embed-xsmall\n        div.services_list\n          div.services_item\n            div.services_item_icon\n            div.services_item_content\n              p.text-style-tagline \"Growth Foundation\"\n              h3.heading-style-h3 \"Websites That Convert\"\n              p.text-size-medium \"Modern, conversion-optimized websites.\"",
+    "assertions": {
+      "rootTag": "section",
+      "firstChildClass": "padding-global",
+      "forbidTags": ["span"],
+      "requireNodes": [
+        { "tag": "img", "className": "icon-embed-xsmall" },
+        { "tag": "div", "className": "services_list" }
+      ]
+    }
+  },
+  {
+    "name": "hero-background-video-hoists-past-source",
+    "sectionName": "Hero",
+    "treeText": "section.section_hero\n  div.hero_background-media\n    video\n      source\n        div.container-large\n          div.padding-section-large\n            div.hero_component",
+    "assertions": {
+      "rootTag": "section",
+      "firstChildClass": "hero_background-media",
+      "forbidTags": ["source"],
+      "requireNodes": [
+        { "tag": "div", "className": "container-large" },
+        { "tag": "div", "className": "padding-section-large" },
+        { "tag": "div", "className": "hero_component" }
+      ]
+    }
+  }
+]

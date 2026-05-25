@@ -288,8 +288,8 @@ describe("executeBuildPlan", () => {
     const rootId = result.rootNodeId!;
     const root = elements.get(rootId);
     const firstChild = elements.get(result.createdNodeIds[1]);
-    expect(root?.childIds).toEqual([result.createdNodeIds[1]]);
-    expect(firstChild?.afterCalls).toEqual([result.createdNodeIds[2]]);
+    expect(root?.childIds).toEqual([result.createdNodeIds[1], result.createdNodeIds[2]]);
+    expect(firstChild?.afterCalls).toEqual([]);
     expect(selected.childIds).toEqual([rootId]);
   });
 });
