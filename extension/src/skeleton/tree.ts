@@ -1,3 +1,4 @@
+import { isClientFirstName } from "../../../src/shared/client-first.js";
 import { BuildNode, SkeletonPlan } from "../../../src/shared/contracts.js";
 
 const LEAF_TAGS = new Set(["img", "source", "br", "hr", "input", "meta", "link"]);
@@ -56,10 +57,59 @@ function expandInlineChain(treeText: string): string {
     .join("\n");
 }
 
+function splitInlineSiblingLine(rawLine: string): string[] {
+  const indent = rawLine.match(/^\s*/)?.[0] ?? "";
+  const content = rawLine.slice(indent.length);
+  const segments: string[] = [];
+  let current = "";
+  let quote: '"' | "'" | null = null;
+
+  for (let index = 0; index < content.length; index += 1) {
+    const char = content[index];
+    const previous = content[index - 1] ?? " ";
+    const next = content[index + 1] ?? " ";
+
+    if ((char === '"' || char === "'")) {
+      if (quote === char) {
+        quote = null;
+      } else if (!quote) {
+        quote = char;
+      }
+      current += char;
+      continue;
+    }
+
+    const isSiblingSeparator =
+      !quote &&
+      (char === "+" || char === "|") &&
+      /\s/.test(previous) &&
+      /\s/.test(next);
+
+    if (isSiblingSeparator) {
+      const normalized = current.trim();
+      if (normalized) {
+        segments.push(`${indent}${normalized}`);
+      }
+      current = "";
+      continue;
+    }
+
+    current += char;
+  }
+
+  const trailing = current.trim();
+  if (trailing) {
+    segments.push(`${indent}${trailing}`);
+  }
+
+  return segments.length > 0 ? segments : [rawLine];
+}
+
 function normalizeLines(treeText: string): string[] {
   return expandInlineChain(treeText)
     .split("\n")
     .map((line) => line.replace(/\t/g, "  "))
+    .flatMap(splitInlineSiblingLine)
     .filter((line) => line.trim().length > 0);
 }
 
@@ -76,6 +126,13 @@ function lineIndent(rawLine: string): number {
 
 function collectClassNames(node: BuildNode): string[] {
   return [node.classNames, ...node.children.map(collectClassNames)].flat();
+}
+
+function countInvalidClassNames(node: BuildNode): number {
+  return (
+    node.classNames.filter((className) => !isClientFirstName(className)).length +
+    node.children.reduce((total, child) => total + countInvalidClassNames(child), 0)
+  );
 }
 
 export function parseSkeletonTreeText(
@@ -121,8 +178,15 @@ export function parseSkeletonTreeText(
       ...tokens
         .slice(1)
         .map((token) => token.replace(/^\./, "").trim())
-        .filter((token) => Boolean(token) && token !== "/" && token !== "->")
-    ];
+        .filter(
+          (token) =>
+            Boolean(token) &&
+            token !== "/" &&
+            token !== "->" &&
+            token !== "+" &&
+            token !== "|"
+        )
+    ].filter((className) => isClientFirstName(className));
     if (!tag) {
       throw new Error(`Missing element tag on line ${index + 1}.`);
     }
@@ -222,6 +286,15 @@ export function sanitizeSkeletonPlan(plan: SkeletonPlan): SkeletonPlan {
       });
     }
 
+    const filteredClassNames = node.classNames.filter((className) => isClientFirstName(className));
+    if (filteredClassNames.length !== node.classNames.length) {
+      warnings.push({
+        code: "removed-invalid-class-name",
+        message: `Removed invalid class tokens from <${safeTag}> before Webflow insertion.`,
+        level: "warning"
+      });
+    }
+
     if ((LEAF_TAGS.has(safeTag) || NON_CONTAINER_TAGS.has(safeTag)) && normalizedChildren.length > 0) {
       warnings.push({
         code: "invalid-noncontainer-children",
@@ -233,6 +306,7 @@ export function sanitizeSkeletonPlan(plan: SkeletonPlan): SkeletonPlan {
           ...node,
           id: nextId,
           tag: safeTag,
+          classNames: filteredClassNames,
           children: []
         },
         hoistedChildren: normalizedChildren
@@ -244,6 +318,7 @@ export function sanitizeSkeletonPlan(plan: SkeletonPlan): SkeletonPlan {
         ...node,
         id: nextId,
         tag: safeTag,
+        classNames: filteredClassNames,
         children: normalizedChildren
       },
       hoistedChildren: []
@@ -265,14 +340,19 @@ export function sanitizeSkeletonPlan(plan: SkeletonPlan): SkeletonPlan {
 export function normalizeSkeletonPlan(plan: SkeletonPlan): SkeletonPlan {
   const sanitized = sanitizeSkeletonPlan(plan);
   const existingClassCount = new Set(collectClassNames(sanitized.elementTree)).size;
-  if (existingClassCount > 0) {
-    return sanitized;
-  }
+  const existingInvalidClassCount = countInvalidClassNames(sanitized.elementTree);
 
   try {
     const reparsed = sanitizeSkeletonPlan(parseSkeletonTreeText(sanitized, sanitized.treeText));
     const reparsedClassCount = new Set(collectClassNames(reparsed.elementTree)).size;
-    return reparsedClassCount > 0 ? reparsed : sanitized;
+    const reparsedInvalidClassCount = countInvalidClassNames(reparsed.elementTree);
+    if (existingClassCount === 0 && reparsedClassCount > 0) {
+      return reparsed;
+    }
+    if (existingInvalidClassCount > reparsedInvalidClassCount) {
+      return reparsed;
+    }
+    return sanitized;
   } catch {
     return sanitized;
   }

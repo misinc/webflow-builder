@@ -42,6 +42,8 @@ const SKELETON_TREE_RULES = [
   "Only use Webflow-safe skeleton elements such as section, div, h1-h6, p, span, ul, ol, li, img, video, a, and button.",
   "Do not include source tags, svg tags, path tags, icon vector tags, or any inline SVG structure in the skeleton.",
   "Do not use semantic wrapper tags such as article, aside, figure, header, footer, nav, or main in the skeleton. Convert those wrappers to divs while preserving the class names and hierarchy.",
+  "Use exactly one skeleton node per line.",
+  "Never place sibling elements on the same line with separators like +, |, &, commas, or chained shorthand.",
   "Never return React-only or framework-only tags such as motion, Fragment, Link, component names, or custom JSX elements.",
   "Never copy Tailwind utility classes, arbitrary value utilities, or source-framework class dumps into the skeleton.",
   "Normalize source structure into Client-First-compatible, reusable class names and prefer existing shared classes whenever possible.",
