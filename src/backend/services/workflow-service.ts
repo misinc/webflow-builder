@@ -808,9 +808,12 @@ export class WorkflowService {
       metadata,
       mode: "fullAssist" as const,
       sectionContext,
-      serializedSection: serializeSectionContext(sectionContext),
+      serializedSection: serializeSectionContext(sectionContext, {
+        includeContent: request.includeContent
+      }),
       projectContext: createProjectContext(sharedStyleContext),
       sharedStyleContext,
+      includeContent: request.includeContent,
       selectedElementId: null
     };
     const skeleton = skeletonPlanSchema.parse(

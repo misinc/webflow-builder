@@ -14,6 +14,10 @@ export interface SerializedSectionContext {
   sourceExcerpt: string;
 }
 
+interface SerializeSectionOptions {
+  includeContent?: boolean;
+}
+
 function dedupe(items: string[]): string[] {
   return [...new Set(items)];
 }
@@ -63,13 +67,14 @@ function parseAttributeValue(tagSource: string, attributeName: string): string |
   return raw ? decodeHtmlEntities(raw.trim()) : undefined;
 }
 
-function outlineNodeLabel(node: HtmlOutlineNode): string {
+function outlineNodeLabel(node: HtmlOutlineNode, includeContent: boolean): string {
   const tag = node.tag;
   const id = node.id?.trim();
   const classList = node.classNames.filter((name) => !looksLikeUtilityClass(name));
   const classSuffix = classList.slice(0, 3).map((name) => `.${name}`).join("");
   const idSuffix = id ? `#${id}` : "";
-  const textSource = node.children.length === 0 ? cleanText(node.textContent ?? "") : "";
+  const textSource =
+    includeContent && node.children.length === 0 ? cleanText(node.textContent ?? "") : "";
   const textSuffix = textSource ? ` "${textSource.slice(0, 80)}"` : "";
   return `${tag}${idSuffix}${classSuffix}${textSuffix}`;
 }
@@ -194,7 +199,7 @@ function parseHtmlOutline(sourceCode: string): HtmlOutlineNode | null {
   return roots[0] ?? null;
 }
 
-function outlineHtmlSource(sourceCode: string): string {
+function outlineHtmlSource(sourceCode: string, includeContent: boolean): string {
   const root = parseHtmlOutline(sourceCode);
   if (!root) {
     return sourceCode.slice(0, 12000);
@@ -203,7 +208,7 @@ function outlineHtmlSource(sourceCode: string): string {
   const lines: string[] = [];
 
   function visit(node: HtmlOutlineNode, depth: number): void {
-    lines.push(`${"  ".repeat(depth)}${outlineNodeLabel(node)}`);
+    lines.push(`${"  ".repeat(depth)}${outlineNodeLabel(node, includeContent)}`);
 
     if (node.children.length === 0) {
       return;
@@ -222,7 +227,9 @@ function outlineHtmlSource(sourceCode: string): string {
       }
 
       if (runLength >= 3) {
-        lines.push(`${"  ".repeat(depth + 1)}${outlineNodeLabel(current)} [repeats x${runLength}]`);
+        lines.push(
+          `${"  ".repeat(depth + 1)}${outlineNodeLabel(current, includeContent)} [repeats x${runLength}]`
+        );
         visit(current, depth + 2);
       } else {
         for (let offset = 0; offset < runLength; offset += 1) {
@@ -237,7 +244,13 @@ function outlineHtmlSource(sourceCode: string): string {
   return lines.join("\n").slice(0, 12000);
 }
 
-function collectHtmlContent(sourceCode: string): SerializedSectionContentItem[] {
+function collectHtmlContent(
+  sourceCode: string,
+  includeContent: boolean
+): SerializedSectionContentItem[] {
+  if (!includeContent) {
+    return [];
+  }
   const items: SerializedSectionContentItem[] = [];
 
   for (const match of sourceCode.matchAll(/<(h[1-6]|p|button|a|li)[^>]*>\s*([^<]{3,180})\s*<\/\1>/gi)) {
@@ -293,12 +306,53 @@ function looksLikeContent(value: string): boolean {
   return /[a-z]/i.test(trimmed);
 }
 
-function collectLabeledContent(sourceCode: string): SerializedSectionContentItem[] {
+function placeholderForContentKind(kind: string): SerializedSectionContentItem {
+  const normalized = kind.toLowerCase();
+  if (/^h[1-6]$/.test(normalized) || ["title", "heading", "subtitle"].includes(normalized)) {
+    return { kind, label: kind, value: "Heading" };
+  }
+  if (["button", "a", "ctatext", "buttontext"].includes(normalized)) {
+    return { kind, label: kind, value: "Button text" };
+  }
+  if (normalized === "img") {
+    return { kind, label: kind, value: "Image" };
+  }
+  if (normalized === "li") {
+    return { kind, label: kind, value: "List item" };
+  }
+  if (["label", "span", "eyebrow"].includes(normalized)) {
+    return { kind, label: kind, value: "Label" };
+  }
+  return { kind, label: kind, value: "Body copy" };
+}
+
+function collectLabeledContent(
+  sourceCode: string,
+  includeContent: boolean
+): SerializedSectionContentItem[] {
   if (isHtmlLike(sourceCode)) {
-    const htmlItems = collectHtmlContent(sourceCode);
+    const htmlItems = collectHtmlContent(sourceCode, includeContent);
     if (htmlItems.length > 0) {
       return htmlItems;
     }
+  }
+
+  if (!includeContent) {
+    const kinds: string[] = [];
+
+    for (const match of sourceCode.matchAll(/<(h[1-6]|p|span|li|button|a|img)\b/gi)) {
+      kinds.push(match[1].toLowerCase());
+    }
+
+    for (const match of sourceCode.matchAll(
+      /(eyebrow|title|heading|subtitle|description|body|copy|label|buttonText|ctaText)\s*[:=]/g
+    )) {
+      kinds.push(match[1].toLowerCase());
+    }
+
+    return dedupe(kinds)
+      .slice(0, 24)
+      .map((kind) => placeholderForContentKind(kind));
   }
 
   const items: SerializedSectionContentItem[] = [];
@@ -372,8 +426,14 @@ function collectLayoutHints(sourceCode: string, sectionName: string): string[] {
 
 function summarizeContent(
   sectionContext: SectionContext,
-  content: SerializedSectionContentItem[]
+  content: SerializedSectionContentItem[],
+  includeContent: boolean
 ): string {
+  if (!includeContent) {
+    return cleanText(
+      `${sectionContext.sectionName} on ${sectionContext.pageName}. Preserve the source structure, but use placeholder copy for text-bearing elements.`
+    );
+  }
   const lead = content
     .slice(0, 4)
     .map((item) => item.value)
@@ -386,14 +446,16 @@ function summarizeContent(
 }
 
 export function serializeSectionContext(
-  sectionContext: SectionContext
+  sectionContext: SectionContext,
+  options: SerializeSectionOptions = {}
 ): SerializedSectionContext {
-  const content = collectLabeledContent(sectionContext.sourceCode);
+  const includeContent = options.includeContent ?? true;
+  const content = collectLabeledContent(sectionContext.sourceCode, includeContent);
   const sourceExcerpt = isHtmlLike(sectionContext.sourceCode)
-    ? outlineHtmlSource(sectionContext.sourceCode)
+    ? outlineHtmlSource(sectionContext.sourceCode, includeContent)
     : sectionContext.sourceCode.slice(0, 6000);
   return {
-    summary: summarizeContent(sectionContext, content),
+    summary: summarizeContent(sectionContext, content, includeContent),
     content,
     assetReferences: sectionContext.assetReferences,
     layoutHints: collectLayoutHints(

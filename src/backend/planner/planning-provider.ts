@@ -19,6 +19,7 @@ export interface PlanningProviderInput {
   serializedSection: SerializedSectionContext;
   projectContext: ProjectContext;
   sharedStyleContext: SharedStyleContext;
+  includeContent?: boolean;
   selectedElementId?: string | null;
 }
 

@@ -44,6 +44,7 @@ export function DebugSkeletonScreen() {
   const [inputType, setInputType] = useState<DebugSkeletonRequest["inputType"]>("jsx");
   const [sectionName, setSectionName] = useState("Hero");
   const [code, setCode] = useState(DEFAULT_CODE);
+  const [includeContent, setIncludeContent] = useState(true);
   const [skeleton, setSkeleton] = useState<SkeletonPlan | null>(null);
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
@@ -55,6 +56,7 @@ export function DebugSkeletonScreen() {
     code: string;
     inputType: DebugSkeletonRequest["inputType"];
     sectionName: string;
+    includeContent: boolean;
   } | null>(null);
   const insertedNodeIdsRef = useRef<string[]>([]);
   const activeAbortControllerRef = useRef<AbortController | null>(null);
@@ -81,7 +83,8 @@ export function DebugSkeletonScreen() {
       !lastGeneratedInput ||
       lastGeneratedInput.code !== normalizedCode ||
       lastGeneratedInput.inputType !== inputType ||
-      lastGeneratedInput.sectionName !== normalizedSectionName
+      lastGeneratedInput.sectionName !== normalizedSectionName ||
+      lastGeneratedInput.includeContent !== includeContent
     );
   const canGenerate = !isMutating && Boolean(normalizedCode);
   const generateLabel = displaySkeleton
@@ -114,6 +117,7 @@ export function DebugSkeletonScreen() {
             inputType,
             sectionName: normalizedSectionName,
             pageName: "Debug playground",
+            includeContent,
             sharedStyleContext
           },
           controller.signal
@@ -124,7 +128,8 @@ export function DebugSkeletonScreen() {
       setLastGeneratedInput({
         code: normalizedCode,
         inputType,
-        sectionName: normalizedSectionName
+        sectionName: normalizedSectionName,
+        includeContent
       });
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") {
@@ -231,7 +236,7 @@ export function DebugSkeletonScreen() {
               : isGenerating
               ? "Generating skeleton…"
               : hasDraftChanges
-              ? "Pasted code changed · generate a new skeleton"
+              ? "Debug inputs changed · generate a new skeleton"
               : displaySkeleton
               ? `${elementCount} elements · ${classCount} classes`
               : "Paste code to generate a skeleton"}
@@ -355,6 +360,18 @@ export function DebugSkeletonScreen() {
               onChange={(event) => setSectionName(event.target.value)}
               className="flex-1 h-8 px-2.5 rounded-md bg-wb-input border border-white/[0.09] text-[12px] text-wb-text-primary outline-none focus:border-wb-accent"
             />
+            <label className="ml-2 inline-flex items-center gap-2 text-[12px] text-wb-text-secondary whitespace-nowrap">
+              <input
+                type="checkbox"
+                checked={includeContent}
+                onChange={(event) => {
+                  setIncludeContent(event.target.checked);
+                  setError(null);
+                }}
+                className="h-3.5 w-3.5 rounded border border-white/[0.16] bg-wb-input accent-[var(--wb-accent)]"
+              />
+              Insert content too
+            </label>
           </div>
           <div className="flex-1 overflow-hidden bg-black/[0.18]">
             <textarea

@@ -447,6 +447,7 @@ export const debugSkeletonRequestSchema = z.object({
   inputType: z.enum(["html", "jsx"]),
   sectionName: z.string().min(1).default("Debug section"),
   pageName: z.string().min(1).default("Debug playground"),
+  includeContent: z.boolean().default(true),
   sharedStyleContext: sharedStyleContextSchema.optional()
 });
 

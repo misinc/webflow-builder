@@ -41,4 +41,19 @@ describe("serializeSectionContext", () => {
     expect(values).toContain("Regional Medical Practice");
     expect(values).toContain("300% increase in online appointment bookings within 6 months");
   });
+
+  it("uses placeholder content when includeContent is disabled", () => {
+    const serialized = serializeSectionContext(htmlContext(CASE_STUDIES_HTML), {
+      includeContent: false
+    });
+    const values = serialized.content.map((item) => item.value);
+
+    expect(serialized.summary).toContain("use placeholder copy");
+    expect(serialized.sourceExcerpt).toContain("section#case-studies");
+    expect(serialized.sourceExcerpt).toContain("[repeats x3]");
+    expect(serialized.sourceExcerpt).not.toContain("Regional Medical Practice");
+    expect(values).toContain("Heading");
+    expect(values).toContain("Body copy");
+    expect(values).toContain("Image");
+  });
 });

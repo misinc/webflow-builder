@@ -109,7 +109,9 @@ function stagePrompt(
       "The skeleton should preserve the source section hierarchy, reuse shared wrappers when available, and keep section-specific classes functional and reusable.",
       "Do not style the section in this step. Focus on structure, semantic content nodes, and correct shared wrapper usage.",
       "If the inventory contains exact wrappers like padding-global, container-large, or padding-section-medium, use those exact names.",
-      "If the source implies lists, cards, CTAs, or media groups, represent them structurally without inventing visual styling classes.",
+  "If the source implies lists, cards, CTAs, or media groups, represent them structurally without inventing visual styling classes.",
+      "If includeContent is true, preserve real heading, paragraph, button, link, list item, and image alt text when the source clearly provides it.",
+      "If includeContent is false, ignore verbatim source copy and use placeholders like Heading, Body copy, Button text, List item, and Image instead.",
       "Return JSON with: sectionMetadata, treeText, elementTree, reusableClasses, suggestedNewClasses, warnings."
     ].join(" ");
   }
@@ -599,6 +601,7 @@ function userContext(input: PlanningProviderInput): string {
       sharedClasses: input.sharedStyleContext.classes.slice(0, 60),
       sharedVariables: input.sharedStyleContext.variables.slice(0, 60),
       projectContext: input.projectContext,
+      includeContent: input.includeContent ?? true,
       selectedElementId: input.selectedElementId ?? null
     },
     null,
