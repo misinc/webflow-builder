@@ -39,7 +39,9 @@ const WEBFLOW_SITE_BUILDER_RULES = [
 const SKELETON_TREE_RULES = [
   "Return a faithful section skeleton tree in the style: section.section-name -> div.padding-global -> div.container-large -> div.padding-section-medium -> div.section-name_component -> div.section-name_content / div.section-name_visual.",
   "This skeleton tree is the actual Webflow insertion plan, not a JSX or source-code preview.",
-  "Only use Webflow-safe HTML elements such as section, div, header, footer, nav, h1-h6, p, span, ul, ol, li, article, figure, img, video, source, a, and button.",
+  "Only use Webflow-safe skeleton elements such as section, div, h1-h6, p, span, ul, ol, li, img, video, a, and button.",
+  "Do not include source tags, svg tags, path tags, icon vector tags, or any inline SVG structure in the skeleton.",
+  "Do not use semantic wrapper tags such as article, aside, figure, header, footer, nav, or main in the skeleton. Convert those wrappers to divs while preserving the class names and hierarchy.",
   "Never return React-only or framework-only tags such as motion, Fragment, Link, component names, or custom JSX elements.",
   "Never copy Tailwind utility classes, arbitrary value utilities, or source-framework class dumps into the skeleton.",
   "Normalize source structure into Client-First-compatible, reusable class names and prefer existing shared classes whenever possible.",

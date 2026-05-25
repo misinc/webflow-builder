@@ -1,7 +1,21 @@
 import { BuildNode, SkeletonPlan } from "../../../src/shared/contracts.js";
 
 const LEAF_TAGS = new Set(["img", "source", "br", "hr", "input", "meta", "link"]);
-const REMOVED_TAGS = new Set(["source"]);
+const REMOVED_TAGS = new Set([
+  "source",
+  "svg",
+  "path",
+  "circle",
+  "rect",
+  "line",
+  "polyline",
+  "polygon",
+  "ellipse",
+  "g",
+  "defs",
+  "clippath"
+]);
+const WRAPPER_TO_DIV_TAGS = new Set(["article", "aside", "figure", "header", "footer", "nav", "main"]);
 const NON_CONTAINER_TAGS = new Set([
   "p",
   "span",
@@ -17,7 +31,7 @@ const NON_CONTAINER_TAGS = new Set([
 ]);
 
 function normalizeTagToken(token: string): string {
-  return token.replace(/^<\/?/, "").replace(/\/?>$/, "").trim();
+  return token.replace(/^<\/?/, "").replace(/\/?>$/, "").trim().toLowerCase();
 }
 
 function inferNodeType(tag: string): BuildNode["type"] {
@@ -157,6 +171,7 @@ export function sanitizeSkeletonPlan(plan: SkeletonPlan): SkeletonPlan {
     node: BuildNode | null;
     hoistedChildren: BuildNode[];
   } {
+    const normalizedTag = normalizeTagToken(node.tag);
     const fallbackId = `${plan.sectionMetadata.sectionId}-node-${seenIds.size}`;
     let nextId = node.id?.trim() || fallbackId;
     if (seenIds.has(nextId)) {
@@ -169,7 +184,7 @@ export function sanitizeSkeletonPlan(plan: SkeletonPlan): SkeletonPlan {
     }
     seenIds.add(nextId);
 
-    if (REMOVED_TAGS.has(node.tag)) {
+    if (REMOVED_TAGS.has(normalizedTag)) {
       const normalizedChildren: BuildNode[] = [];
       for (const child of node.children) {
         const sanitizedChild = sanitizeNode(child);
@@ -180,7 +195,7 @@ export function sanitizeSkeletonPlan(plan: SkeletonPlan): SkeletonPlan {
       }
       warnings.push({
         code: "removed-unsupported-tag",
-        message: `Removed <${node.tag}> from the Webflow skeleton because it should not be inserted as a standalone element.`,
+        message: `Removed <${normalizedTag}> from the Webflow skeleton because it should not be inserted into Webflow.`,
         level: "warning"
       });
       return {
@@ -198,16 +213,26 @@ export function sanitizeSkeletonPlan(plan: SkeletonPlan): SkeletonPlan {
       normalizedChildren.push(...sanitizedChild.hoistedChildren);
     }
 
-    if ((LEAF_TAGS.has(node.tag) || NON_CONTAINER_TAGS.has(node.tag)) && normalizedChildren.length > 0) {
+    const safeTag = WRAPPER_TO_DIV_TAGS.has(normalizedTag) ? "div" : normalizedTag;
+    if (safeTag !== normalizedTag) {
+      warnings.push({
+        code: "converted-semantic-wrapper",
+        message: `Converted <${normalizedTag}> to <div> for safer Webflow insertion.`,
+        level: "warning"
+      });
+    }
+
+    if ((LEAF_TAGS.has(safeTag) || NON_CONTAINER_TAGS.has(safeTag)) && normalizedChildren.length > 0) {
       warnings.push({
         code: "invalid-noncontainer-children",
-        message: `Moved children out of <${node.tag}> because it should not contain nested elements in the Webflow skeleton.`,
+        message: `Moved children out of <${safeTag}> because it should not contain nested elements in the Webflow skeleton.`,
         level: "warning"
       });
       return {
         node: {
           ...node,
           id: nextId,
+          tag: safeTag,
           children: []
         },
         hoistedChildren: normalizedChildren
@@ -218,6 +243,7 @@ export function sanitizeSkeletonPlan(plan: SkeletonPlan): SkeletonPlan {
       node: {
         ...node,
         id: nextId,
+        tag: safeTag,
         children: normalizedChildren
       },
       hoistedChildren: []
