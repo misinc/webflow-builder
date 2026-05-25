@@ -55,15 +55,27 @@ const SCREEN_COMPONENTS: Record<ScreenName, ComponentType> = {
  */
 export default function App() {
   return (
-    <AppStateProvider>
-      <NavigationProvider>
-        <CurrentScreen />
-      </NavigationProvider>
-    </AppStateProvider>
+    <NavigationProvider>
+      <CurrentScreen />
+    </NavigationProvider>
   );
 }
 
 function CurrentScreen() {
+  const { current } = useNavigation();
+
+  if (current === 'debug-skeleton') {
+    return <ScreenRenderer />;
+  }
+
+  return (
+    <AppStateProvider>
+      <AppStateBoundScreens />
+    </AppStateProvider>
+  );
+}
+
+function AppStateBoundScreens() {
   return (
     <>
       <InitialRouteResolver />
