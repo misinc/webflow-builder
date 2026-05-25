@@ -33,6 +33,7 @@ const NON_CONTAINER_TAGS = new Set([
 const ICON_IMAGE_CLASS_PATTERN = /^icon-embed(?:-|$)/;
 const MEDIA_WRAPPER_CLASS_PATTERN = /(background|media|video|image|scrim|visual|canvas)/i;
 const PADDING_WRAPPER_CLASS_PATTERN = /^padding-(?!global$)/;
+const TEXT_BLOCK_CLASS_PATTERN = /(tagline|eyebrow|mini-label)/i;
 
 function normalizeTagToken(token: string): string {
   return token.replace(/^<\/?/, "").replace(/\/?>$/, "").trim().toLowerCase();
@@ -348,6 +349,14 @@ export function sanitizeSkeletonPlan(plan: SkeletonPlan): SkeletonPlan {
           hoistedChildren: []
         };
       }
+      nextTag = "div";
+      retagged = true;
+    }
+
+    if (
+      nextTag === "p" &&
+      filteredClassNames.some((className) => TEXT_BLOCK_CLASS_PATTERN.test(className))
+    ) {
       nextTag = "div";
       retagged = true;
     }

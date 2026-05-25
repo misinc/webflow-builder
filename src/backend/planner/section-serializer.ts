@@ -39,6 +39,23 @@ interface HtmlOutlineNode {
   children: HtmlOutlineNode[];
 }
 
+function iconEmbedClassForSvg(tagSource: string): string {
+  const width = Number.parseFloat(parseAttributeValue(tagSource, "width") ?? "");
+  const height = Number.parseFloat(parseAttributeValue(tagSource, "height") ?? "");
+  const maxDimension = Math.max(
+    Number.isFinite(width) ? width : 0,
+    Number.isFinite(height) ? height : 0
+  );
+
+  if (maxDimension > 0 && maxDimension <= 18) {
+    return "icon-embed-xsmall";
+  }
+  if (maxDimension > 0 && maxDimension <= 24) {
+    return "icon-embed-small";
+  }
+  return "icon-embed-small";
+}
+
 function decodeHtmlEntities(value: string): string {
   return value
     .replace(/&amp;/g, "&")
@@ -73,8 +90,12 @@ function outlineNodeLabel(node: HtmlOutlineNode, includeContent: boolean): strin
   const classList = node.classNames.filter((name) => !looksLikeUtilityClass(name));
   const classSuffix = classList.slice(0, 3).map((name) => `.${name}`).join("");
   const idSuffix = id ? `#${id}` : "";
+  const hasOnlyLineBreakChildren =
+    node.children.length > 0 && node.children.every((child) => child.tag === "br");
   const textSource =
-    includeContent && node.children.length === 0 ? cleanText(node.textContent ?? "") : "";
+    includeContent && (node.children.length === 0 || hasOnlyLineBreakChildren)
+      ? cleanText(node.textContent ?? "")
+      : "";
   const textSuffix = textSource ? ` "${textSource.slice(0, 80)}"` : "";
   return `${tag}${idSuffix}${classSuffix}${textSuffix}`;
 }
@@ -97,7 +118,6 @@ function parseHtmlOutline(sourceCode: string): HtmlOutlineNode | null {
   const banned = new Set([
     "script",
     "style",
-    "svg",
     "path",
     "rect",
     "circle",
@@ -152,6 +172,35 @@ function parseHtmlOutline(sourceCode: string): HtmlOutlineNode | null {
       continue;
     }
 
+    if (tag === "svg" && !isClosing) {
+      const rawClassNames = (parseAttributeValue(rawTag, "class") ?? "")
+        .split(/\s+/)
+        .map((value) => value.trim())
+        .filter(Boolean);
+      const classNames = dedupe([
+        iconEmbedClassForSvg(rawTag),
+        ...rawClassNames.filter((name) => /icon|embed/i.test(name))
+      ]);
+      const node: HtmlOutlineNode = {
+        tag: "img",
+        id: undefined,
+        classNames,
+        children: []
+      };
+
+      if (stack.length > 0) {
+        stack[stack.length - 1].children.push(node);
+      } else {
+        roots.push(node);
+      }
+
+      if (!isSelfClosing) {
+        skipDepth = 1;
+      }
+      cursor = tagPattern.lastIndex;
+      continue;
+    }
+
     if (banned.has(tag)) {
       if (!isClosing && !isSelfClosing) {
         skipDepth = 1;
@@ -197,6 +246,13 @@ function parseHtmlOutline(sourceCode: string): HtmlOutlineNode | null {
 
   attachText(sourceCode.length);
   return roots[0] ?? null;
+}
+
+function walkHtmlNodes(node: HtmlOutlineNode, visitor: (node: HtmlOutlineNode) => void): void {
+  visitor(node);
+  for (const child of node.children) {
+    walkHtmlNodes(child, visitor);
+  }
 }
 
 function outlineHtmlSource(sourceCode: string, includeContent: boolean): string {
@@ -251,6 +307,51 @@ function collectHtmlContent(
   if (!includeContent) {
     return [];
   }
+  const root = parseHtmlOutline(sourceCode);
+  if (root) {
+    const items: SerializedSectionContentItem[] = [];
+    walkHtmlNodes(root, (node) => {
+      const value = cleanText(decodeHtmlEntities(node.textContent ?? ""));
+      if (node.tag === "img") {
+        if (looksLikeContent(value)) {
+          items.push({
+            kind: "img",
+            label: "img",
+            value
+          });
+        }
+        return;
+      }
+
+      if (!["h1", "h2", "h3", "h4", "h5", "h6", "p", "button", "a", "li", "span"].includes(node.tag)) {
+        return;
+      }
+
+      if (!looksLikeContent(value)) {
+        return;
+      }
+
+      items.push({
+        kind: node.tag,
+        label: node.tag,
+        value
+      });
+    });
+
+    const dedupedItems = items
+      .filter(
+        (item, index, array) =>
+          array.findIndex(
+            (candidate) => candidate.kind === item.kind && candidate.value === item.value
+          ) === index
+      )
+      .slice(0, 24);
+
+    if (dedupedItems.length > 0) {
+      return dedupedItems;
+    }
+  }
+
   const items: SerializedSectionContentItem[] = [];
 
   for (const match of sourceCode.matchAll(/<(h[1-6]|p|button|a|li)[^>]*>\s*([^<]{3,180})\s*<\/\1>/gi)) {

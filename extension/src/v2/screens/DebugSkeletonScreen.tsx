@@ -339,28 +339,30 @@ export function DebugSkeletonScreen() {
 
         <div className="w-1/2 flex flex-col min-w-0">
           <SplitHeader title="Pasted source" />
-          <div className="px-4 py-3 border-b border-white/[0.09] bg-black/[0.12] flex items-center gap-3">
-            <label className="text-[11px] font-semibold text-wb-text-tertiary uppercase tracking-wider">
-              Input
-            </label>
-            <select
-              value={inputType}
-              onChange={(event) => setInputType(event.target.value as DebugSkeletonRequest["inputType"])}
-              className="h-8 px-2.5 rounded-md text-[12px] bg-wb-input border border-white/[0.09] text-wb-text-primary"
-            >
-              <option value="jsx">React / TSX</option>
-              <option value="html">HTML</option>
-            </select>
-            <label className="text-[11px] font-semibold text-wb-text-tertiary uppercase tracking-wider ml-2">
-              Section name
-            </label>
-            <input
-              type="text"
-              value={sectionName}
-              onChange={(event) => setSectionName(event.target.value)}
-              className="flex-1 h-8 px-2.5 rounded-md bg-wb-input border border-white/[0.09] text-[12px] text-wb-text-primary outline-none focus:border-wb-accent"
-            />
-            <label className="ml-2 inline-flex items-center gap-2 text-[12px] text-wb-text-secondary whitespace-nowrap">
+          <div className="px-4 py-3 border-b border-white/[0.09] bg-black/[0.12] flex flex-col gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <label className="text-[11px] font-semibold text-wb-text-tertiary uppercase tracking-wider">
+                Input
+              </label>
+              <select
+                value={inputType}
+                onChange={(event) => setInputType(event.target.value as DebugSkeletonRequest["inputType"])}
+                className="h-8 px-2.5 rounded-md text-[12px] bg-wb-input border border-white/[0.09] text-wb-text-primary"
+              >
+                <option value="jsx">React / TSX</option>
+                <option value="html">HTML</option>
+              </select>
+              <label className="text-[11px] font-semibold text-wb-text-tertiary uppercase tracking-wider ml-2">
+                Section name
+              </label>
+              <input
+                type="text"
+                value={sectionName}
+                onChange={(event) => setSectionName(event.target.value)}
+                className="flex-1 min-w-0 h-8 px-2.5 rounded-md bg-wb-input border border-white/[0.09] text-[12px] text-wb-text-primary outline-none focus:border-wb-accent"
+              />
+            </div>
+            <label className="inline-flex items-center gap-2 text-[12px] text-wb-text-secondary whitespace-nowrap self-start">
               <input
                 type="checkbox"
                 checked={includeContent}

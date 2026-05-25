@@ -41,7 +41,9 @@ const SKELETON_TREE_RULES = [
   "This skeleton tree is the actual Webflow insertion plan, not a JSX or source-code preview.",
   "Only use Webflow-safe skeleton elements such as section, div, h1-h6, p, span, ul, ol, li, img, video, a, and button.",
   "Do not use standalone span wrappers in the skeleton unless inline text semantics are truly required. Prefer div wrappers or plain text-bearing elements instead.",
+  "For eyebrow, tagline, or mini-label text, prefer a text block wrapper such as div.text-style-tagline or div.authority-mini-label instead of a paragraph when the source is acting like a small label rather than body copy.",
   "Do not include source tags, svg tags, path tags, icon vector tags, or any inline SVG structure in the skeleton.",
+  "If the source contains inline SVG icons that are meaningfully part of the section UI, preserve them as img.icon-embed-* placeholder nodes inside the correct wrapper instead of dropping them.",
   "Do not use semantic wrapper tags such as article, aside, figure, header, footer, nav, or main in the skeleton. Convert those wrappers to divs while preserving the class names and hierarchy.",
   "When a section follows Client-First wrapper structure, the first layout wrapper under section should usually be div.padding-global before container and inner padding wrappers, unless the source genuinely starts with media or background layers.",
   "For icon placeholders, prefer img.icon-embed-xsmall or another img.icon-embed-* class instead of a generic div.",
@@ -110,6 +112,7 @@ function stagePrompt(
       "Do not style the section in this step. Focus on structure, semantic content nodes, and correct shared wrapper usage.",
       "If the inventory contains exact wrappers like padding-global, container-large, or padding-section-medium, use those exact names.",
   "If the source implies lists, cards, CTAs, or media groups, represent them structurally without inventing visual styling classes.",
+      "If the source contains both a heading and a supporting paragraph, keep them as separate skeleton nodes instead of collapsing the paragraph into the heading.",
       "If includeContent is true, preserve real heading, paragraph, button, link, list item, and image alt text when the source clearly provides it.",
       "If includeContent is false, ignore verbatim source copy and use placeholders like Heading, Body copy, Button text, List item, and Image instead.",
       "Return JSON with: sectionMetadata, treeText, elementTree, reusableClasses, suggestedNewClasses, warnings."
