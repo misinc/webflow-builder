@@ -69,6 +69,8 @@ class TrackingBridge implements WebflowDesignerBridge {
     return { id: "component-root-1" };
   }
 
+  async setNodeTextContent() {}
+
   async configureNode() {}
 
   async registerBlankComponent() {

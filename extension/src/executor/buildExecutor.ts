@@ -52,6 +52,10 @@ async function buildNodeTree(params: {
   params.nodeIdMap.set(params.node.id, created.id);
   throwIfAborted(params.signal);
   await params.bridge.applyClasses(created.id, params.node.classNames);
+  if (typeof params.node.textContent === "string" && params.node.textContent.trim().length > 0) {
+    throwIfAborted(params.signal);
+    await params.bridge.setNodeTextContent(created.id, params.node.textContent);
+  }
 
   let lastChildId: string | null = null;
   for (const child of params.node.children) {
@@ -66,6 +70,32 @@ async function buildNodeTree(params: {
       signal: params.signal
     });
     lastChildId = params.nodeIdMap.get(child.id) ?? null;
+  }
+}
+
+async function applyTextContentTree(params: {
+  bridge: WebflowDesignerBridge;
+  node: BuildNode;
+  nodeIdMap: Map<string, string>;
+  signal?: AbortSignal | null;
+}): Promise<void> {
+  throwIfAborted(params.signal);
+  const runtimeNodeId = params.nodeIdMap.get(params.node.id);
+  if (
+    runtimeNodeId &&
+    typeof params.node.textContent === "string" &&
+    params.node.textContent.trim().length > 0
+  ) {
+    await params.bridge.setNodeTextContent(runtimeNodeId, params.node.textContent);
+  }
+
+  for (const child of params.node.children) {
+    await applyTextContentTree({
+      bridge: params.bridge,
+      node: child,
+      nodeIdMap: params.nodeIdMap,
+      signal: params.signal
+    });
   }
 }
 
@@ -192,6 +222,13 @@ export async function executeBuildPlan(params: {
       parentId: params.context.pageId,
       afterId: anchorId,
       createdNodeIds,
+      nodeIdMap,
+      signal: params.signal
+    });
+
+    await applyTextContentTree({
+      bridge: params.bridge,
+      node: params.plan.elementTree,
       nodeIdMap,
       signal: params.signal
     });

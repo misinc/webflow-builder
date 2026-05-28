@@ -8,7 +8,7 @@ import { Spinner } from "../components/Spinner";
 import { useNavigation } from "../context/NavigationContext";
 import { useAppState } from "../context/AppStateContext";
 import type { BuildNode } from "../../../../src/shared/contracts.js";
-import { normalizeSkeletonPlan } from "../../skeleton/tree.js";
+import { getSkeletonDisplayTag, normalizeSkeletonPlan } from "../../skeleton/tree.js";
 
 export function SkeletonReviewScreen() {
   const { navigate } = useNavigation();
@@ -292,7 +292,7 @@ function TreeNodeLine({
         >
           {hasChildren ? (isCollapsed ? <ChevronRight size={10} /> : <ChevronDown size={10} />) : null}
         </button>
-        <span className="text-[#ff80b5]">{`<${node.tag}>`}</span>
+        <span className="text-[#ff80b5]">{`<${getSkeletonDisplayTag(node)}>`}</span>
         {node.classNames.length > 0 ? (
           <span className="text-[#8ad7ff]">{node.classNames.map((name) => `.${name}`).join("")}</span>
         ) : null}

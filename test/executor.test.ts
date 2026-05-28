@@ -69,6 +69,8 @@ class FailingBridge implements WebflowDesignerBridge {
     return { id: "component-root-1" };
   }
 
+  async setNodeTextContent(_nodeId: string, _content: string) {}
+
   async configureNode() {}
 
   async registerBlankComponent() {
@@ -291,5 +293,66 @@ describe("executeBuildPlan", () => {
     expect(root?.childIds).toEqual([result.createdNodeIds[1], result.createdNodeIds[2]]);
     expect(firstChild?.afterCalls).toEqual([]);
     expect(selected.childIds).toEqual([rootId]);
+  });
+
+  it("reapplies node text after classes are attached", async () => {
+    const textContentCalls: string[] = [];
+
+    class TextBridge extends FailingBridge {
+      override async createNode() {
+        return { id: "text-node-1" };
+      }
+
+      override async applyClasses() {}
+
+      override async setNodeTextContent(_nodeId: string, content: string) {
+        textContentCalls.push(content);
+      }
+    }
+
+    const bridge = new TextBridge();
+    const context = await bridge.getContext();
+
+    const result = await executeSkeletonPlan({
+      bridge,
+      context,
+      placementMode: "append",
+      placementTarget: null,
+      plan: {
+        sectionMetadata: {
+          repoId: "repo-1",
+          pageId: "page-1",
+          sectionId: "section-1",
+          pageName: "Home",
+          sectionName: "Hero",
+          sourceFile: "Hero.tsx"
+        },
+        treeText: "section.hero\n  div.text-style-tagline \"FOUNDED IN 1995\"",
+        elementTree: {
+          id: "root",
+          type: "section",
+          tag: "section",
+          classNames: ["hero"],
+          children: [
+            {
+              id: "child-1",
+              type: "box",
+              tag: "div",
+              classNames: ["text-style-tagline"],
+              textContent: "FOUNDED IN 1995",
+              children: []
+            }
+          ]
+        },
+        reusableClasses: [],
+        suggestedNewClasses: [],
+        warnings: []
+      }
+    });
+
+    expect(result.success).toBe(true);
+    expect(
+      textContentCalls.filter((content) => content === "FOUNDED IN 1995")
+    ).toHaveLength(2);
   });
 });

@@ -40,8 +40,9 @@ const SKELETON_TREE_RULES = [
   "Return a faithful section skeleton tree in the style: section.section-name -> div.padding-global -> div.container-large -> div.padding-section-medium -> div.section-name_component -> div.section-name_content / div.section-name_visual.",
   "This skeleton tree is the actual Webflow insertion plan, not a JSX or source-code preview.",
   "Only use Webflow-safe skeleton elements such as section, div, h1-h6, p, span, ul, ol, li, img, video, a, and button.",
+  "Use textblock as a pseudo-tag for short label-style text blocks that should become real Webflow Text Block elements, for example textblock.text-style-tagline or textblock.authority-mini-label.",
   "Do not use standalone span wrappers in the skeleton unless inline text semantics are truly required. Prefer div wrappers or plain text-bearing elements instead.",
-  "For eyebrow, tagline, or mini-label text, prefer a text block wrapper such as div.text-style-tagline or div.authority-mini-label instead of a paragraph when the source is acting like a small label rather than body copy.",
+  "For eyebrow, tagline, or mini-label text, prefer textblock.text-style-tagline or textblock.authority-mini-label instead of a paragraph when the source is acting like a small label rather than body copy.",
   "Do not include source tags, svg tags, path tags, icon vector tags, or any inline SVG structure in the skeleton.",
   "If the source contains inline SVG icons that are meaningfully part of the section UI, preserve them as img.icon-embed-* placeholder nodes inside the correct wrapper instead of dropping them.",
   "Do not use semantic wrapper tags such as article, aside, figure, header, footer, nav, or main in the skeleton. Convert those wrappers to divs while preserving the class names and hierarchy.",
@@ -342,6 +343,11 @@ function normalizeTagToken(token: string): string {
   return token.replace(/^<\/?/, "").replace(/\/?>$/, "").trim();
 }
 
+function actualTagFromToken(token: string): string {
+  const normalized = normalizeTagToken(token);
+  return normalized.toLowerCase() === "textblock" ? "div" : normalized;
+}
+
 function inferNodeType(tag: string): BuildNode["type"] {
   if (tag === "img") return "image";
   if (tag === "button" || tag === "a") return "button";
@@ -395,10 +401,16 @@ function parseElementTreeFromTreeText(treeText: string, fallback: BuildNode): Bu
   for (const [index, rawLine] of lines.entries()) {
     let content = lineContent(rawLine);
     const depth = Math.floor(lineIndent(rawLine) / indentUnit);
-    const textMatch = content.match(/\s+"([^"]*)"$/);
-    const textContent = textMatch?.[1];
+    const textMatch = content.match(/\s+("(?:\\.|[^"])*")$/);
+    let textContent: string | undefined;
     if (textMatch?.index !== undefined) {
+      const encoded = textMatch[1];
       content = content.slice(0, textMatch.index).trim();
+      try {
+        textContent = JSON.parse(encoded) as string;
+      } catch {
+        textContent = encoded.slice(1, -1);
+      }
     }
 
     const tokens = content.split(/\s+/).filter(Boolean);
@@ -408,7 +420,7 @@ function parseElementTreeFromTreeText(treeText: string, fallback: BuildNode): Bu
     }
 
     const parts = structureToken.split(".").filter(Boolean);
-    const tag = normalizeTagToken(parts[0] ?? "");
+    const tag = actualTagFromToken(parts[0] ?? "");
     if (!tag) {
       return null;
     }

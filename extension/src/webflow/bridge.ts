@@ -53,6 +53,7 @@ export interface WebflowDesignerBridge {
   openComponentCanvas(componentId: string): Promise<void>;
   exitComponentCanvas(): Promise<void>;
   getComponentRootElement(componentId: string): Promise<{ id: string } | null>;
+  setNodeTextContent(nodeId: string, content: string): Promise<void>;
   configureNode(
     nodeId: string,
     node: Pick<BuildNode, "tag" | "classNames" | "textContent">
@@ -168,6 +169,7 @@ interface WebflowApi {
   elementPresets: {
     DOM: unknown;
     DivBlock?: unknown;
+    TextBlock?: unknown;
     Image?: unknown;
   };
   getSiteInfo(): Promise<Record<string, unknown> & { siteId: string }>;
@@ -302,9 +304,21 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
 
   constructor(private readonly api: WebflowApi) {}
 
+  private isTextBlockNode(node: BuildNode): boolean {
+    return (
+      node.tag === "div" &&
+      typeof node.textContent === "string" &&
+      node.textContent.trim().length > 0 &&
+      node.classNames.some((className) => /(tagline|eyebrow|mini-label)/i.test(className))
+    );
+  }
+
   private getInsertionSpec(node: BuildNode): unknown {
     if (node.tag === "img") {
       return this.api.elementPresets.Image ?? this.api.elementPresets.DOM;
+    }
+    if (this.isTextBlockNode(node)) {
+      return this.api.elementPresets.TextBlock ?? this.api.elementPresets.DOM;
     }
     if (node.tag === "div") {
       return this.api.elementPresets.DivBlock ?? "div";
@@ -754,7 +768,12 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
       );
     }
 
-    if (created.type === "DOM" && created.setTag && typeof presetOrTag !== "string") {
+    if (
+      created.type === "DOM" &&
+      created.setTag &&
+      typeof presetOrTag !== "string" &&
+      presetOrTag !== this.api.elementPresets.TextBlock
+    ) {
       await created.setTag(input.node.tag || "div");
     }
 
@@ -822,6 +841,14 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
     const root = await component?.getRootElement?.().catch(() => null);
     const id = this.registerElement(root ?? null);
     return id ? { id } : null;
+  }
+
+  async setNodeTextContent(nodeId: string, content: string): Promise<void> {
+    const element = this.elementsById.get(nodeId);
+    if (!element) {
+      throw new Error("Unable to find the requested Webflow element.");
+    }
+    await element.setTextContent?.(content);
   }
 
   async configureNode(
@@ -1121,6 +1148,8 @@ class MockWebflowDesignerBridge implements WebflowDesignerBridge {
   async getComponentRootElement(componentId: string): Promise<{ id: string } | null> {
     return { id: `mock-component-root-${componentId}` };
   }
+
+  async setNodeTextContent(): Promise<void> {}
 
   async configureNode(): Promise<void> {}
 

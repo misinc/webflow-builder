@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { parseSkeletonTreeText } from "../extension/src/skeleton/tree.js";
+import {
+  normalizeSkeletonPlan,
+  parseSkeletonTreeText,
+  serializeSkeletonTree
+} from "../extension/src/skeleton/tree.js";
 import { SkeletonPlan } from "../src/shared/contracts.js";
 
 function basePlan(): SkeletonPlan {
@@ -61,5 +65,30 @@ describe("parseSkeletonTreeText", () => {
     expect(plan.elementTree.children[0]?.children[0]?.classNames).toEqual([
       "container-large"
     ]);
+  });
+
+  it("parses textblock pseudo-tags as div nodes", () => {
+    const plan = parseSkeletonTreeText(
+      basePlan(),
+      'section.section-name\n  textblock.text-style-tagline "FOUNDED IN 1995"'
+    );
+
+    expect(plan.elementTree.children[0]?.tag).toBe("div");
+    expect(plan.elementTree.children[0]?.classNames).toEqual(["text-style-tagline"]);
+    expect(plan.elementTree.children[0]?.textContent).toBe("FOUNDED IN 1995");
+  });
+
+  it("serializes tagline-style div nodes back to textblock syntax", () => {
+    const normalized = normalizeSkeletonPlan(
+      parseSkeletonTreeText(
+        basePlan(),
+        'section.section-name\n  p.text-style-tagline "FOUNDED IN 1995"'
+      )
+    );
+
+    expect(serializeSkeletonTree(normalized.elementTree)).toContain(
+      'textblock.text-style-tagline "FOUNDED IN 1995"'
+    );
+    expect(normalized.treeText).toContain('textblock.text-style-tagline "FOUNDED IN 1995"');
   });
 });

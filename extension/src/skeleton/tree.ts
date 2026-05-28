@@ -34,9 +34,15 @@ const ICON_IMAGE_CLASS_PATTERN = /^icon-embed(?:-|$)/;
 const MEDIA_WRAPPER_CLASS_PATTERN = /(background|media|video|image|scrim|visual|canvas)/i;
 const PADDING_WRAPPER_CLASS_PATTERN = /^padding-(?!global$)/;
 const TEXT_BLOCK_CLASS_PATTERN = /(tagline|eyebrow|mini-label)/i;
+const TEXTBLOCK_PSEUDO_TAG = "textblock";
 
 function normalizeTagToken(token: string): string {
   return token.replace(/^<\/?/, "").replace(/\/?>$/, "").trim().toLowerCase();
+}
+
+function actualTagFromToken(token: string): string {
+  const normalized = normalizeTagToken(token);
+  return normalized === TEXTBLOCK_PSEUDO_TAG ? "div" : normalized;
 }
 
 function inferNodeType(tag: string): BuildNode["type"] {
@@ -47,6 +53,53 @@ function inferNodeType(tag: string): BuildNode["type"] {
   if (/^h[1-6]$/i.test(tag)) return "heading";
   if (tag === "p" || tag === "span" || tag === "label") return "text";
   return "box";
+}
+
+function isTextBlockNode(node: BuildNode): boolean {
+  return (
+    normalizeTagToken(node.tag) === "div" &&
+    Boolean(node.textContent?.trim()) &&
+    node.classNames.some((className) => TEXT_BLOCK_CLASS_PATTERN.test(className))
+  );
+}
+
+export function getSkeletonDisplayTag(node: BuildNode): string {
+  return isTextBlockNode(node) ? TEXTBLOCK_PSEUDO_TAG : normalizeTagToken(node.tag);
+}
+
+function extractQuotedText(content: string): { content: string; textContent?: string } {
+  const textMatch = content.match(/\s+("(?:\\.|[^"])*")$/);
+  if (textMatch?.index === undefined) {
+    return { content };
+  }
+
+  const encoded = textMatch[1];
+  try {
+    return {
+      content: content.slice(0, textMatch.index).trim(),
+      textContent: JSON.parse(encoded) as string
+    };
+  } catch {
+    return {
+      content: content.slice(0, textMatch.index).trim(),
+      textContent: encoded.slice(1, -1)
+    };
+  }
+}
+
+function serializeSkeletonTreeNode(node: BuildNode, depth: number): string[] {
+  const indent = "  ".repeat(depth);
+  const displayTag = getSkeletonDisplayTag(node);
+  const classSuffix = node.classNames.map((className) => `.${className}`).join("");
+  const textSuffix = node.textContent?.trim() ? ` ${JSON.stringify(node.textContent.trim())}` : "";
+  return [
+    `${indent}${displayTag}${classSuffix}${textSuffix}`,
+    ...node.children.flatMap((child) => serializeSkeletonTreeNode(child, depth + 1))
+  ];
+}
+
+export function serializeSkeletonTree(node: BuildNode): string {
+  return serializeSkeletonTreeNode(node, 0).join("\n");
 }
 
 function expandInlineChain(treeText: string): string {
@@ -213,12 +266,9 @@ export function parseSkeletonTreeText(
   lines.forEach((rawLine, index) => {
     let content = lineContent(rawLine);
     const depth = Math.floor(lineIndent(rawLine) / indentUnit);
-
-    const textMatch = content.match(/\s+"([^"]*)"$/);
-    const textContent = textMatch?.[1];
-    if (textMatch?.index !== undefined) {
-      content = content.slice(0, textMatch.index).trim();
-    }
+    const extractedText = extractQuotedText(content);
+    content = extractedText.content;
+    const textContent = extractedText.textContent;
 
     const tokens = content.split(/\s+/).filter(Boolean);
     const structureToken = tokens[0];
@@ -227,7 +277,7 @@ export function parseSkeletonTreeText(
     }
 
     const parts = structureToken.split(".").filter(Boolean);
-    const tag = normalizeTagToken(parts[0] ?? "");
+    const tag = actualTagFromToken(parts[0] ?? "");
     const classNames = [
       ...parts.slice(1),
       ...tokens
@@ -362,8 +412,8 @@ export function sanitizeSkeletonPlan(plan: SkeletonPlan): SkeletonPlan {
     }
 
     if (filteredClassNames.some((className) => ICON_IMAGE_CLASS_PATTERN.test(className))) {
+      retagged = retagged || nextTag !== "img";
       nextTag = "img";
-      retagged = true;
     }
 
     if (retagged) {
@@ -436,13 +486,25 @@ export function normalizeSkeletonPlan(plan: SkeletonPlan): SkeletonPlan {
     const reparsedClassCount = new Set(collectClassNames(reparsed.elementTree)).size;
     const reparsedInvalidClassCount = countInvalidClassNames(reparsed.elementTree);
     if (existingClassCount === 0 && reparsedClassCount > 0) {
-      return reparsed;
+      return {
+        ...reparsed,
+        treeText: serializeSkeletonTree(reparsed.elementTree)
+      };
     }
     if (existingInvalidClassCount > reparsedInvalidClassCount) {
-      return reparsed;
+      return {
+        ...reparsed,
+        treeText: serializeSkeletonTree(reparsed.elementTree)
+      };
     }
-    return sanitized;
+    return {
+      ...sanitized,
+      treeText: serializeSkeletonTree(sanitized.elementTree)
+    };
   } catch {
-    return sanitized;
+    return {
+      ...sanitized,
+      treeText: serializeSkeletonTree(sanitized.elementTree)
+    };
   }
 }
