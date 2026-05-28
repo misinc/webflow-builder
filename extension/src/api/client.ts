@@ -313,8 +313,7 @@ export class BackendClient {
   ): Promise<SkeletonPlan> {
     const validated = debugSkeletonRequestSchema.parse(input);
     const routing = decideDebugSkeletonRouting(validated);
-
-    if (!routing.useBackground) {
+    const runSyncRequest = async () => {
       const response = await request<SkeletonPlan>(
         this.functionUrl("workflow-debug-generate-skeleton"),
         {
@@ -325,32 +324,45 @@ export class BackendClient {
         signal
       );
       return skeletonPlanSchema.parse(response);
+    };
+
+    if (!routing.useBackground) {
+      return runSyncRequest();
     }
 
-    const start = debugSkeletonJobStartSchema.parse(
-      await request(
-        this.functionUrl("workflow-debug-generate-skeleton-start"),
+    let start;
+    try {
+      start = debugSkeletonJobStartSchema.parse(
+        await request(
+          this.functionUrl("workflow-debug-generate-skeleton-start"),
+          {
+            method: "POST",
+            body: JSON.stringify(validated)
+          },
+          undefined,
+          signal
+        )
+      );
+
+      await request<{ status: string }>(
+        this.functionUrl("workflow-debug-generate-skeleton-background"),
         {
           method: "POST",
-          body: JSON.stringify(validated)
+          body: JSON.stringify(
+            debugSkeletonJobTriggerSchema.parse({
+              jobId: start.jobId
+            })
+          )
         },
         undefined,
         signal
-      )
-    );
-
-    await fetch(this.functionUrl("workflow-debug-generate-skeleton-background"), {
-      method: "POST",
-      signal,
-      headers: {
-        "content-type": "application/json"
-      },
-      body: JSON.stringify(
-        debugSkeletonJobTriggerSchema.parse({
-          jobId: start.jobId
-        })
-      )
-    });
+      );
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        throw error;
+      }
+      return runSyncRequest();
+    }
 
     let pollAfterMs = start.pollAfterMs;
     while (true) {

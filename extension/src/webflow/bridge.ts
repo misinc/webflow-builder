@@ -169,6 +169,7 @@ interface WebflowApi {
   elementPresets: {
     DOM: unknown;
     DivBlock?: unknown;
+    Blockquote?: unknown;
     TextBlock?: unknown;
     Image?: unknown;
   };
@@ -330,7 +331,10 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
     if (node.tag === "img") {
       return this.api.elementPresets.Image ?? this.api.elementPresets.DOM;
     }
-    if (node.tag === "ul" || node.tag === "ol" || node.tag === "li" || node.tag === "blockquote") {
+    if (node.tag === "blockquote") {
+      return this.api.elementPresets.Blockquote ?? "blockquote";
+    }
+    if (node.tag === "ul" || node.tag === "ol" || node.tag === "li") {
       return this.api.elementPresets.DOM;
     }
     if (this.isTextBlockNode(node)) {

@@ -372,10 +372,10 @@ describe("Webflow bridge image insertion", () => {
     expect(setTag).toHaveBeenCalledWith("ul");
   });
 
-  it("creates blockquote nodes through the DOM preset and retags them natively", async () => {
-    const domPreset = {};
+  it("creates blockquote nodes through the native preset instead of a custom DOM retag", async () => {
+    const blockquotePreset = {};
     const append = vi.fn(async (preset) => {
-      expect(preset).toBe(domPreset);
+      expect(preset).toBe(blockquotePreset);
       return created;
     });
     const setTag = vi.fn(async () => undefined);
@@ -394,7 +394,7 @@ describe("Webflow bridge image insertion", () => {
 
     const created = {
       id: "created-blockquote",
-      type: "DOM",
+      type: "Blockquote",
       append: vi.fn(),
       after: vi.fn(),
       setTag,
@@ -407,8 +407,9 @@ describe("Webflow bridge image insertion", () => {
       value: {
         webflow: {
           elementPresets: {
-            DOM: domPreset,
+            DOM: {},
             DivBlock: {},
+            Blockquote: blockquotePreset,
             TextBlock: {},
             Image: {}
           },
@@ -444,7 +445,7 @@ describe("Webflow bridge image insertion", () => {
       }
     });
 
-    expect(setTag).toHaveBeenCalledWith("blockquote");
+    expect(setTag).not.toHaveBeenCalled();
   });
 
   it("prefers the live selected handle when writing TextBlock content", async () => {
