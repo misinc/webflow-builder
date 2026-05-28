@@ -33,8 +33,16 @@ const NON_CONTAINER_TAGS = new Set([
 const ICON_IMAGE_CLASS_PATTERN = /^icon-embed(?:-|$)/;
 const MEDIA_WRAPPER_CLASS_PATTERN = /(background|media|video|image|scrim|visual|canvas)/i;
 const PADDING_WRAPPER_CLASS_PATTERN = /^padding-(?!global$)/;
-const TEXT_BLOCK_CLASS_PATTERN = /(tagline|eyebrow|mini-label)/i;
+const TEXT_BLOCK_CLASS_PATTERN = /(tagline|eyebrow|mini-label|item_value|stat|metric)/i;
 const TEXTBLOCK_PSEUDO_TAG = "textblock";
+
+function looksLikeStatText(value: string | null | undefined): boolean {
+  const normalized = value?.trim() ?? "";
+  if (!normalized || normalized.length > 40) {
+    return false;
+  }
+  return /^\d[\d+.,:%xX°/-]*$/.test(normalized);
+}
 
 function normalizeTagToken(token: string): string {
   return token.replace(/^<\/?/, "").replace(/\/?>$/, "").trim().toLowerCase();
@@ -59,7 +67,10 @@ function isTextBlockNode(node: BuildNode): boolean {
   return (
     normalizeTagToken(node.tag) === "div" &&
     Boolean(node.textContent?.trim()) &&
-    node.classNames.some((className) => TEXT_BLOCK_CLASS_PATTERN.test(className))
+    (
+      node.classNames.some((className) => TEXT_BLOCK_CLASS_PATTERN.test(className)) ||
+      looksLikeStatText(node.textContent)
+    )
   );
 }
 
@@ -405,7 +416,10 @@ export function sanitizeSkeletonPlan(plan: SkeletonPlan): SkeletonPlan {
 
     if (
       nextTag === "p" &&
-      filteredClassNames.some((className) => TEXT_BLOCK_CLASS_PATTERN.test(className))
+      (
+        filteredClassNames.some((className) => TEXT_BLOCK_CLASS_PATTERN.test(className)) ||
+        looksLikeStatText(node.textContent)
+      )
     ) {
       nextTag = "div";
       retagged = true;

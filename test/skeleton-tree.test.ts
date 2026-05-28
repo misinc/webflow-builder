@@ -91,4 +91,18 @@ describe("parseSkeletonTreeText", () => {
     );
     expect(normalized.treeText).toContain('textblock.text-style-tagline "FOUNDED IN 1995"');
   });
+
+  it("normalizes stat-value paragraphs into textblock syntax", () => {
+    const normalized = normalizeSkeletonPlan(
+      parseSkeletonTreeText(
+        basePlan(),
+        'section.section-name\n  p.authority_item_value "50+"'
+      )
+    );
+
+    expect(serializeSkeletonTree(normalized.elementTree)).toContain(
+      'textblock.authority_item_value "50+"'
+    );
+    expect(normalized.elementTree.children[0]?.tag).toBe("div");
+  });
 });

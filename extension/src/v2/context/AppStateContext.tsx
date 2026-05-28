@@ -56,6 +56,7 @@ import {
 const backend = new BackendClient();
 const bridge = getWebflowBridge();
 const SELECTED_REPO_STORAGE_KEY = "wb-v2-selected-repo-id";
+const EMPTY_REPO_PAGES: RepoTreeResponse["pages"] = [];
 
 function mergeMappingRows(params: {
   livePages: WebflowSitePage[];
@@ -335,7 +336,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const mutationLockRef = useRef(0);
 
   const selectedRepo = repos.find((repo) => repo.id === selectedRepoId) ?? null;
-  const repoPages = repoTree?.pages ?? [];
+  const repoPages = repoTree?.pages ?? EMPTY_REPO_PAGES;
   const repoPageNameById = useMemo(
     () =>
       new Map(repoPages.map((entry) => [entry.page.id, entry.page.name] as const)),

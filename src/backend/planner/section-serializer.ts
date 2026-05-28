@@ -96,7 +96,7 @@ function outlineNodeLabel(node: HtmlOutlineNode, includeContent: boolean): strin
     includeContent && (node.children.length === 0 || hasOnlyLineBreakChildren)
       ? cleanText(node.textContent ?? "")
       : "";
-  const textSuffix = textSource ? ` "${textSource.slice(0, 80)}"` : "";
+  const textSuffix = textSource ? ` "${textSource.slice(0, 180)}"` : "";
   return `${tag}${idSuffix}${classSuffix}${textSuffix}`;
 }
 
@@ -323,11 +323,15 @@ function collectHtmlContent(
         return;
       }
 
-      if (!["h1", "h2", "h3", "h4", "h5", "h6", "p", "button", "a", "li", "span"].includes(node.tag)) {
+      if (!["h1", "h2", "h3", "h4", "h5", "h6", "p", "button", "a", "li", "span", "div"].includes(node.tag)) {
         return;
       }
 
       if (!looksLikeContent(value) && !looksLikeStatValue(value)) {
+        return;
+      }
+
+      if (node.tag === "div" && !looksLikeStatValue(value)) {
         return;
       }
 
@@ -390,7 +394,7 @@ function collectHtmlContent(
 
 function looksLikeContent(value: string): boolean {
   const trimmed = cleanText(value);
-  if (trimmed.length < 3 || trimmed.length > 180) {
+  if (trimmed.length < 2 || trimmed.length > 400) {
     return false;
   }
   if (
@@ -412,7 +416,7 @@ function looksLikeStatValue(value: string): boolean {
   if (trimmed.length < 1 || trimmed.length > 40) {
     return false;
   }
-  return /^\d[\d+.,%xX/-]*$/.test(trimmed);
+  return /^\d[\d+.,:%xX°/-]*$/.test(trimmed);
 }
 
 function placeholderForContentKind(kind: string): SerializedSectionContentItem {

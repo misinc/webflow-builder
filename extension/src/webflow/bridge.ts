@@ -304,12 +304,24 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
 
   constructor(private readonly api: WebflowApi) {}
 
+  private looksLikeStatText(content: string | null | undefined): boolean {
+    const normalized = content?.trim() ?? "";
+    if (!normalized || normalized.length > 40) {
+      return false;
+    }
+    return /^\d[\d+.,:%xX°/-]*$/.test(normalized);
+  }
+
   private isTextBlockNode(node: BuildNode): boolean {
     return (
       node.tag === "div" &&
       typeof node.textContent === "string" &&
       node.textContent.trim().length > 0 &&
-      node.classNames.some((className) => /(tagline|eyebrow|mini-label)/i.test(className))
+      (
+        node.classNames.some((className) =>
+          /(tagline|eyebrow|mini-label|item_value|stat|metric)/i.test(className)
+        ) || this.looksLikeStatText(node.textContent)
+      )
     );
   }
 
