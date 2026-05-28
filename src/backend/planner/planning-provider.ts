@@ -21,6 +21,7 @@ export interface PlanningProviderInput {
   sharedStyleContext: SharedStyleContext;
   includeContent?: boolean;
   selectedElementId?: string | null;
+  openAiTimeoutMs?: number;
 }
 
 export interface PlanningProvider {

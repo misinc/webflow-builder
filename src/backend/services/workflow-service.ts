@@ -1,7 +1,12 @@
 import {
   BuildNode,
   debugSkeletonRequestSchema,
+  debugSkeletonJobResponseSchema,
+  debugSkeletonJobStartSchema,
+  debugSkeletonJobTriggerSchema,
   DebugSkeletonRequest,
+  DebugSkeletonJobResponse,
+  DebugSkeletonJobStart,
   pageMappingsUpsertInputSchema,
   PageMappingsUpsertInput,
   PlannerWarning,
@@ -37,6 +42,16 @@ import { AppRepository } from "../repositories/app-repository.js";
 import { dedupe } from "../../shared/client-first.js";
 import { nowIso, stableId } from "../utils.js";
 import { createProjectContext } from "./project-context.js";
+
+interface DebugSkeletonJobRecord {
+  jobId: string;
+  status: "pending" | "running" | "completed" | "failed";
+  request: DebugSkeletonRequest;
+  skeleton?: SkeletonPlan;
+  error?: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 function emptySharedStyleContext(siteId: string): SharedStyleContext {
   return {
@@ -765,6 +780,22 @@ export class WorkflowService {
 
   async generateDebugSkeleton(input: DebugSkeletonRequest): Promise<SkeletonPlan> {
     const request = debugSkeletonRequestSchema.parse(input);
+    return this.generateDebugSkeletonDirect(request);
+  }
+
+  private debugSkeletonJobKey(jobId: string): string {
+    return `debug-skeleton-job:${jobId}`;
+  }
+
+  private async saveDebugSkeletonJob(job: DebugSkeletonJobRecord): Promise<void> {
+    await this.blobStore.putJson(this.debugSkeletonJobKey(job.jobId), job);
+  }
+
+  private async getDebugSkeletonJobRecord(jobId: string): Promise<DebugSkeletonJobRecord | null> {
+    return this.blobStore.getJson<DebugSkeletonJobRecord>(this.debugSkeletonJobKey(jobId));
+  }
+
+  private buildDebugSkeletonProviderInput(request: DebugSkeletonRequest) {
     const sharedStyleContext =
       request.sharedStyleContext ?? emptySharedStyleContext("debug-site");
     const componentName = request.sectionName
@@ -804,7 +835,7 @@ export class WorkflowService {
       sectionName: request.sectionName,
       sourceFile
     };
-    const providerInput = {
+    return {
       metadata,
       mode: "fullAssist" as const,
       sectionContext,
@@ -815,6 +846,16 @@ export class WorkflowService {
       sharedStyleContext,
       includeContent: request.includeContent,
       selectedElementId: null
+    };
+  }
+
+  private async generateDebugSkeletonDirect(
+    request: DebugSkeletonRequest,
+    options?: { openAiTimeoutMs?: number }
+  ): Promise<SkeletonPlan> {
+    const providerInput = {
+      ...this.buildDebugSkeletonProviderInput(request),
+      openAiTimeoutMs: options?.openAiTimeoutMs
     };
     const skeleton = skeletonPlanSchema.parse(
       await this.planningProvider.generateSkeleton(providerInput)
@@ -827,6 +868,90 @@ export class WorkflowService {
     }
 
     return skeleton;
+  }
+
+  async startDebugSkeletonJob(input: DebugSkeletonRequest): Promise<DebugSkeletonJobStart> {
+    const request = debugSkeletonRequestSchema.parse(input);
+    const jobId = stableId("debug-skeleton", request.sectionName, request.inputType, request.code, nowIso());
+    const now = nowIso();
+    await this.saveDebugSkeletonJob({
+      jobId,
+      status: "pending",
+      request,
+      createdAt: now,
+      updatedAt: now
+    });
+    return debugSkeletonJobStartSchema.parse({
+      jobId,
+      status: "pending",
+      pollAfterMs: 1500
+    });
+  }
+
+  async runDebugSkeletonJob(input: { jobId: string }): Promise<void> {
+    const trigger = debugSkeletonJobTriggerSchema.parse(input);
+    const existing = await this.getDebugSkeletonJobRecord(trigger.jobId);
+    if (!existing) {
+      throw new Error("Unknown debug skeleton job.");
+    }
+
+    await this.saveDebugSkeletonJob({
+      ...existing,
+      status: "running",
+      error: undefined,
+      updatedAt: nowIso()
+    });
+
+    try {
+      const skeleton = await this.generateDebugSkeletonDirect(existing.request, {
+        openAiTimeoutMs: 120000
+      });
+      await this.saveDebugSkeletonJob({
+        ...existing,
+        status: "completed",
+        skeleton,
+        error: undefined,
+        updatedAt: nowIso()
+      });
+    } catch (error) {
+      await this.saveDebugSkeletonJob({
+        ...existing,
+        status: "failed",
+        skeleton: undefined,
+        error: error instanceof Error ? error.message : "Debug skeleton generation failed.",
+        updatedAt: nowIso()
+      });
+    }
+  }
+
+  async getDebugSkeletonJob(jobId: string): Promise<DebugSkeletonJobResponse> {
+    const job = await this.getDebugSkeletonJobRecord(jobId);
+    if (!job) {
+      return debugSkeletonJobResponseSchema.parse({
+        jobId,
+        status: "pending",
+        pollAfterMs: 1500
+      });
+    }
+    if (job.status === "completed" && job.skeleton) {
+      return debugSkeletonJobResponseSchema.parse({
+        jobId,
+        status: "completed",
+        skeleton: job.skeleton
+      });
+    }
+    if (job.status === "failed") {
+      return debugSkeletonJobResponseSchema.parse({
+        jobId,
+        status: "failed",
+        error: job.error ?? "Debug skeleton generation failed."
+      });
+    }
+    return debugSkeletonJobResponseSchema.parse({
+      jobId,
+      status: job.status,
+      pollAfterMs: 1500
+    });
   }
 
   async styleSection(request: WorkflowSectionRequest): Promise<StylingPlan> {

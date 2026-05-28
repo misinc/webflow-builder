@@ -330,6 +330,9 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
     if (node.tag === "img") {
       return this.api.elementPresets.Image ?? this.api.elementPresets.DOM;
     }
+    if (node.tag === "ul" || node.tag === "ol" || node.tag === "li") {
+      return this.api.elementPresets.DOM;
+    }
     if (this.isTextBlockNode(node)) {
       return this.api.elementPresets.TextBlock ?? this.api.elementPresets.DOM;
     }

@@ -451,6 +451,40 @@ export const debugSkeletonRequestSchema = z.object({
   sharedStyleContext: sharedStyleContextSchema.optional()
 });
 
+export const debugSkeletonJobStartSchema = z.object({
+  jobId: z.string().min(1),
+  status: z.literal("pending"),
+  pollAfterMs: z.number().int().positive().default(1500)
+});
+
+export const debugSkeletonJobTriggerSchema = z.object({
+  jobId: z.string().min(1)
+});
+
+export const debugSkeletonJobPendingSchema = z.object({
+  jobId: z.string().min(1),
+  status: z.enum(["pending", "running"]),
+  pollAfterMs: z.number().int().positive().default(1500)
+});
+
+export const debugSkeletonJobCompletedSchema = z.object({
+  jobId: z.string().min(1),
+  status: z.literal("completed"),
+  skeleton: skeletonPlanSchema
+});
+
+export const debugSkeletonJobFailedSchema = z.object({
+  jobId: z.string().min(1),
+  status: z.literal("failed"),
+  error: z.string().min(1)
+});
+
+export const debugSkeletonJobResponseSchema = z.discriminatedUnion("status", [
+  debugSkeletonJobPendingSchema,
+  debugSkeletonJobCompletedSchema,
+  debugSkeletonJobFailedSchema
+]);
+
 export const workflowSectionDecisionInputSchema = z.object({
   repoId: z.string().min(1),
   webflowSiteId: z.string().min(1),
@@ -570,6 +604,9 @@ export type PageMappingsUpsertInput = z.infer<typeof pageMappingsUpsertInputSche
 export type WorkflowQueueRequest = z.infer<typeof workflowQueueRequestSchema>;
 export type WorkflowSectionRequest = z.infer<typeof workflowSectionRequestSchema>;
 export type DebugSkeletonRequest = z.infer<typeof debugSkeletonRequestSchema>;
+export type DebugSkeletonJobStart = z.infer<typeof debugSkeletonJobStartSchema>;
+export type DebugSkeletonJobTrigger = z.infer<typeof debugSkeletonJobTriggerSchema>;
+export type DebugSkeletonJobResponse = z.infer<typeof debugSkeletonJobResponseSchema>;
 export type WorkflowSectionDecisionInput = z.infer<
   typeof workflowSectionDecisionInputSchema
 >;

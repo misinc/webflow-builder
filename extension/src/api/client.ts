@@ -3,7 +3,11 @@ import {
   BindSiteInput,
   ComponentOpportunitiesResponse,
   debugSkeletonRequestSchema,
+  debugSkeletonJobResponseSchema,
+  debugSkeletonJobStartSchema,
+  debugSkeletonJobTriggerSchema,
   DebugSkeletonRequest,
+  DebugSkeletonJobResponse,
   PageMappingsUpsertInput,
   RepoConnectionInput,
   RepoRecord,
@@ -28,6 +32,7 @@ import {
   WorkflowSectionRequest,
   workflowSectionRequestSchema
 } from "../../../src/shared/contracts.js";
+import { decideDebugSkeletonRouting } from "../../../src/shared/debug-skeleton.js";
 
 export interface RepoTreeResponse {
   repo: RepoRecord;
@@ -105,6 +110,27 @@ async function request<T>(
   }
 
   return (await response.json()) as T;
+}
+
+async function delay(ms: number, signal?: AbortSignal): Promise<void> {
+  if (!signal) {
+    await new Promise((resolve) => setTimeout(resolve, ms));
+    return;
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    const timeoutId = window.setTimeout(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+
+    const onAbort = () => {
+      window.clearTimeout(timeoutId);
+      reject(new DOMException("The operation was aborted.", "AbortError"));
+    };
+
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
 }
 
 function withQuery(urlString: string, params: Record<string, string | null | undefined>): string {
@@ -286,16 +312,67 @@ export class BackendClient {
     signal?: AbortSignal
   ): Promise<SkeletonPlan> {
     const validated = debugSkeletonRequestSchema.parse(input);
-    const response = await request<SkeletonPlan>(
-      this.functionUrl("workflow-debug-generate-skeleton"),
-      {
-        method: "POST",
-        body: JSON.stringify(validated)
-      },
-      undefined,
-      signal
+    const routing = decideDebugSkeletonRouting(validated);
+
+    if (!routing.useBackground) {
+      const response = await request<SkeletonPlan>(
+        this.functionUrl("workflow-debug-generate-skeleton"),
+        {
+          method: "POST",
+          body: JSON.stringify(validated)
+        },
+        undefined,
+        signal
+      );
+      return skeletonPlanSchema.parse(response);
+    }
+
+    const start = debugSkeletonJobStartSchema.parse(
+      await request(
+        this.functionUrl("workflow-debug-generate-skeleton-start"),
+        {
+          method: "POST",
+          body: JSON.stringify(validated)
+        },
+        undefined,
+        signal
+      )
     );
-    return skeletonPlanSchema.parse(response);
+
+    await fetch(this.functionUrl("workflow-debug-generate-skeleton-background"), {
+      method: "POST",
+      signal,
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify(
+        debugSkeletonJobTriggerSchema.parse({
+          jobId: start.jobId
+        })
+      )
+    });
+
+    let pollAfterMs = start.pollAfterMs;
+    while (true) {
+      await delay(pollAfterMs, signal);
+      const status = debugSkeletonJobResponseSchema.parse(
+        await request<DebugSkeletonJobResponse>(
+          this.functionUrl(`workflow-debug-generate-skeleton-status?jobId=${encodeURIComponent(start.jobId)}`),
+          { method: "GET" },
+          undefined,
+          signal
+        )
+      );
+
+      if (status.status === "completed") {
+        return skeletonPlanSchema.parse(status.skeleton);
+      }
+      if (status.status === "failed") {
+        throw new Error(status.error);
+      }
+
+      pollAfterMs = status.pollAfterMs;
+    }
   }
 
   async styleSection(

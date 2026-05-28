@@ -1257,12 +1257,13 @@ export class OpenAIPlanningProvider implements PlanningProvider {
   private async requestJson<T>(
     name: string,
     systemPrompt: string,
-    input: PlanningProviderInput
+    input: PlanningProviderInput,
+    timeoutMs = OPENAI_REQUEST_TIMEOUT_MS
   ): Promise<T> {
     this.ensureConfigured();
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), OPENAI_REQUEST_TIMEOUT_MS);
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     let response: Response;
     try {
       response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -1289,7 +1290,7 @@ export class OpenAIPlanningProvider implements PlanningProvider {
       if (error instanceof Error && error.name === "AbortError") {
         throw new Error(
           `OpenAI ${name} timed out after ${Math.round(
-            OPENAI_REQUEST_TIMEOUT_MS / 1000
+            timeoutMs / 1000
           )} seconds.`
         );
       }
@@ -1393,7 +1394,8 @@ export class OpenAIPlanningProvider implements PlanningProvider {
       const raw = await this.requestJson<unknown>(
         "skeleton_plan",
         stagePrompt("skeleton"),
-        input
+        input,
+        input.openAiTimeoutMs ?? OPENAI_REQUEST_TIMEOUT_MS
       );
       return canonicalizeSkeletonTreeText(
         hydrateMissingTextFromContent(
