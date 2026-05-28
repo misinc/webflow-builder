@@ -364,6 +364,28 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
     return selected;
   }
 
+  private async getLiveElementHandle(nodeId: string): Promise<WebflowElement | null> {
+    const selected = await this.getSelectedElement().catch(() => null);
+    if (normalizeElementId(selected?.id) === nodeId) {
+      return selected;
+    }
+    return this.elementsById.get(nodeId) ?? null;
+  }
+
+  private async setElementTextContent(
+    nodeId: string,
+    fallbackElement: WebflowElement | null,
+    content: string
+  ): Promise<void> {
+    const normalized = content.trim();
+    if (!normalized) {
+      return;
+    }
+    const liveElement = await this.getLiveElementHandle(nodeId).catch(() => null);
+    const target = liveElement ?? fallbackElement;
+    await target?.setTextContent?.(normalized);
+  }
+
   private async resolveAnchor(input: CreateNodeInput): Promise<{
     parent: WebflowElement | null;
     after: WebflowElement | null;
@@ -777,20 +799,26 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
       await created.setTag(input.node.tag || "div");
     }
 
-    if (created.setTextContent && input.node.textContent) {
-      await created.setTextContent(input.node.textContent);
+    const createdId = normalizeElementId(created.id);
+    const preferredCreatedHandle =
+      this.isTextBlockNode(input.node) && createdId
+        ? (await this.getLiveElementHandle(createdId)) ?? created
+        : created;
+
+    const id = this.registerElement(preferredCreatedHandle);
+    if (!id) {
+      throw new Error("Created Webflow element is missing an id.");
+    }
+
+    if (input.node.textContent) {
+      await this.setElementTextContent(id, preferredCreatedHandle, input.node.textContent);
     }
 
     if (input.node.tag === "img") {
       await this.setSafeImageAlt(
-        created,
+        preferredCreatedHandle,
         input.node.label ?? input.node.textContent ?? ""
       );
-    }
-
-    const id = this.registerElement(created);
-    if (!id) {
-      throw new Error("Created Webflow element is missing an id.");
     }
     return { id };
   }
@@ -844,11 +872,11 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
   }
 
   async setNodeTextContent(nodeId: string, content: string): Promise<void> {
-    const element = this.elementsById.get(nodeId);
+    const element = await this.getLiveElementHandle(nodeId);
     if (!element) {
       throw new Error("Unable to find the requested Webflow element.");
     }
-    await element.setTextContent?.(content);
+    await this.setElementTextContent(nodeId, element, content);
   }
 
   async configureNode(

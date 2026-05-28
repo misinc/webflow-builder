@@ -56,22 +56,10 @@ const SCREEN_COMPONENTS: Record<ScreenName, ComponentType> = {
 export default function App() {
   return (
     <NavigationProvider>
-      <CurrentScreen />
+      <AppStateProvider>
+        <AppStateBoundScreens />
+      </AppStateProvider>
     </NavigationProvider>
-  );
-}
-
-function CurrentScreen() {
-  const { current } = useNavigation();
-
-  if (current === 'debug-skeleton') {
-    return <ScreenRenderer />;
-  }
-
-  return (
-    <AppStateProvider>
-      <AppStateBoundScreens />
-    </AppStateProvider>
   );
 }
 
@@ -98,6 +86,7 @@ function InitialRouteResolver() {
 
   useEffect(() => {
     if (
+      current === 'debug-skeleton' ||
       isBootstrapping ||
       isLoadingWorkflowState ||
       historyLength !== 1 ||
