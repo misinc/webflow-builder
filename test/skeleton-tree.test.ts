@@ -135,12 +135,12 @@ describe("parseSkeletonTreeText", () => {
 
     expect(serializeSkeletonTree(normalized.elementTree)).toContain("li.item");
     expect(serializeSkeletonTree(normalized.elementTree)).toContain(
-      'textblock "State Bar of California"'
+      'p "State Bar of California"'
     );
     const listItem = normalized.elementTree.children[0]?.children[0];
     expect(listItem?.tag).toBe("li");
     expect(listItem?.textContent).toBeUndefined();
-    expect(listItem?.children[0]?.tag).toBe("div");
+    expect(listItem?.children[0]?.tag).toBe("p");
     expect(listItem?.children[0]?.textContent).toBe("State Bar of California");
   });
 

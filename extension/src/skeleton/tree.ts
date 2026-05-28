@@ -491,7 +491,7 @@ export function sanitizeSkeletonPlan(plan: SkeletonPlan): SkeletonPlan {
     ) {
       warnings.push({
         code: "split-list-item-text",
-        message: "Split list item text into an inner Text Block so Webflow preserves the content during insertion.",
+        message: "Split list item text into an inner paragraph so Webflow preserves the content during insertion.",
         level: "warning"
       });
       return {
@@ -506,7 +506,7 @@ export function sanitizeSkeletonPlan(plan: SkeletonPlan): SkeletonPlan {
             {
               id: `${nextId}-text`,
               type: "text",
-              tag: "div",
+              tag: "p",
               classNames: [],
               textContent: node.textContent,
               children: []
