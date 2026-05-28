@@ -11,6 +11,8 @@ import {
   PlanningProviderInput,
   providerWarning
 } from "./planning-provider.js";
+import { HtmlOutlineNode, parseHtmlOutline } from "./section-serializer.js";
+import { slugify } from "../../shared/text.js";
 
 interface OpenAIMessage {
   role: "system" | "user";
@@ -857,15 +859,13 @@ function defaultElementTree(input: PlanningProviderInput): BuildNode {
     `${input.metadata.sectionName} section`
   );
   const body = extractBody(input);
+  const sectionKey = slugify(input.metadata.sectionName) || "section";
   return {
     id: `${input.metadata.sectionId}-root`,
     type: "box",
     tag: "section",
     label: input.metadata.sectionName,
-    classNames: [
-      "section",
-      `section_${input.metadata.sectionName.toLowerCase().replace(/\s+/g, "-")}`
-    ],
+    classNames: [`section_${sectionKey}`],
     children: [
       {
         id: `${input.metadata.sectionId}-content`,
@@ -910,6 +910,317 @@ function userContext(input: PlanningProviderInput): string {
     null,
     2
   );
+}
+
+function preferredSharedClass(
+  input: PlanningProviderInput,
+  candidates: string[],
+  fallback: string
+): string {
+  const shared = new Set(
+    input.sharedStyleContext.classes.map((item) => item.name.toLowerCase())
+  );
+  return (
+    candidates.find((candidate) => shared.has(candidate.toLowerCase())) ?? fallback
+  );
+}
+
+function buildNode(
+  id: string,
+  type: string,
+  tag: string,
+  classNames: string[],
+  children: BuildNode[] = [],
+  textContent?: string,
+  label?: string
+): BuildNode {
+  return {
+    id,
+    type,
+    tag,
+    classNames,
+    children,
+    ...(textContent ? { textContent } : {}),
+    ...(label ? { label } : {})
+  };
+}
+
+function unwrapStructuralChildren(root: HtmlOutlineNode): HtmlOutlineNode[] {
+  let current = root;
+  while (
+    current.children.length === 1 &&
+    current.children[0]?.tag === "div" &&
+    !current.textContent?.trim()
+  ) {
+    current = current.children[0];
+  }
+  return current.children;
+}
+
+function childSignature(node: HtmlOutlineNode): string {
+  return `${node.tag}:${node.children.slice(0, 4).map((child) => child.tag).join(",")}`;
+}
+
+function subtreeTagCount(node: HtmlOutlineNode, tag: string): number {
+  return (
+    (node.tag === tag ? 1 : 0) +
+    node.children.reduce((total, child) => total + subtreeTagCount(child, tag), 0)
+  );
+}
+
+function subtreeHasTag(node: HtmlOutlineNode, tag: string): boolean {
+  return node.tag === tag || node.children.some((child) => subtreeHasTag(child, tag));
+}
+
+function nodeText(node: HtmlOutlineNode): string | undefined {
+  const normalized = node.textContent?.trim();
+  return normalized ? normalized : undefined;
+}
+
+function convertHtmlNode(
+  node: HtmlOutlineNode,
+  input: PlanningProviderInput,
+  sectionKey: string,
+  idPrefix: string,
+  role: "root" | "group" | "list" | "item" = "group"
+): BuildNode | null {
+  const text = nodeText(node);
+
+  if (node.tag === "br") {
+    return null;
+  }
+
+  if (/^h[1-6]$/i.test(node.tag)) {
+    return buildNode(
+      idPrefix,
+      "heading",
+      node.tag,
+      [`heading-style-${node.tag.toLowerCase()}`],
+      [],
+      text
+    );
+  }
+
+  if (node.tag === "p") {
+    return buildNode(
+      idPrefix,
+      "text",
+      "p",
+      [text && text.length <= 40 ? "text-size-small" : "text-size-medium"],
+      [],
+      text
+    );
+  }
+
+  if (node.tag === "img") {
+    return buildNode(
+      idPrefix,
+      "image",
+      "img",
+      [`${sectionKey}_image`],
+      [],
+      undefined,
+      text
+    );
+  }
+
+  if (node.tag === "a") {
+    const children = convertHtmlChildren(node.children, input, sectionKey, idPrefix, "group");
+    return buildNode(
+      idPrefix,
+      "button",
+      "a",
+      [children.length === 0 && (text?.length ?? 0) <= 24 ? "button" : `${sectionKey}_link`],
+      children,
+      children.length === 0 ? text : undefined
+    );
+  }
+
+  if (node.tag === "ul" || node.tag === "ol") {
+    return buildNode(
+      idPrefix,
+      "list",
+      node.tag,
+      [`${sectionKey}_list`],
+      convertHtmlChildren(node.children, input, sectionKey, idPrefix, "list")
+    );
+  }
+
+  if (node.tag === "li") {
+    const children = convertHtmlChildren(node.children, input, sectionKey, idPrefix, "item");
+    return buildNode(
+      idPrefix,
+      "listItem",
+      "li",
+      [`${sectionKey}_item`],
+      children,
+      children.length === 0 ? text : undefined
+    );
+  }
+
+  const children = convertHtmlChildren(node.children, input, sectionKey, idPrefix, "group");
+  const hasImage = subtreeHasTag(node, "img");
+  const hasList = subtreeHasTag(node, "ul") || subtreeHasTag(node, "ol");
+  const paragraphCount = subtreeTagCount(node, "p");
+  const headingCount = node.children.filter((child) => /^h[1-6]$/i.test(child.tag)).length;
+
+  let className = `${sectionKey}_group`;
+  if (role === "item") {
+    className = `${sectionKey}_item`;
+  } else if (hasImage && headingCount > 0) {
+    className = `${sectionKey}_card`;
+  } else if (hasImage && paragraphCount <= 1 && !hasList) {
+    className = `${sectionKey}_media`;
+  } else if (hasList || paragraphCount >= 2) {
+    className = `${sectionKey}_content`;
+  }
+
+  return buildNode(
+    idPrefix,
+    "box",
+    node.tag === "section" || node.tag === "footer" ? "div" : node.tag,
+    [className],
+    children,
+    text && children.length === 0 ? text : undefined
+  );
+}
+
+function convertHtmlChildren(
+  children: HtmlOutlineNode[],
+  input: PlanningProviderInput,
+  sectionKey: string,
+  idPrefix: string,
+  parentRole: "root" | "group" | "list" | "item"
+): BuildNode[] {
+  const nodes: BuildNode[] = [];
+
+  for (let index = 0; index < children.length; index += 1) {
+    const current = children[index];
+    const signature = childSignature(current);
+    let runLength = 1;
+    while (
+      index + runLength < children.length &&
+      childSignature(children[index + runLength]!) === signature
+    ) {
+      runLength += 1;
+    }
+
+    if (runLength >= 2 && current.tag === "div") {
+      nodes.push(
+        buildNode(
+          `${idPrefix}-list-${index}`,
+          "box",
+          "div",
+          [`${sectionKey}_list`],
+          children
+            .slice(index, index + runLength)
+            .map((child, childIndex) =>
+              convertHtmlNode(
+                child,
+                input,
+                sectionKey,
+                `${idPrefix}-item-${index + childIndex}`,
+                "item"
+              )
+            )
+            .filter((child): child is BuildNode => Boolean(child))
+        )
+      );
+      index += runLength - 1;
+      continue;
+    }
+
+    const nextNode = convertHtmlNode(
+      current,
+      input,
+      sectionKey,
+      `${idPrefix}-${index}`,
+      parentRole === "list" ? "item" : "group"
+    );
+    if (nextNode) {
+      nodes.push(nextNode);
+    }
+  }
+
+  return nodes;
+}
+
+function htmlFallbackSkeleton(input: PlanningProviderInput): SkeletonPlan | null {
+  const outlineRoot = parseHtmlOutline(input.sectionContext.sourceCode);
+  if (!outlineRoot) {
+    return null;
+  }
+
+  const sectionKey = slugify(input.metadata.sectionName) || "section";
+  const rootTag = outlineRoot.tag === "footer" ? "footer" : "section";
+  const root = buildNode(
+    `${input.metadata.sectionId}-root`,
+    "box",
+    rootTag,
+    [`section_${sectionKey}`]
+  );
+  const padding = buildNode(
+    `${input.metadata.sectionId}-padding`,
+    "box",
+    "div",
+    [preferredSharedClass(input, ["padding-global"], "padding-global")]
+  );
+  const container = buildNode(
+    `${input.metadata.sectionId}-container`,
+    "box",
+    "div",
+    [preferredSharedClass(input, ["container-large"], "container-large")]
+  );
+  const sectionPadding = buildNode(
+    `${input.metadata.sectionId}-section-padding`,
+    "box",
+    "div",
+    [preferredSharedClass(input, ["padding-section-medium"], "padding-section-medium")]
+  );
+  const component = buildNode(
+    `${input.metadata.sectionId}-component`,
+    "box",
+    "div",
+    [`${sectionKey}_component`],
+    convertHtmlChildren(
+      unwrapStructuralChildren(outlineRoot),
+      input,
+      sectionKey,
+      `${input.metadata.sectionId}-component`,
+      "root"
+    )
+  );
+
+  sectionPadding.children.push(component);
+  container.children.push(sectionPadding);
+  padding.children.push(container);
+  root.children.push(padding);
+
+  return {
+    sectionMetadata: input.metadata,
+    treeText: serializeSkeletonTree(root),
+    elementTree: root,
+    reusableClasses: [
+      preferredSharedClass(input, ["padding-global"], "padding-global"),
+      preferredSharedClass(input, ["container-large"], "container-large"),
+      preferredSharedClass(input, ["padding-section-medium"], "padding-section-medium"),
+      "heading-style-h2",
+      "text-size-medium"
+    ],
+    suggestedNewClasses: [
+      `section_${sectionKey}`,
+      `${sectionKey}_component`,
+      `${sectionKey}_list`,
+      `${sectionKey}_item`,
+      `${sectionKey}_content`
+    ],
+    warnings: [
+      providerWarning(
+        "skeleton-html-fallback",
+        "OpenAI skeleton generation was unavailable, so a deterministic HTML-derived fallback skeleton was used."
+      )
+    ]
+  };
 }
 
 export class OpenAIPlanningProvider implements PlanningProvider {
@@ -1039,19 +1350,18 @@ export class OpenAIPlanningProvider implements PlanningProvider {
   }
 
   async generateSkeleton(input: PlanningProviderInput): Promise<SkeletonPlan> {
+    const sectionKey = slugify(input.metadata.sectionName) || "section";
     const fallback: SkeletonPlan = {
       sectionMetadata: input.metadata,
       treeText: [
-        `section ${input.metadata.sectionName}`,
-        "  div container-large layout_stack-large",
-        "    h2 heading-style-h2",
-        "    p text-size-medium"
+        `section.section_${sectionKey}`,
+        "  div.container-large",
+        "    h2.heading-style-h2",
+        "    p.text-size-medium"
       ].join("\n"),
       elementTree: defaultElementTree(input),
       reusableClasses: ["container-large", "heading-style-h2", "text-size-medium"],
-      suggestedNewClasses: [
-        `section_${input.metadata.sectionName.toLowerCase().replace(/\s+/g, "-")}`
-      ],
+      suggestedNewClasses: [`section_${sectionKey}`],
       warnings: [
         providerWarning(
           "skeleton-fallback",
@@ -1075,12 +1385,13 @@ export class OpenAIPlanningProvider implements PlanningProvider {
         )
       );
     } catch (error) {
+      const richFallback = htmlFallbackSkeleton(input);
       return canonicalizeSkeletonTreeText(
         normalizeFooterRoot(
           {
-            ...fallback,
+            ...(richFallback ?? fallback),
             warnings: [
-              ...fallback.warnings,
+              ...(richFallback?.warnings ?? fallback.warnings),
               providerWarning(
                 "skeleton-error",
                 error instanceof Error ? error.message : "OpenAI skeleton generation failed."

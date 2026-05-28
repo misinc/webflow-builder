@@ -31,7 +31,7 @@ function isHtmlLike(sourceCode: string): boolean {
   return /^<([a-z][a-z0-9-]*)\b/i.test(trimmed);
 }
 
-interface HtmlOutlineNode {
+export interface HtmlOutlineNode {
   tag: string;
   id?: string;
   classNames: string[];
@@ -113,7 +113,7 @@ function signatureForElement(node: HtmlOutlineNode): string {
   return `${tag}|${classList}|${childTags}`;
 }
 
-function parseHtmlOutline(sourceCode: string): HtmlOutlineNode | null {
+export function parseHtmlOutline(sourceCode: string): HtmlOutlineNode | null {
   const tagPattern = /<!--[\s\S]*?-->|<\/?([a-z][a-z0-9-]*)\b[^>]*>/gi;
   const banned = new Set([
     "script",

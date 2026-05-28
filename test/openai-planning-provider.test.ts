@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { OpenAIPlanningProvider } from "../src/backend/planner/openai-planning-provider.js";
 import { PlanningProviderInput } from "../src/backend/planner/planning-provider.js";
@@ -298,12 +299,63 @@ describe("OpenAIPlanningProvider footer skeleton normalization", () => {
     expect(plan.sectionMetadata.sectionName).toBe("Footer");
     expect(plan.elementTree.tag).toBe("footer");
     expect(plan.treeText).toContain("footer.section_footer");
-    expect(plan.warnings.some((warning) => warning.code === "skeleton-fallback")).toBe(true);
+    expect(
+      plan.warnings.some(
+        (warning) => warning.code === "skeleton-fallback" || warning.code === "skeleton-html-fallback"
+      )
+    ).toBe(true);
     expect(plan.warnings.some((warning) => warning.code === "skeleton-error")).toBe(true);
     expect(
       plan.warnings.some((warning) =>
         warning.message.includes("timed out after 25 seconds")
       )
     ).toBe(true);
+  });
+
+  it("builds a richer HTML-derived fallback for large pasted sections on timeout", async () => {
+    const abortError = new Error("aborted");
+    abortError.name = "AbortError";
+
+    vi.stubGlobal("fetch", vi.fn(async () => {
+      throw abortError;
+    }));
+
+    const attorneysHtml = readFileSync(
+      new URL("./fixtures/attorneys-debug.html", import.meta.url),
+      "utf8"
+    );
+
+    const provider = new OpenAIPlanningProvider("test-key", "test-model");
+    const plan = await provider.generateSkeleton({
+      ...input,
+      metadata: {
+        ...input.metadata,
+        sectionName: "Attorneys"
+      },
+      sectionContext: {
+        ...input.sectionContext,
+        sectionName: "Attorneys",
+        sourceCode: attorneysHtml
+      },
+      serializedSection: {
+        ...input.serializedSection,
+        summary: "Attorneys section with repeated profile entries.",
+        sourceExcerpt: "<section>",
+        content: [
+          { kind: "h2", label: "h2", value: "Our Attorneys" },
+          { kind: "h3", label: "h3", value: "Mark Windsor" },
+          { kind: "p", label: "p", value: "Partner" },
+          { kind: "h3", label: "h3", value: "Katy Kimball Windsor" }
+        ]
+      }
+    });
+
+    expect(plan.treeText).toContain("section.section_attorneys");
+    expect(plan.treeText).toContain('h2.heading-style-h2 "Our Attorneys"');
+    expect(plan.treeText).toContain('"Mark Windsor"');
+    expect(plan.treeText).toContain('"Katy Kimball Windsor"');
+    expect(plan.treeText).toContain("div.attorneys_list");
+    expect(plan.warnings.some((warning) => warning.code === "skeleton-html-fallback")).toBe(true);
+    expect(plan.warnings.some((warning) => warning.code === "skeleton-error")).toBe(true);
   });
 });
