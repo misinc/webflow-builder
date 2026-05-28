@@ -16,13 +16,12 @@ const REMOVED_TAGS = new Set([
   "defs",
   "clippath"
 ]);
-const WRAPPER_TO_DIV_TAGS = new Set(["article", "aside", "figure", "header", "footer", "nav", "main"]);
+const WRAPPER_TO_DIV_TAGS = new Set(["article", "aside", "figure", "header", "nav", "main"]);
 const NON_CONTAINER_TAGS = new Set([
   "p",
   "span",
   "label",
   "button",
-  "a",
   "h1",
   "h2",
   "h3",
@@ -34,6 +33,7 @@ const ICON_IMAGE_CLASS_PATTERN = /^icon-embed(?:-|$)/;
 const MEDIA_WRAPPER_CLASS_PATTERN = /(background|media|video|image|scrim|visual|canvas)/i;
 const PADDING_WRAPPER_CLASS_PATTERN = /^padding-(?!global$)/;
 const TEXT_BLOCK_CLASS_PATTERN = /(tagline|eyebrow|mini-label|item_value|stat|metric)/i;
+const TEXT_WRAPPER_CLASS_PATTERN = /(?:^|[-_])(tag|badge|chip|pill)(?:$|[-_])/i;
 const TEXTBLOCK_PSEUDO_TAG = "textblock";
 
 function looksLikeStatText(value: string | null | undefined): boolean {
@@ -67,9 +67,11 @@ function isTextBlockNode(node: BuildNode): boolean {
   return (
     normalizeTagToken(node.tag) === "div" &&
     Boolean(node.textContent?.trim()) &&
+    node.children.length === 0 &&
     (
       node.classNames.some((className) => TEXT_BLOCK_CLASS_PATTERN.test(className)) ||
       looksLikeStatText(node.textContent)
+      || node.classNames.length === 0
     )
   );
 }
@@ -444,6 +446,41 @@ export function sanitizeSkeletonPlan(plan: SkeletonPlan): SkeletonPlan {
         message: `Removed invalid class tokens from <${nextTag}> before Webflow insertion.`,
         level: "warning"
       });
+    }
+
+    if (
+      nextTag === "div" &&
+      typeof node.textContent === "string" &&
+      node.textContent.trim().length > 0 &&
+      filteredClassNames.some((className) => TEXT_WRAPPER_CLASS_PATTERN.test(className))
+    ) {
+      warnings.push({
+        code: "split-text-wrapper",
+        message: `Split <div> text content into an inner Text Block for Webflow-safe tag/badge structure.`,
+        level: "warning"
+      });
+      return {
+        node: {
+          ...node,
+          id: nextId,
+          type: inferNodeType(nextTag),
+          tag: nextTag,
+          classNames: filteredClassNames,
+          textContent: undefined,
+          children: [
+            {
+              id: `${nextId}-text`,
+              type: "text",
+              tag: "div",
+              classNames: [],
+              textContent: node.textContent,
+              children: []
+            },
+            ...normalizedChildren
+          ]
+        },
+        hoistedChildren: []
+      };
     }
 
     if ((LEAF_TAGS.has(nextTag) || NON_CONTAINER_TAGS.has(nextTag)) && normalizedChildren.length > 0) {

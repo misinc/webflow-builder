@@ -223,6 +223,81 @@ describe("Webflow bridge image insertion", () => {
     expect(setTag).not.toHaveBeenCalled();
   });
 
+  it("uses the TextBlock preset for generic inner textblock div nodes without classes", async () => {
+    const textBlockPreset = {};
+    const append = vi.fn(async (preset) => {
+      expect(preset).toBe(textBlockPreset);
+      return created;
+    });
+    const setTag = vi.fn(async () => undefined);
+
+    const selected = {
+      id: "selected-root",
+      type: "DOM",
+      children: true,
+      append,
+      after: vi.fn(),
+      setTag: vi.fn(),
+      setTextContent: vi.fn(),
+      setAttribute: vi.fn(),
+      setAltText: vi.fn()
+    };
+
+    const created = {
+      id: "created-tag-text",
+      type: "DOM",
+      append: vi.fn(),
+      after: vi.fn(),
+      setTag,
+      setTextContent: vi.fn(async () => undefined),
+      setAttribute: vi.fn(),
+      setAltText: vi.fn()
+    };
+
+    Object.defineProperty(globalThis, "window", {
+      value: {
+        webflow: {
+          elementPresets: {
+            DOM: {},
+            DivBlock: {},
+            TextBlock: textBlockPreset,
+            Image: {}
+          },
+          getSiteInfo: async () => ({ siteId: "site-1", name: "Test Site" }),
+          getCurrentPage: async () => ({ id: "page-1", getName: async () => "Home" }),
+          getCurrentMode: async () => "design",
+          getSelectedElement: async () => selected,
+          getAllStyles: async () => [],
+          getStyleByName: async () => null,
+          createStyle: async () => ({
+            id: "style-1",
+            getName: async () => "style-1",
+            setProperties: async () => undefined
+          }),
+          removeStyle: async () => undefined,
+          getDefaultVariableCollection: async () => null,
+          getAllAssets: async () => []
+        }
+      },
+      configurable: true
+    });
+
+    const bridge = getWebflowBridge();
+    await bridge.createNode({
+      parentId: null,
+      node: {
+        id: "tag-text-1",
+        type: "text",
+        tag: "div",
+        textContent: "Medicare Fraud and Kickbacks",
+        classNames: [],
+        children: []
+      }
+    });
+
+    expect(setTag).not.toHaveBeenCalled();
+  });
+
   it("prefers the live selected handle when writing TextBlock content", async () => {
     const textBlockPreset = {};
     const staleSetTextContent = vi.fn(async () => undefined);

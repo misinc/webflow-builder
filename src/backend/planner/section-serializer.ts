@@ -313,7 +313,7 @@ function collectHtmlContent(
     walkHtmlNodes(root, (node) => {
       const value = cleanText(decodeHtmlEntities(node.textContent ?? ""));
       if (node.tag === "img") {
-        if (looksLikeContent(value) || looksLikeStatValue(value)) {
+        if (looksLikeContent(value) || looksLikeStatValue(value) || looksLikeContactValue(value)) {
           items.push({
             kind: "img",
             label: "img",
@@ -327,7 +327,7 @@ function collectHtmlContent(
         return;
       }
 
-      if (!looksLikeContent(value) && !looksLikeStatValue(value)) {
+      if (!looksLikeContent(value) && !looksLikeStatValue(value) && !looksLikeContactValue(value)) {
         return;
       }
 
@@ -360,7 +360,7 @@ function collectHtmlContent(
 
   for (const match of sourceCode.matchAll(/<(h[1-6]|p|button|a|li)[^>]*>\s*([^<]{3,180})\s*<\/\1>/gi)) {
     const value = cleanText(decodeHtmlEntities(match[2]));
-    if (!looksLikeContent(value) && !looksLikeStatValue(value)) {
+    if (!looksLikeContent(value) && !looksLikeStatValue(value) && !looksLikeContactValue(value)) {
       continue;
     }
     items.push({
@@ -372,7 +372,7 @@ function collectHtmlContent(
 
   for (const match of sourceCode.matchAll(/<img[^>]*alt\s*=\s*("([^"]*)"|'([^']*)')[^>]*>/gi)) {
     const value = cleanText(decodeHtmlEntities(match[2] ?? match[3] ?? ""));
-    if (!looksLikeContent(value) && !looksLikeStatValue(value)) {
+    if (!looksLikeContent(value) && !looksLikeStatValue(value) && !looksLikeContactValue(value)) {
       continue;
     }
     items.push({
@@ -417,6 +417,17 @@ function looksLikeStatValue(value: string): boolean {
     return false;
   }
   return /^\d[\d+.,:%xX°/-]*$/.test(trimmed);
+}
+
+function looksLikeContactValue(value: string): boolean {
+  const trimmed = cleanText(value);
+  if (trimmed.length < 3 || trimmed.length > 120) {
+    return false;
+  }
+  return (
+    /@/.test(trimmed) ||
+    /^\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(trimmed)
+  );
 }
 
 function placeholderForContentKind(kind: string): SerializedSectionContentItem {
@@ -484,7 +495,7 @@ function collectLabeledContent(
     /<(h[1-6]|p|span|li|button)[^>]*>\s*([^<>{]{3,180})\s*<\/\1>/g
   )) {
     const value = cleanText(match[2]);
-    if (!looksLikeContent(value)) {
+    if (!looksLikeContent(value) && !looksLikeContactValue(value)) {
       continue;
     }
     items.push({
@@ -496,7 +507,7 @@ function collectLabeledContent(
 
   for (const match of sourceCode.matchAll(/["'`]([^"'`\n]{3,180})["'`]/g)) {
     const value = cleanText(match[1]);
-    if (!looksLikeContent(value)) {
+    if (!looksLikeContent(value) && !looksLikeContactValue(value)) {
       continue;
     }
     items.push({

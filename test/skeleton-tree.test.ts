@@ -105,4 +105,50 @@ describe("parseSkeletonTreeText", () => {
     );
     expect(normalized.elementTree.children[0]?.tag).toBe("div");
   });
+
+  it("splits tag wrapper text into an inner textblock child", () => {
+    const normalized = normalizeSkeletonPlan(
+      parseSkeletonTreeText(
+        basePlan(),
+        'section.section-name\n  div.tag "Medicare Fraud and Kickbacks"'
+      )
+    );
+
+    expect(serializeSkeletonTree(normalized.elementTree)).toContain("div.tag");
+    expect(serializeSkeletonTree(normalized.elementTree)).toContain(
+      'textblock "Medicare Fraud and Kickbacks"'
+    );
+    const wrapper = normalized.elementTree.children[0];
+    expect(wrapper?.tag).toBe("div");
+    expect(wrapper?.classNames).toEqual(["tag"]);
+    expect(wrapper?.children[0]?.tag).toBe("div");
+    expect(wrapper?.children[0]?.textContent).toBe("Medicare Fraud and Kickbacks");
+  });
+
+  it("preserves image children inside anchor wrappers", () => {
+    const normalized = normalizeSkeletonPlan(
+      parseSkeletonTreeText(
+        basePlan(),
+        "section.section-name\n  a.footer_logo-link\n    img.footer_logo"
+      )
+    );
+
+    const anchor = normalized.elementTree.children[0];
+    expect(anchor?.tag).toBe("a");
+    expect(anchor?.children[0]?.tag).toBe("img");
+    expect(anchor?.children[0]?.classNames).toEqual(["footer_logo"]);
+  });
+
+  it("preserves a footer root instead of converting it to a div or section", () => {
+    const normalized = normalizeSkeletonPlan(
+      parseSkeletonTreeText(
+        basePlan(),
+        "footer.section_footer\n  div.padding-global"
+      )
+    );
+
+    expect(normalized.elementTree.tag).toBe("footer");
+    expect(normalized.elementTree.classNames).toEqual(["section_footer"]);
+    expect(normalized.elementTree.children[0]?.classNames).toEqual(["padding-global"]);
+  });
 });

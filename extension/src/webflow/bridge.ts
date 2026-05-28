@@ -317,10 +317,11 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
       node.tag === "div" &&
       typeof node.textContent === "string" &&
       node.textContent.trim().length > 0 &&
+      node.children.length === 0 &&
       (
         node.classNames.some((className) =>
           /(tagline|eyebrow|mini-label|item_value|stat|metric)/i.test(className)
-        ) || this.looksLikeStatText(node.textContent)
+        ) || this.looksLikeStatText(node.textContent) || node.classNames.length === 0
       )
     );
   }

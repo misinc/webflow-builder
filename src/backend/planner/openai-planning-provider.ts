@@ -17,7 +17,7 @@ interface OpenAIMessage {
   content: string;
 }
 
-const OPENAI_REQUEST_TIMEOUT_MS = 60000;
+const OPENAI_REQUEST_TIMEOUT_MS = 25000;
 
 const WEBFLOW_SITE_BUILDER_RULES = [
   "Work on one section at a time.",
@@ -38,16 +38,20 @@ const WEBFLOW_SITE_BUILDER_RULES = [
 
 const SKELETON_TREE_RULES = [
   "Return a faithful section skeleton tree in the style: section.section-name -> div.padding-global -> div.container-large -> div.padding-section-medium -> div.section-name_component -> div.section-name_content / div.section-name_visual.",
+  "If the source is an actual site footer, use footer.section_footer as the root instead of section.section_footer.",
   "This skeleton tree is the actual Webflow insertion plan, not a JSX or source-code preview.",
   "Only use Webflow-safe skeleton elements such as section, div, h1-h6, p, span, ul, ol, li, img, video, a, and button.",
   "Use textblock as a pseudo-tag for short label-style text blocks that should become real Webflow Text Block elements, for example textblock.text-style-tagline or textblock.authority-mini-label.",
   "Short stat or metric values such as 50+, 1:1, 360°, 30, or 500+ should also use textblock when they are visually acting as standalone value blocks rather than paragraph copy.",
   "Do not use standalone span wrappers in the skeleton unless inline text semantics are truly required. Prefer div wrappers or plain text-bearing elements instead.",
+  "Allow anchors to wrap meaningful child elements such as a logo image when the source uses an image link. Do not flatten image children out of logo or brand anchors.",
   "For eyebrow, tagline, or mini-label text, prefer textblock.text-style-tagline or textblock.authority-mini-label instead of a paragraph when the source is acting like a small label rather than body copy.",
   "For numeric or symbolic stat values that are displayed as standalone figures, prefer textblock.authority_item_value or another textblock.* value class instead of a plain div or paragraph.",
+  "For tag, badge, chip, or pill UI patterns, prefer a wrapper div plus an inner textblock child rather than putting the text directly on the wrapper div.",
   "Do not include source tags, svg tags, path tags, icon vector tags, or any inline SVG structure in the skeleton.",
   "If the source contains inline SVG icons that are meaningfully part of the section UI, preserve them as img.icon-embed-* placeholder nodes inside the correct wrapper instead of dropping them.",
-  "Do not use semantic wrapper tags such as article, aside, figure, header, footer, nav, or main in the skeleton. Convert those wrappers to divs while preserving the class names and hierarchy.",
+  "Do not use semantic wrapper tags such as article, aside, figure, header, nav, or main in the skeleton. Convert those wrappers to divs while preserving the class names and hierarchy.",
+  "Footer is the exception: keep a real footer root when the source is a real site footer.",
   "When a section follows Client-First wrapper structure, the first layout wrapper under section should usually be div.padding-global before container and inner padding wrappers, unless the source genuinely starts with media or background layers.",
   "For icon placeholders, prefer img.icon-embed-xsmall or another img.icon-embed-* class instead of a generic div.",
   "Use exactly one skeleton node per line.",
@@ -115,7 +119,8 @@ function stagePrompt(
       "Do not style the section in this step. Focus on structure, semantic content nodes, and correct shared wrapper usage.",
       "If the inventory contains exact wrappers like padding-global, container-large, or padding-section-medium, use those exact names.",
   "If the source implies lists, cards, CTAs, or media groups, represent them structurally without inventing visual styling classes.",
-      "If the source contains both a heading and a supporting paragraph, keep them as separate skeleton nodes instead of collapsing the paragraph into the heading.",
+  "If the source contains both a heading and a supporting paragraph, keep them as separate skeleton nodes instead of collapsing the paragraph into the heading.",
+  "If the source contains explicit footer links, contact lines, copyright copy, or repeated list rows, preserve every provided text item instead of dropping trailing entries.",
       "If includeContent is true, preserve real heading, paragraph, button, link, list item, and image alt text when the source clearly provides it.",
       "If includeContent is false, ignore verbatim source copy and use placeholders like Heading, Body copy, Button text, List item, and Image instead.",
       "Return JSON with: sectionMetadata, treeText, elementTree, reusableClasses, suggestedNewClasses, warnings."
@@ -360,6 +365,45 @@ function inferNodeType(tag: string): BuildNode["type"] {
   return "box";
 }
 
+const CLASS_TEXT_FALLBACK_PREFIX = "__class_text__:";
+const TEXT_BLOCK_CLASS_PATTERN = /(tagline|eyebrow|mini-label|item_value|stat|metric)/i;
+
+function looksLikeStatText(value: string | null | undefined): boolean {
+  const normalized = value?.trim() ?? "";
+  if (!normalized || normalized.length > 40) {
+    return false;
+  }
+  return /^\d[\d+.,:%xX°/-]*$/.test(normalized);
+}
+
+function isTextBlockNode(node: BuildNode): boolean {
+  return (
+    node.tag === "div" &&
+    Boolean(node.textContent?.trim()) &&
+    node.children.length === 0 &&
+    (
+      node.classNames.some((className) => TEXT_BLOCK_CLASS_PATTERN.test(className)) ||
+      looksLikeStatText(node.textContent)
+      || node.classNames.length === 0
+    )
+  );
+}
+
+function serializeSkeletonTreeNode(node: BuildNode, depth: number): string[] {
+  const indent = "  ".repeat(depth);
+  const displayTag = isTextBlockNode(node) ? "textblock" : normalizeTagToken(node.tag);
+  const classSuffix = node.classNames.map((className) => `.${className}`).join("");
+  const textSuffix = node.textContent?.trim() ? ` ${JSON.stringify(node.textContent.trim())}` : "";
+  return [
+    `${indent}${displayTag}${classSuffix}${textSuffix}`,
+    ...node.children.flatMap((child) => serializeSkeletonTreeNode(child, depth + 1))
+  ];
+}
+
+function serializeSkeletonTree(node: BuildNode): string {
+  return serializeSkeletonTreeNode(node, 0).join("\n");
+}
+
 function parseElementTreeFromTreeText(treeText: string, fallback: BuildNode): BuildNode | null {
   const compact = treeText.trim();
   if (!compact) {
@@ -503,6 +547,248 @@ function normalizeSkeleton(raw: unknown, fallback: SkeletonPlan): SkeletonPlan {
     reusableClasses: stringArray(raw.reusableClasses),
     suggestedNewClasses: stringArray(raw.suggestedNewClasses),
     warnings: warningsArray(raw.warnings)
+  };
+}
+
+function sourceLooksLikeFooter(input: PlanningProviderInput): boolean {
+  const sectionName = input.metadata.sectionName.trim().toLowerCase();
+  return (
+    /^\s*<footer\b/i.test(input.sectionContext.sourceCode) ||
+    /^\s*footer\b/i.test(input.serializedSection.sourceExcerpt) ||
+    sectionName === "footer"
+  );
+}
+
+function isTextBearingNode(node: BuildNode): boolean {
+  return (
+    /^h[1-6]$/i.test(node.tag) ||
+    node.tag === "p" ||
+    node.tag === "a" ||
+    node.tag === "button" ||
+    isTextLikeDiv(node)
+  );
+}
+
+function isStructuredTextClassToken(token: string, index: number): boolean {
+  return token.includes("-") || token.includes("_") || (index === 0 && token === "tag");
+}
+
+function splitSuspiciousClassText(classNames: string[]): {
+  classNames: string[];
+  fallbackText: string;
+} | null {
+  if (classNames.length < 2) {
+    return null;
+  }
+
+  const splitIndex = classNames.findIndex(
+    (token, index) => index > 0 && !isStructuredTextClassToken(token, index)
+  );
+
+  if (splitIndex <= 0) {
+    return null;
+  }
+
+  const fallbackTokens = classNames.slice(splitIndex);
+  const looksLikeAccidentalText =
+    fallbackTokens.length >= 2 &&
+    fallbackTokens.filter((token) => /^[a-z0-9]+$/i.test(token)).length >= 2;
+
+  if (!looksLikeAccidentalText) {
+    return null;
+  }
+
+  return {
+    classNames: classNames.slice(0, splitIndex),
+    fallbackText: fallbackTokens.join(" ")
+  };
+}
+
+function repairMalformedTextClassTokens(plan: SkeletonPlan): SkeletonPlan {
+  const warnings = [...plan.warnings];
+
+  function visit(node: BuildNode): BuildNode {
+    const children = node.children.map(visit);
+    if (!isTextBearingNode(node) || node.textContent?.trim()) {
+      return { ...node, children };
+    }
+
+    const split = splitSuspiciousClassText(node.classNames);
+    if (!split) {
+      return { ...node, children };
+    }
+
+    warnings.push(
+      providerWarning(
+        "recovered-class-text",
+        `Recovered likely text tokens from class names on <${node.tag}> before insertion.`
+      )
+    );
+
+    return {
+      ...node,
+      classNames: split.classNames,
+      label: node.label ?? `${CLASS_TEXT_FALLBACK_PREFIX}${split.fallbackText}`,
+      children
+    };
+  }
+
+  return {
+    ...plan,
+    elementTree: visit(plan.elementTree),
+    warnings
+  };
+}
+
+function normalizeFooterRoot(
+  plan: SkeletonPlan,
+  input: PlanningProviderInput
+): SkeletonPlan {
+  if (!sourceLooksLikeFooter(input) || normalizeTagToken(plan.elementTree.tag) === "footer") {
+    return plan;
+  }
+
+  return {
+    ...plan,
+    elementTree: {
+      ...plan.elementTree,
+      tag: "footer",
+      type: inferNodeType("footer"),
+      classNames: plan.elementTree.classNames.filter((className) => className !== "section")
+    },
+    warnings: [
+      ...plan.warnings,
+      providerWarning(
+        "normalized-footer-root",
+        "Normalized the root skeleton node to <footer> because the source is an actual site footer."
+      )
+    ]
+  };
+}
+
+function isTextLikeDiv(node: BuildNode): boolean {
+  return (
+    node.tag === "div" &&
+    node.children.length === 0 &&
+    node.classNames.some((className) =>
+      /(tagline|eyebrow|mini-label|item_value|stat|metric|tag|badge|chip|pill)/i.test(className)
+    )
+  );
+}
+
+function matchesContentKind(node: BuildNode, kind: string): boolean {
+  if (/^h[1-6]$/i.test(node.tag)) {
+    return /^h[1-6]$/i.test(kind);
+  }
+  if (node.tag === "p") {
+    return kind === "p" || kind === "span" || kind === "label" || kind === "string" || kind === "div";
+  }
+  if (node.tag === "a") {
+    return kind === "a" || kind === "button" || kind === "string";
+  }
+  if (node.tag === "button") {
+    return kind === "button" || kind === "a" || kind === "string";
+  }
+  if (isTextLikeDiv(node)) {
+    return kind === "p" || kind === "span" || kind === "label" || kind === "string" || kind === "div";
+  }
+  return false;
+}
+
+function hydrateMissingTextFromContent(
+  plan: SkeletonPlan,
+  contentItems: Array<{ kind: string; value: string }>
+): SkeletonPlan {
+  const warnings = [...plan.warnings];
+  const consumed = new Set<number>();
+
+  function nextContentFor(node: BuildNode): string | null {
+    for (let index = 0; index < contentItems.length; index += 1) {
+      if (consumed.has(index)) {
+        continue;
+      }
+      const item = contentItems[index];
+      if (!item.value?.trim()) {
+        continue;
+      }
+      if (matchesContentKind(node, item.kind)) {
+        consumed.add(index);
+        return item.value.trim();
+      }
+    }
+    return null;
+  }
+
+  function visit(node: BuildNode): BuildNode {
+    const children = node.children.map(visit);
+    const shouldHydrate =
+      children.length === 0 &&
+      (!node.textContent || !node.textContent.trim()) &&
+      (/^h[1-6]$/i.test(node.tag) ||
+        node.tag === "p" ||
+        node.tag === "a" ||
+        node.tag === "button" ||
+        isTextLikeDiv(node));
+
+    if (!shouldHydrate) {
+      return { ...node, children };
+    }
+
+    const nextText = nextContentFor(node);
+    if (!nextText) {
+      const fallbackLabel =
+        typeof node.label === "string" && node.label.startsWith(CLASS_TEXT_FALLBACK_PREFIX)
+          ? node.label.slice(CLASS_TEXT_FALLBACK_PREFIX.length).trim()
+          : "";
+      if (!fallbackLabel) {
+        return { ...node, children };
+      }
+      warnings.push(
+        providerWarning(
+          "used-class-text-fallback",
+          `Used fallback text recovered from malformed class tokens for <${node.tag}>.`
+        )
+      );
+      return {
+        ...node,
+        textContent: fallbackLabel,
+        label: undefined,
+        children
+      };
+    }
+
+    warnings.push(
+      providerWarning(
+        "hydrated-missing-text",
+        `Filled missing text content for <${node.tag}> from serialized source content.`,
+        "warning"
+      )
+    );
+
+    return {
+      ...node,
+      textContent: nextText,
+      label:
+        typeof node.label === "string" && node.label.startsWith(CLASS_TEXT_FALLBACK_PREFIX)
+          ? undefined
+          : node.label,
+      children
+    };
+  }
+
+  const nextTree = visit(plan.elementTree);
+  return {
+    ...plan,
+    elementTree: nextTree,
+    treeText: plan.treeText,
+    warnings
+  };
+}
+
+function canonicalizeSkeletonTreeText(plan: SkeletonPlan): SkeletonPlan {
+  return {
+    ...plan,
+    treeText: serializeSkeletonTree(plan.elementTree)
   };
 }
 
@@ -780,10 +1066,29 @@ export class OpenAIPlanningProvider implements PlanningProvider {
         stagePrompt("skeleton"),
         input
       );
-      return normalizeSkeleton(raw, fallback);
+      return canonicalizeSkeletonTreeText(
+        hydrateMissingTextFromContent(
+          repairMalformedTextClassTokens(
+            normalizeFooterRoot(normalizeSkeleton(raw, fallback), input)
+          ),
+          input.serializedSection.content
+        )
+      );
     } catch (error) {
-      throw new Error(
-        error instanceof Error ? error.message : "OpenAI skeleton generation failed."
+      return canonicalizeSkeletonTreeText(
+        normalizeFooterRoot(
+          {
+            ...fallback,
+            warnings: [
+              ...fallback.warnings,
+              providerWarning(
+                "skeleton-error",
+                error instanceof Error ? error.message : "OpenAI skeleton generation failed."
+              )
+            ]
+          },
+          input
+        )
       );
     }
   }
