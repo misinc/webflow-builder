@@ -125,6 +125,25 @@ describe("parseSkeletonTreeText", () => {
     expect(wrapper?.children[0]?.textContent).toBe("Medicare Fraud and Kickbacks");
   });
 
+  it("splits list item text into an inner textblock child", () => {
+    const normalized = normalizeSkeletonPlan(
+      parseSkeletonTreeText(
+        basePlan(),
+        'section.section-name\n  ul.items\n    li.item "State Bar of California"'
+      )
+    );
+
+    expect(serializeSkeletonTree(normalized.elementTree)).toContain("li.item");
+    expect(serializeSkeletonTree(normalized.elementTree)).toContain(
+      'textblock "State Bar of California"'
+    );
+    const listItem = normalized.elementTree.children[0]?.children[0];
+    expect(listItem?.tag).toBe("li");
+    expect(listItem?.textContent).toBeUndefined();
+    expect(listItem?.children[0]?.tag).toBe("div");
+    expect(listItem?.children[0]?.textContent).toBe("State Bar of California");
+  });
+
   it("preserves image children inside anchor wrappers", () => {
     const normalized = normalizeSkeletonPlan(
       parseSkeletonTreeText(

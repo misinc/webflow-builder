@@ -925,6 +925,22 @@ function preferredSharedClass(
   );
 }
 
+function placeholderTextForTag(tag: string): string {
+  if (/^h[1-6]$/i.test(tag)) {
+    return "Heading";
+  }
+  if (tag === "li") {
+    return "List item";
+  }
+  if (tag === "a" || tag === "button") {
+    return "Button text";
+  }
+  if (tag === "img") {
+    return "Image";
+  }
+  return "Body copy";
+}
+
 function buildNode(
   id: string,
   type: string,
@@ -984,7 +1000,8 @@ function convertHtmlNode(
   idPrefix: string,
   role: "root" | "group" | "list" | "item" = "group"
 ): BuildNode | null {
-  const text = nodeText(node);
+  const includeContent = input.includeContent ?? true;
+  const text = includeContent ? nodeText(node) : undefined;
 
   if (node.tag === "br") {
     return null;
@@ -997,7 +1014,7 @@ function convertHtmlNode(
       node.tag,
       [`heading-style-${node.tag.toLowerCase()}`],
       [],
-      text
+      text ?? placeholderTextForTag(node.tag)
     );
   }
 
@@ -1008,7 +1025,7 @@ function convertHtmlNode(
       "p",
       [text && text.length <= 40 ? "text-size-small" : "text-size-medium"],
       [],
-      text
+      text ?? placeholderTextForTag(node.tag)
     );
   }
 
@@ -1020,7 +1037,7 @@ function convertHtmlNode(
       [`${sectionKey}_image`],
       [],
       undefined,
-      text
+      includeContent ? text : placeholderTextForTag(node.tag)
     );
   }
 
@@ -1032,7 +1049,7 @@ function convertHtmlNode(
       "a",
       [children.length === 0 && (text?.length ?? 0) <= 24 ? "button" : `${sectionKey}_link`],
       children,
-      children.length === 0 ? text : undefined
+      children.length === 0 ? (text ?? placeholderTextForTag(node.tag)) : undefined
     );
   }
 
@@ -1054,7 +1071,7 @@ function convertHtmlNode(
       "li",
       [`${sectionKey}_item`],
       children,
-      children.length === 0 ? text : undefined
+      children.length === 0 ? (text ?? placeholderTextForTag(node.tag)) : undefined
     );
   }
 
@@ -1081,7 +1098,9 @@ function convertHtmlNode(
     node.tag === "section" || node.tag === "footer" ? "div" : node.tag,
     [className],
     children,
-    text && children.length === 0 ? text : undefined
+    (text ?? (!includeContent ? placeholderTextForTag(node.tag) : undefined)) && children.length === 0
+      ? text ?? placeholderTextForTag(node.tag)
+      : undefined
   );
 }
 

@@ -483,6 +483,40 @@ export function sanitizeSkeletonPlan(plan: SkeletonPlan): SkeletonPlan {
       };
     }
 
+    if (
+      nextTag === "li" &&
+      typeof node.textContent === "string" &&
+      node.textContent.trim().length > 0 &&
+      normalizedChildren.length === 0
+    ) {
+      warnings.push({
+        code: "split-list-item-text",
+        message: "Split list item text into an inner Text Block so Webflow preserves the content during insertion.",
+        level: "warning"
+      });
+      return {
+        node: {
+          ...node,
+          id: nextId,
+          type: inferNodeType(nextTag),
+          tag: nextTag,
+          classNames: filteredClassNames,
+          textContent: undefined,
+          children: [
+            {
+              id: `${nextId}-text`,
+              type: "text",
+              tag: "div",
+              classNames: [],
+              textContent: node.textContent,
+              children: []
+            }
+          ]
+        },
+        hoistedChildren: []
+      };
+    }
+
     if ((LEAF_TAGS.has(nextTag) || NON_CONTAINER_TAGS.has(nextTag)) && normalizedChildren.length > 0) {
       warnings.push({
         code: "invalid-noncontainer-children",

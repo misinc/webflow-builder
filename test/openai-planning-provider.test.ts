@@ -358,4 +358,46 @@ describe("OpenAIPlanningProvider footer skeleton normalization", () => {
     expect(plan.warnings.some((warning) => warning.code === "skeleton-html-fallback")).toBe(true);
     expect(plan.warnings.some((warning) => warning.code === "skeleton-error")).toBe(true);
   });
+
+  it("honors includeContent=false for the HTML-derived timeout fallback", async () => {
+    const abortError = new Error("aborted");
+    abortError.name = "AbortError";
+
+    vi.stubGlobal("fetch", vi.fn(async () => {
+      throw abortError;
+    }));
+
+    const attorneysHtml = readFileSync(
+      new URL("./fixtures/attorneys-debug.html", import.meta.url),
+      "utf8"
+    );
+
+    const provider = new OpenAIPlanningProvider("test-key", "test-model");
+    const plan = await provider.generateSkeleton({
+      ...input,
+      metadata: {
+        ...input.metadata,
+        sectionName: "Attorneys"
+      },
+      includeContent: false,
+      sectionContext: {
+        ...input.sectionContext,
+        sectionName: "Attorneys",
+        sourceCode: attorneysHtml
+      },
+      serializedSection: {
+        ...input.serializedSection,
+        summary: "Attorneys section with repeated profile entries.",
+        sourceExcerpt: "<section>",
+        content: []
+      }
+    });
+
+    expect(plan.treeText).toContain('h2.heading-style-h2 "Heading"');
+    expect(plan.treeText).toContain('h3.heading-style-h3 "Heading"');
+    expect(plan.treeText).toContain('p.text-size-medium "Body copy"');
+    expect(plan.treeText).toContain('li.attorneys_item "List item"');
+    expect(plan.treeText).not.toContain("Mark Windsor");
+    expect(plan.treeText).not.toContain("State Bar of California");
+  });
 });
