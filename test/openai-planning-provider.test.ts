@@ -400,6 +400,49 @@ describe("OpenAIPlanningProvider footer skeleton normalization", () => {
     expect(plan.treeText).not.toContain("Mark Windsor");
     expect(plan.treeText).not.toContain("State Bar of California");
   });
+
+  it("uses descendant heading text and drops empty accordion content wrappers in the HTML fallback", async () => {
+    const abortError = new Error("aborted");
+    abortError.name = "AbortError";
+
+    vi.stubGlobal("fetch", vi.fn(async () => {
+      throw abortError;
+    }));
+
+    const faqHtml = `<section><div><div data-slot="accordion"><div data-slot="accordion-item"><h3><button type="button"><span>What should I do if federal agents contact me?</span><svg><path></path></svg></button></h3><div id="radix-:r1:" class="overflow-hidden"></div></div></div></div></section>`;
+
+    const provider = new OpenAIPlanningProvider("test-key", "test-model");
+    const plan = await provider.generateSkeleton({
+      ...input,
+      metadata: {
+        ...input.metadata,
+        sectionName: "FAQ"
+      },
+      sectionContext: {
+        ...input.sectionContext,
+        sectionName: "FAQ",
+        sourceCode: faqHtml
+      },
+      serializedSection: {
+        ...input.serializedSection,
+        summary: "FAQ accordion with repeated question items.",
+        sourceExcerpt: "<section>",
+        content: [
+          {
+            kind: "h3",
+            label: "h3",
+            value: "What should I do if federal agents contact me?"
+          }
+        ]
+      }
+    });
+
+    expect(plan.treeText).toContain(
+      'h3.heading-style-h3 "What should I do if federal agents contact me?"'
+    );
+    expect(plan.treeText).not.toContain('h3.heading-style-h3 "Heading"');
+    expect(plan.treeText).not.toContain("faq_group");
+  });
 });
 
 describe("OpenAIPlanningProvider blockquote normalization", () => {

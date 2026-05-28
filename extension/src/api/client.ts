@@ -331,37 +331,53 @@ export class BackendClient {
     }
 
     let start;
-    try {
-      start = debugSkeletonJobStartSchema.parse(
-        await request(
-          this.functionUrl("workflow-debug-generate-skeleton-start"),
+    let backgroundStartError: Error | null = null;
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        start = debugSkeletonJobStartSchema.parse(
+          await request(
+            this.functionUrl("workflow-debug-generate-skeleton-start"),
+            {
+              method: "POST",
+              body: JSON.stringify(validated)
+            },
+            undefined,
+            signal
+          )
+        );
+
+        await request<{ status: string }>(
+          this.functionUrl("workflow-debug-generate-skeleton-background"),
           {
             method: "POST",
-            body: JSON.stringify(validated)
+            body: JSON.stringify(
+              debugSkeletonJobTriggerSchema.parse({
+                jobId: start.jobId
+              })
+            )
           },
           undefined,
           signal
-        )
-      );
+        );
 
-      await request<{ status: string }>(
-        this.functionUrl("workflow-debug-generate-skeleton-background"),
-        {
-          method: "POST",
-          body: JSON.stringify(
-            debugSkeletonJobTriggerSchema.parse({
-              jobId: start.jobId
-            })
-          )
-        },
-        undefined,
-        signal
-      );
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") {
-        throw error;
+        backgroundStartError = null;
+        break;
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          throw error;
+        }
+        backgroundStartError =
+          error instanceof Error
+            ? error
+            : new Error("Background debug skeleton generation failed to start.");
       }
-      return runSyncRequest();
+    }
+
+    if (!start || backgroundStartError) {
+      const reasons = routing.reasons.length > 0 ? ` (${routing.reasons.join(", ")})` : "";
+      throw new Error(
+        `Background debug skeleton generation could not start after 2 attempts${reasons}. ${backgroundStartError?.message ?? "No additional error details were available."}`
+      );
     }
 
     let pollAfterMs = start.pollAfterMs;

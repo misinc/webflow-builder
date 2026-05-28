@@ -1028,9 +1028,53 @@ function subtreeHasTag(node: HtmlOutlineNode, tag: string): boolean {
   return node.tag === tag || node.children.some((child) => subtreeHasTag(child, tag));
 }
 
-function nodeText(node: HtmlOutlineNode): string | undefined {
+function nodeText(
+  node: HtmlOutlineNode,
+  options?: { deep?: boolean }
+): string | undefined {
   const normalized = node.textContent?.trim();
-  return normalized ? normalized : undefined;
+  if (normalized) {
+    return normalized;
+  }
+
+  if (!options?.deep) {
+    return undefined;
+  }
+
+  const descendantText = node.children
+    .map((child) => nodeText(child, { deep: true }))
+    .filter((value): value is string => Boolean(value))
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return descendantText || undefined;
+}
+
+function hasMeaningfulChildren(children: BuildNode[]): boolean {
+  return children.some((child) => {
+    if (child.textContent?.trim()) {
+      return true;
+    }
+    if (child.tag === "img") {
+      return true;
+    }
+    return hasMeaningfulChildren(child.children);
+  });
+}
+
+function isLikelyEmptyAccordionContent(node: HtmlOutlineNode): boolean {
+  return (
+    node.tag === "div" &&
+    node.children.length === 0 &&
+    !node.textContent?.trim() &&
+    (
+      node.id?.startsWith("radix-:") ||
+      node.classNames.some((className) =>
+        /accordion-content|collapsible-content|overflow-hidden/i.test(className)
+      )
+    )
+  );
 }
 
 function convertHtmlNode(
@@ -1042,6 +1086,11 @@ function convertHtmlNode(
 ): BuildNode | null {
   const includeContent = input.includeContent ?? true;
   const text = includeContent ? nodeText(node) : undefined;
+  const descendantText = includeContent ? nodeText(node, { deep: true }) : undefined;
+
+  if (isLikelyEmptyAccordionContent(node)) {
+    return null;
+  }
 
   if (node.tag === "br") {
     return null;
@@ -1054,7 +1103,7 @@ function convertHtmlNode(
       node.tag,
       [`heading-style-${node.tag.toLowerCase()}`],
       [],
-      text ?? placeholderTextForTag(node.tag)
+      text ?? descendantText ?? placeholderTextForTag(node.tag)
     );
   }
 
@@ -1076,7 +1125,7 @@ function convertHtmlNode(
       "blockquote",
       ["blockquote"],
       [],
-      text ?? placeholderTextForTag(node.tag)
+      text ?? descendantText ?? placeholderTextForTag(node.tag)
     );
   }
 
@@ -1100,7 +1149,18 @@ function convertHtmlNode(
       "a",
       [children.length === 0 && (text?.length ?? 0) <= 24 ? "button" : `${sectionKey}_link`],
       children,
-      children.length === 0 ? (text ?? placeholderTextForTag(node.tag)) : undefined
+      children.length === 0 ? (text ?? descendantText ?? placeholderTextForTag(node.tag)) : undefined
+    );
+  }
+
+  if (node.tag === "button") {
+    return buildNode(
+      idPrefix,
+      "button",
+      "button",
+      [`${sectionKey}_button`],
+      [],
+      text ?? descendantText ?? placeholderTextForTag(node.tag)
     );
   }
 
@@ -1141,6 +1201,10 @@ function convertHtmlNode(
     className = `${sectionKey}_media`;
   } else if (hasList || paragraphCount >= 2) {
     className = `${sectionKey}_content`;
+  }
+
+  if (includeContent && !text && !hasMeaningfulChildren(children) && node.tag === "div") {
+    return null;
   }
 
   return buildNode(
