@@ -401,3 +401,73 @@ describe("OpenAIPlanningProvider footer skeleton normalization", () => {
     expect(plan.treeText).not.toContain("State Bar of California");
   });
 });
+
+describe("OpenAIPlanningProvider blockquote normalization", () => {
+  it("converts blockquote-class paragraphs into native blockquote nodes", async () => {
+    const provider = new OpenAIPlanningProvider("test-key", "gpt-test");
+    const rawPlan = {
+      sectionMetadata: input.metadata,
+      treeText: 'section.section_testimonial\n  p.blockquote.text-style-italic "Quoted disclaimer copy"',
+      elementTree: {
+        id: "root",
+        type: "box",
+        tag: "section",
+        classNames: ["section_testimonial"],
+        children: [
+          {
+            id: "quote",
+            type: "text",
+            tag: "p",
+            classNames: ["blockquote", "text-style-italic"],
+            textContent: "Quoted disclaimer copy",
+            children: []
+          }
+        ]
+      },
+      reusableClasses: ["blockquote", "text-style-italic"],
+      suggestedNewClasses: ["section_testimonial"],
+      warnings: []
+    };
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(
+          JSON.stringify({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify(rawPlan)
+                }
+              }
+            ]
+          }),
+          { status: 200, headers: { "content-type": "application/json" } }
+        )
+      )
+    );
+
+    const result = await provider.generateSkeleton({
+      ...input,
+      metadata: {
+        ...input.metadata,
+        sectionName: "Testimonial"
+      },
+      sectionContext: {
+        ...input.sectionContext,
+        sourceCode:
+          '<section><blockquote class="blockquote text-style-italic">Quoted disclaimer copy</blockquote></section>'
+      },
+      serializedSection: {
+        ...input.serializedSection,
+        summary: "Testimonial quote section.",
+        sourceExcerpt: '<blockquote class="blockquote text-style-italic">'
+      }
+    });
+
+    expect(result.elementTree.children[0]?.tag).toBe("blockquote");
+    expect(result.treeText).toContain(
+      'blockquote.blockquote.text-style-italic "Quoted disclaimer copy"'
+    );
+  });
+});

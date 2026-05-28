@@ -19,6 +19,7 @@ const REMOVED_TAGS = new Set([
 const WRAPPER_TO_DIV_TAGS = new Set(["article", "aside", "figure", "header", "nav", "main"]);
 const NON_CONTAINER_TAGS = new Set([
   "p",
+  "blockquote",
   "span",
   "label",
   "button",
@@ -59,7 +60,7 @@ function inferNodeType(tag: string): BuildNode["type"] {
   if (tag === "ul" || tag === "ol") return "list";
   if (tag === "li") return "listItem";
   if (/^h[1-6]$/i.test(tag)) return "heading";
-  if (tag === "p" || tag === "span" || tag === "label") return "text";
+  if (tag === "p" || tag === "blockquote" || tag === "span" || tag === "label") return "text";
   return "box";
 }
 
@@ -413,6 +414,14 @@ export function sanitizeSkeletonPlan(plan: SkeletonPlan): SkeletonPlan {
         };
       }
       nextTag = "div";
+      retagged = true;
+    }
+
+    if (
+      (nextTag === "p" || nextTag === "div") &&
+      filteredClassNames.includes("blockquote")
+    ) {
+      nextTag = "blockquote";
       retagged = true;
     }
 

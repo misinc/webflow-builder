@@ -42,7 +42,8 @@ const SKELETON_TREE_RULES = [
   "Return a faithful section skeleton tree in the style: section.section-name -> div.padding-global -> div.container-large -> div.padding-section-medium -> div.section-name_component -> div.section-name_content / div.section-name_visual.",
   "If the source is an actual site footer, use footer.section_footer as the root instead of section.section_footer.",
   "This skeleton tree is the actual Webflow insertion plan, not a JSX or source-code preview.",
-  "Only use Webflow-safe skeleton elements such as section, div, h1-h6, p, span, ul, ol, li, img, video, a, and button.",
+  "Only use Webflow-safe skeleton elements such as section, footer, div, h1-h6, p, blockquote, span, ul, ol, li, img, video, a, and button.",
+  "When the source is semantically a quote, pull quote, testimonial quote, or disclaimer block styled as a quote, use a native blockquote node instead of a paragraph or div.",
   "Use textblock as a pseudo-tag for short label-style text blocks that should become real Webflow Text Block elements, for example textblock.text-style-tagline or textblock.authority-mini-label.",
   "Short stat or metric values such as 50+, 1:1, 360°, 30, or 500+ should also use textblock when they are visually acting as standalone value blocks rather than paragraph copy.",
   "Do not use standalone span wrappers in the skeleton unless inline text semantics are truly required. Prefer div wrappers or plain text-bearing elements instead.",
@@ -363,7 +364,7 @@ function inferNodeType(tag: string): BuildNode["type"] {
   if (tag === "ul" || tag === "ol") return "list";
   if (tag === "li") return "listItem";
   if (/^h[1-6]$/i.test(tag)) return "heading";
-  if (tag === "p" || tag === "span" || tag === "label") return "text";
+  if (tag === "p" || tag === "blockquote" || tag === "span" || tag === "label") return "text";
   return "box";
 }
 
@@ -565,6 +566,7 @@ function isTextBearingNode(node: BuildNode): boolean {
   return (
     /^h[1-6]$/i.test(node.tag) ||
     node.tag === "p" ||
+    node.tag === "blockquote" ||
     node.tag === "a" ||
     node.tag === "button" ||
     isTextLikeDiv(node)
@@ -682,6 +684,9 @@ function matchesContentKind(node: BuildNode, kind: string): boolean {
   if (/^h[1-6]$/i.test(node.tag)) {
     return /^h[1-6]$/i.test(kind);
   }
+  if (node.tag === "blockquote") {
+    return kind === "blockquote" || kind === "p" || kind === "div" || kind === "string";
+  }
   if (node.tag === "p") {
     return kind === "p" || kind === "span" || kind === "label" || kind === "string" || kind === "div";
   }
@@ -727,6 +732,7 @@ function hydrateMissingTextFromContent(
       children.length === 0 &&
       (!node.textContent || !node.textContent.trim()) &&
       (/^h[1-6]$/i.test(node.tag) ||
+        node.tag === "blockquote" ||
         node.tag === "p" ||
         node.tag === "a" ||
         node.tag === "button" ||
@@ -783,6 +789,40 @@ function hydrateMissingTextFromContent(
     ...plan,
     elementTree: nextTree,
     treeText: plan.treeText,
+    warnings
+  };
+}
+
+function normalizeBlockquoteNodes(plan: SkeletonPlan): SkeletonPlan {
+  const warnings = [...plan.warnings];
+
+  function visit(node: BuildNode): BuildNode {
+    const children = node.children.map(visit);
+    const shouldRetag =
+      (node.tag === "p" || node.tag === "div") && node.classNames.includes("blockquote");
+
+    if (!shouldRetag) {
+      return { ...node, children };
+    }
+
+    warnings.push(
+      providerWarning(
+        "normalized-blockquote-node",
+        `Normalized <${node.tag}> with .blockquote to a native <blockquote> node.`
+      )
+    );
+
+    return {
+      ...node,
+      tag: "blockquote",
+      type: inferNodeType("blockquote"),
+      children
+    };
+  }
+
+  return {
+    ...plan,
+    elementTree: visit(plan.elementTree),
     warnings
   };
 }
@@ -1024,6 +1064,17 @@ function convertHtmlNode(
       "text",
       "p",
       [text && text.length <= 40 ? "text-size-small" : "text-size-medium"],
+      [],
+      text ?? placeholderTextForTag(node.tag)
+    );
+  }
+
+  if (node.tag === "blockquote") {
+    return buildNode(
+      idPrefix,
+      "text",
+      "blockquote",
+      ["blockquote"],
       [],
       text ?? placeholderTextForTag(node.tag)
     );
@@ -1399,8 +1450,10 @@ export class OpenAIPlanningProvider implements PlanningProvider {
       );
       return canonicalizeSkeletonTreeText(
         hydrateMissingTextFromContent(
-          repairMalformedTextClassTokens(
-            normalizeFooterRoot(normalizeSkeleton(raw, fallback), input)
+          normalizeBlockquoteNodes(
+            repairMalformedTextClassTokens(
+              normalizeFooterRoot(normalizeSkeleton(raw, fallback), input)
+            )
           ),
           input.serializedSection.content
         )
@@ -1408,18 +1461,20 @@ export class OpenAIPlanningProvider implements PlanningProvider {
     } catch (error) {
       const richFallback = htmlFallbackSkeleton(input);
       return canonicalizeSkeletonTreeText(
-        normalizeFooterRoot(
-          {
-            ...(richFallback ?? fallback),
-            warnings: [
-              ...(richFallback?.warnings ?? fallback.warnings),
-              providerWarning(
-                "skeleton-error",
-                error instanceof Error ? error.message : "OpenAI skeleton generation failed."
-              )
-            ]
-          },
-          input
+        normalizeBlockquoteNodes(
+          normalizeFooterRoot(
+            {
+              ...(richFallback ?? fallback),
+              warnings: [
+                ...(richFallback?.warnings ?? fallback.warnings),
+                providerWarning(
+                  "skeleton-error",
+                  error instanceof Error ? error.message : "OpenAI skeleton generation failed."
+                )
+              ]
+            },
+            input
+          )
         )
       );
     }

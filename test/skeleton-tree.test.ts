@@ -106,6 +106,20 @@ describe("parseSkeletonTreeText", () => {
     expect(normalized.elementTree.children[0]?.tag).toBe("div");
   });
 
+  it("normalizes blockquote-class paragraphs into native blockquote nodes", () => {
+    const normalized = normalizeSkeletonPlan(
+      parseSkeletonTreeText(
+        basePlan(),
+        'section.section-name\n  p.blockquote.text-style-italic "Quoted disclaimer copy"'
+      )
+    );
+
+    expect(serializeSkeletonTree(normalized.elementTree)).toContain(
+      'blockquote.blockquote.text-style-italic "Quoted disclaimer copy"'
+    );
+    expect(normalized.elementTree.children[0]?.tag).toBe("blockquote");
+  });
+
   it("splits tag wrapper text into an inner textblock child", () => {
     const normalized = normalizeSkeletonPlan(
       parseSkeletonTreeText(
