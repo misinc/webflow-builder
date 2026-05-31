@@ -249,7 +249,25 @@ function parseImports(content: string): Array<{
         })
     );
 
-  return [...defaultMatches, ...namedMatches, ...reExportMatches];
+  const defaultExportReferenceMatches = [
+    ...content.matchAll(/export\s+default\s+([A-Z][A-Za-z0-9_]*)\s*;?/g)
+  ].flatMap((match) => {
+    const componentName = match[1];
+    const imported =
+      defaultMatches.find((item) => item.componentName === componentName) ??
+      namedMatches.find((item) => item.componentName === componentName);
+    return imported
+      ? [
+          {
+            componentName,
+            importPath: imported.importPath,
+            usage: "reexport" as const
+          }
+        ]
+      : [];
+  });
+
+  return [...defaultMatches, ...namedMatches, ...reExportMatches, ...defaultExportReferenceMatches];
 }
 
 function resolveSectionSourceFile(
@@ -367,6 +385,13 @@ function assetReferencesFromSource(sourceCode: string): string[] {
   );
 }
 
+function derivePageFallbackSectionKey(page: RepoPageRecord): string {
+  if (page.route === "/") {
+    return "home";
+  }
+  return slugify(page.name) ?? slugify(page.route.replace(/\//g, " ")) ?? "page";
+}
+
 export interface ExtractedRepoIndex {
   pages: RepoPageRecord[];
   sections: RepoSectionRecord[];
@@ -395,6 +420,7 @@ export class MisRepoExtractor {
         }
       };
       pages.push(page);
+      const sectionsBeforePage = sections.length;
 
       const imports = parseImports(pageFile.content);
       imports
@@ -439,6 +465,27 @@ export class MisRepoExtractor {
             }
           });
         });
+
+      if (sections.length === sectionsBeforePage) {
+        const sectionKey = derivePageFallbackSectionKey(page);
+        sections.push({
+          id: stableId(pageId, "page-root-section"),
+          repoId,
+          pageId,
+          name: page.name,
+          sectionKey,
+          sourceFile: pageFile.path,
+          importPath: pageFile.path,
+          sortOrder: 0,
+          componentName: `${page.name.replace(/\s+/g, "")}Page`,
+          metadata: {
+            parseStatus: "parsed",
+            confidence: 0.55,
+            displayOrder: 0,
+            inferredFromPageFile: true
+          }
+        });
+      }
     });
 
     return { pages, sections };

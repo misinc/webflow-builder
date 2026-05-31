@@ -367,4 +367,70 @@ describe("MisRepoExtractor", () => {
     expect(index.sections.map((section) => section.sectionKey)).toEqual(["about-page"]);
     expect(index.sections.map((section) => section.name)).toEqual(["About Page"]);
   });
+
+  it("indexes imported page components exported as the route default", () => {
+    const extractor = new MisRepoExtractor();
+    const snapshot: RepositorySnapshot = {
+      owner: "misinc",
+      name: "windsorkimball",
+      defaultBranch: "main",
+      commitSha: "fixture-default-ref-commit",
+      files: [
+        {
+          path: "src/app/pages/about.tsx",
+          content: `
+            import { AboutPage } from "@/components/pages/AboutPage";
+            export default AboutPage;
+          `
+        },
+        {
+          path: "src/components/pages/AboutPage.tsx",
+          content: "export function AboutPage() { return <section>About</section>; }"
+        }
+      ]
+    };
+
+    const index = extractor.extractRepoIndex("repo-1", snapshot);
+
+    expect(index.sections.map((section) => section.sourceFile)).toEqual([
+      "src/components/pages/AboutPage.tsx"
+    ]);
+    expect(index.sections.map((section) => section.name)).toEqual(["About Page"]);
+  });
+
+  it("falls back to indexing the page file itself as a section", () => {
+    const extractor = new MisRepoExtractor();
+    const snapshot: RepositorySnapshot = {
+      owner: "misinc",
+      name: "windsorkimball",
+      defaultBranch: "main",
+      commitSha: "fixture-page-fallback-commit",
+      files: [
+        {
+          path: "src/app/pages/about.tsx",
+          content: `
+            export default function AboutPage() {
+              return (
+                <main>
+                  <section>
+                    <h1>About Windsor Kimball APC</h1>
+                    <p>Firm overview content.</p>
+                  </section>
+                </main>
+              );
+            }
+          `
+        }
+      ]
+    };
+
+    const index = extractor.extractRepoIndex("repo-1", snapshot);
+
+    expect(index.pages).toHaveLength(1);
+    expect(index.sections.map((section) => section.sourceFile)).toEqual([
+      "src/app/pages/about.tsx"
+    ]);
+    expect(index.sections.map((section) => section.sectionKey)).toEqual(["about"]);
+    expect(index.sections.map((section) => section.name)).toEqual(["About"]);
+  });
 });

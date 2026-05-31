@@ -427,8 +427,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setComponentBannerDismissed(false);
   }, [selectedRepoId]);
 
-  const refreshWorkflowState = useCallback(async () => {
-    if (!selectedRepoId || !session?.userId || !designerContext?.siteId) {
+  const refreshWorkflowState = useCallback(async (repoIdOverride?: string) => {
+    const effectiveRepoId = repoIdOverride ?? selectedRepoId;
+    if (!effectiveRepoId || !session?.userId || !designerContext?.siteId) {
       setMappingRows([]);
       setSavedMappingsSnapshot("[]");
       setQueueByPageId({});
@@ -440,7 +441,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setLivePages(currentLivePages);
 
     const savedMappings = await backend
-      .getPageMappings(selectedRepoId, designerContext.siteId, session.userId)
+      .getPageMappings(effectiveRepoId, designerContext.siteId, session.userId)
       .catch(() => [] as SitePageMappingRow[]);
 
     const mergedRows = mergeMappingRows({
@@ -457,7 +458,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       mappedRows.map(async (row) => {
         const queue = await backend
           .getWorkflowQueue(
-            selectedRepoId,
+            effectiveRepoId,
             designerContext.siteId!,
             row.webflowPageId,
             session.userId!
@@ -486,7 +487,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     designerContext?.siteId,
     repoPageNameById,
     resetSectionRunState,
-    selectedRepoId,
     session?.userId
   ]);
 
@@ -647,7 +647,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [refreshWorkflowState]);
+  }, [
+    refreshWorkflowState,
+    selectedRepo?.lastSyncedAt,
+    selectedRepo?.pageCount,
+    selectedRepo?.status
+  ]);
 
   const currentSections = useMemo(() => {
     if (!activeQueue?.repoPage) {

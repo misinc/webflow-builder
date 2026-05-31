@@ -38,6 +38,7 @@ export function SectionListScreen() {
     loadingLabel,
     refreshComponentOpportunities,
     rescanSelectedRepo,
+    selectedSection,
     selectSection
   } = useAppState();
   const builtCount =
@@ -48,6 +49,7 @@ export function SectionListScreen() {
   const remainingCount = Math.max(totalCount - builtCount - skippedCount, 0);
   const isMapped = Boolean(activeMapping?.repoPageId);
   const isPageComplete = totalCount > 0 && remainingCount === 0;
+  const canContinue = isMapped && currentSections.length > 0 && Boolean(selectedSection);
   const progressPercent =
     totalCount > 0 ? Math.round(((builtCount + skippedCount) / totalCount) * 100) : 0;
 
@@ -188,9 +190,13 @@ export function SectionListScreen() {
         <div className="flex-1" />
         <Button
           variant="primary"
+          disabled={!isMapped ? false : !canContinue && !isPageComplete}
           onClick={() => {
             if (!isMapped) {
               navigate("not-mapped");
+              return;
+            }
+            if (!canContinue && !isPageComplete) {
               return;
             }
             if (isPageComplete) {
@@ -207,7 +213,11 @@ export function SectionListScreen() {
           {isMapped
             ? isPageComplete
               ? "See page summary"
-              : "Continue building"
+              : currentSections.length === 0
+                ? "No sections detected"
+                : selectedSection
+                  ? "Continue building"
+                  : "Select a section"
             : "Resolve mapping"}
         </Button>
       </div>
