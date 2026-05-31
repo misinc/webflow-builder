@@ -80,6 +80,8 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+const JURISDICTIONS_HTML = `<section class="bg-secondary py-20"><div class="max-w-7xl mx-auto px-6 lg:px-8"><h2 class="text-3xl mb-8 text-foreground text-center">Jurisdictions Served</h2><div class="max-w-3xl mx-auto"><p class="text-center text-muted-foreground leading-relaxed mb-8">We are admitted to practice and regularly appear in the following courts:</p><div class="grid grid-cols-1 md:grid-cols-2 gap-6"><div class="bg-white p-6 rounded"><h3 class="mb-4">Trial Courts</h3><ul class="space-y-2 text-sm text-muted-foreground"><li>U.S. District Court, Central District of California</li><li>U.S. District Court, Southern District of California</li><li>Northern District of California</li><li>Superior Court of California</li></ul></div><div class="bg-white p-6 rounded"><h3 class="mb-4">Appellate Courts</h3><ul class="space-y-2 text-sm text-muted-foreground"><li>U.S. Court of Appeals, Ninth Circuit</li></ul></div></div></div></section>`;
+
 describe("OpenAIPlanningProvider footer skeleton normalization", () => {
   it("forces a footer root and rehydrates malformed text nodes before returning treeText", async () => {
     const rawPlan = {
@@ -425,6 +427,120 @@ describe("OpenAIPlanningProvider footer skeleton normalization", () => {
         fallback: "placeholder"
       }
     ]);
+  });
+
+  it("replaces an underfit provider skeleton with the richer HTML-derived structure", async () => {
+    const rawPlan = {
+      sectionMetadata: {
+        ...input.metadata,
+        sectionName: "Jurisdictions"
+      },
+      treeText: [
+        "section.section_jurisdictions",
+        "  div.container-large",
+        '    h2.heading-style-h2 "Jurisdictions Served"',
+        '    p.text-size-medium "We are admitted to practice and regularly appear in the following courts:"'
+      ].join("\n"),
+      elementTree: {
+        id: "root",
+        type: "box",
+        tag: "section",
+        classNames: ["section_jurisdictions"],
+        children: [
+          {
+            id: "container",
+            type: "box",
+            tag: "div",
+            classNames: ["container-large"],
+            children: [
+              {
+                id: "heading",
+                type: "heading",
+                tag: "h2",
+                classNames: ["heading-style-h2"],
+                textContent: "Jurisdictions Served",
+                children: []
+              },
+              {
+                id: "body",
+                type: "text",
+                tag: "p",
+                classNames: ["text-size-medium"],
+                textContent:
+                  "We are admitted to practice and regularly appear in the following courts:",
+                children: []
+              }
+            ]
+          }
+        ]
+      },
+      assetBindings: [],
+      reusableClasses: ["container-large", "heading-style-h2", "text-size-medium"],
+      suggestedNewClasses: ["section_jurisdictions"],
+      warnings: []
+    };
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(
+          JSON.stringify({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify(rawPlan)
+                }
+              }
+            ]
+          }),
+          { status: 200, headers: { "content-type": "application/json" } }
+        )
+      )
+    );
+
+    const provider = new OpenAIPlanningProvider("test-key", "test-model");
+    const plan = await provider.generateSkeleton({
+      ...input,
+      metadata: {
+        ...input.metadata,
+        sectionName: "Jurisdictions"
+      },
+      sectionContext: {
+        ...input.sectionContext,
+        sectionName: "Jurisdictions",
+        sourceCode: JURISDICTIONS_HTML
+      },
+      serializedSection: {
+        ...input.serializedSection,
+        summary: "Jurisdictions section with intro copy and two court cards.",
+        sourceExcerpt: "<section>",
+        layoutHints: ["grid layout appears in the source"],
+        content: [
+          { kind: "h2", label: "h2", value: "Jurisdictions Served" },
+          {
+            kind: "p",
+            label: "p",
+            value: "We are admitted to practice and regularly appear in the following courts:"
+          },
+          { kind: "h3", label: "h3", value: "Trial Courts" },
+          {
+            kind: "li",
+            label: "li",
+            value: "U.S. District Court, Central District of California"
+          },
+          { kind: "h3", label: "h3", value: "Appellate Courts" },
+          { kind: "li", label: "li", value: "U.S. Court of Appeals, Ninth Circuit" }
+        ]
+      }
+    });
+
+    expect(plan.treeText).toContain("div.padding-global");
+    expect(plan.treeText).toContain("div.jurisdictions_list");
+    expect(plan.treeText).toContain('h3.heading-style-h3 "Trial Courts"');
+    expect(plan.treeText).toContain('li.jurisdictions_item "U.S. Court of Appeals, Ninth Circuit"');
+    expect(
+      plan.warnings.some((warning) => warning.code === "skeleton-underfit-fallback")
+    ).toBe(true);
   });
 
   it("honors includeContent=false for the HTML-derived timeout fallback", async () => {

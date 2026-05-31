@@ -1035,6 +1035,16 @@ function childSignature(node: HtmlOutlineNode): string {
   return `${node.tag}:${node.children.slice(0, 4).map((child) => child.tag).join(",")}`;
 }
 
+function countBuildNodes(
+  node: BuildNode,
+  predicate: (candidate: BuildNode) => boolean
+): number {
+  return (
+    (predicate(node) ? 1 : 0) +
+    node.children.reduce((total, child) => total + countBuildNodes(child, predicate), 0)
+  );
+}
+
 function subtreeTagCount(node: HtmlOutlineNode, tag: string): number {
   return (
     (node.tag === tag ? 1 : 0) +
@@ -1093,6 +1103,62 @@ function isLikelyEmptyAccordionContent(node: HtmlOutlineNode): boolean {
       )
     )
   );
+}
+
+function skeletonLooksUnderfit(
+  plan: SkeletonPlan,
+  input: PlanningProviderInput
+): boolean {
+  const sourceCode = input.sectionContext.sourceCode;
+  const sourceHasList = /<(ul|ol|li)\b/i.test(sourceCode);
+  const sourceHasGrid = /\bgrid\b|grid-cols-|gap-\d/.test(sourceCode);
+  const headingCount = countBuildNodes(plan.elementTree, (node) => /^h[1-6]$/i.test(node.tag));
+  const listCount = countBuildNodes(plan.elementTree, (node) =>
+    node.tag === "ul" || node.tag === "ol" || node.tag === "li"
+  );
+  const textBearingCount = countBuildNodes(plan.elementTree, (node) =>
+    /^h[1-6]$/i.test(node.tag) ||
+    node.tag === "p" ||
+    node.tag === "blockquote" ||
+    node.tag === "a" ||
+    node.tag === "button" ||
+    node.tag === "li" ||
+    node.tag === "img"
+  );
+
+  if (sourceHasList && listCount === 0) {
+    return true;
+  }
+  if (sourceHasGrid && headingCount <= 1 && textBearingCount <= 3) {
+    return true;
+  }
+
+  return false;
+}
+
+function maybePromoteHtmlFallback(
+  plan: SkeletonPlan,
+  input: PlanningProviderInput
+): SkeletonPlan {
+  if (!skeletonLooksUnderfit(plan, input)) {
+    return plan;
+  }
+
+  const richFallback = htmlFallbackSkeleton(input);
+  if (!richFallback) {
+    return plan;
+  }
+
+  return {
+    ...richFallback,
+    warnings: [
+      ...plan.warnings,
+      providerWarning(
+        "skeleton-underfit-fallback",
+        "The provider skeleton underfit the source structure, so the HTML-derived fallback skeleton was used instead."
+      )
+    ]
+  };
 }
 
 function collectImageNodeIds(node: BuildNode): string[] {
@@ -1577,15 +1643,18 @@ export class OpenAIPlanningProvider implements PlanningProvider {
         input.openAiTimeoutMs ?? OPENAI_REQUEST_TIMEOUT_MS
       );
       return hydrateSkeletonAssetBindings(
-        canonicalizeSkeletonTreeText(
-          hydrateMissingTextFromContent(
-            normalizeBlockquoteNodes(
-              repairMalformedTextClassTokens(
-                normalizeFooterRoot(normalizeSkeleton(raw, fallback), input)
-              )
-            ),
-            input.serializedSection.content
-          )
+        maybePromoteHtmlFallback(
+          canonicalizeSkeletonTreeText(
+            hydrateMissingTextFromContent(
+              normalizeBlockquoteNodes(
+                repairMalformedTextClassTokens(
+                  normalizeFooterRoot(normalizeSkeleton(raw, fallback), input)
+                )
+              ),
+              input.serializedSection.content
+            )
+          ),
+          input
         ),
         input.sectionContext.assetReferences
       );

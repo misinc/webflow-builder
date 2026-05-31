@@ -39,6 +39,10 @@ import { RepositorySnapshot } from "../github/client.js";
 import { HeuristicBuildPlanner } from "../planner/heuristic-planner.js";
 import { PlanningProvider, providerWarning } from "../planner/planning-provider.js";
 import { serializeSectionContext } from "../planner/section-serializer.js";
+import {
+  buildFallbackStylingFromSkeleton,
+  shouldFallbackStylingPlan
+} from "../planner/style-fallback.js";
 import { AppRepository } from "../repositories/app-repository.js";
 import { dedupe } from "../../shared/client-first.js";
 import { nowIso, stableId } from "../utils.js";
@@ -957,17 +961,78 @@ export class WorkflowService {
 
   async styleSection(request: WorkflowSectionRequest): Promise<StylingPlan> {
     const context = await this.getSectionStateContext(request);
-    const styling = stylingPlanSchema.parse(
-      await this.planningProvider.generateStylingPlan({
-        metadata: context.metadata,
-        mode: request.mode,
-        sectionContext: context.sectionContext,
-        serializedSection: context.serializedSection,
-        projectContext: context.projectContext,
-        sharedStyleContext: context.sharedStyleContext,
-        selectedElementId: request.selectedElementId ?? null
-      })
+    const latestSkeletonRun = await this.repository.getLatestSectionRun(
+      request.requestedBy,
+      request.webflowSiteId,
+      request.webflowPageId,
+      request.sectionId,
+      "skeleton"
     );
+    const latestSkeleton =
+      latestSkeletonRun?.payload
+        ? skeletonPlanSchema.safeParse(latestSkeletonRun.payload).data ?? null
+        : null;
+
+    const providerInput = {
+      metadata: context.metadata,
+      mode: request.mode,
+      sectionContext: context.sectionContext,
+      serializedSection: context.serializedSection,
+      projectContext: context.projectContext,
+      sharedStyleContext: context.sharedStyleContext,
+      selectedElementId: request.selectedElementId ?? null
+    };
+
+    let styling: StylingPlan;
+    try {
+      const providerStyling = stylingPlanSchema.parse(
+        await this.planningProvider.generateStylingPlan(providerInput)
+      );
+      styling =
+        shouldFallbackStylingPlan(providerStyling)
+          ? latestSkeleton
+            ? buildFallbackStylingFromSkeleton({
+                metadata: context.metadata,
+                mode: request.mode,
+                sectionContext: context.sectionContext,
+                sharedStyleContext: context.sharedStyleContext,
+                skeleton: latestSkeleton,
+                inheritedWarnings: providerStyling.warnings
+              })
+            : deterministicStyling({
+                metadata: context.metadata,
+                mode: request.mode,
+                sectionContext: context.sectionContext,
+                projectContext: context.projectContext,
+                sharedStyleContext: context.sharedStyleContext,
+                inheritedWarnings: providerStyling.warnings
+              })
+          : providerStyling;
+    } catch (error) {
+      const inheritedWarnings = [
+        providerWarning(
+          "styling-error",
+          error instanceof Error ? error.message : "OpenAI styling generation failed."
+        )
+      ];
+      styling = latestSkeleton
+        ? buildFallbackStylingFromSkeleton({
+            metadata: context.metadata,
+            mode: request.mode,
+            sectionContext: context.sectionContext,
+            sharedStyleContext: context.sharedStyleContext,
+            skeleton: latestSkeleton,
+            inheritedWarnings
+          })
+        : deterministicStyling({
+            metadata: context.metadata,
+            mode: request.mode,
+            sectionContext: context.sectionContext,
+            projectContext: context.projectContext,
+            sharedStyleContext: context.sharedStyleContext,
+            inheritedWarnings
+          });
+    }
     const runId = await this.persistRun(
       request,
       context.queue.repoPage!.id,

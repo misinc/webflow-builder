@@ -230,16 +230,47 @@ function countInvalidClassNames(node: BuildNode): number {
   );
 }
 
+function hasClass(node: BuildNode | undefined, className: string): boolean {
+  return Boolean(node?.classNames.includes(className));
+}
+
+function looksLikeContainerWrapper(node: BuildNode | undefined): boolean {
+  return Boolean(
+    node?.tag === "div" &&
+      node.classNames.some((className) => /(?:^|-)container(?:-|$)|^container-large$/.test(className))
+  );
+}
+
+function looksLikeSpacingWrapper(node: BuildNode | undefined): boolean {
+  return Boolean(
+    node?.tag === "div" &&
+      node.classNames.some((className) => PADDING_WRAPPER_CLASS_PATTERN.test(className))
+  );
+}
+
+function isTopLevelContentNode(node: BuildNode): boolean {
+  return (
+    /^h[1-6]$/i.test(node.tag) ||
+    node.tag === "p" ||
+    node.tag === "blockquote" ||
+    node.tag === "ul" ||
+    node.tag === "ol"
+  );
+}
+
+function wrapChildren(
+  children: BuildNode[],
+  wrapper: BuildNode
+): BuildNode[] {
+  return [{ ...wrapper, children }];
+}
+
 function patchTopLevelSectionWrapper(node: BuildNode, warnings: SkeletonPlan["warnings"]): BuildNode {
   if (node.tag !== "section" || node.children.length === 0) {
     return node;
   }
 
   const firstChild = node.children[0];
-  if (firstChild.tag !== "div") {
-    return node;
-  }
-
   const alreadyHasPaddingGlobal = node.children.some((child) =>
     child.classNames.includes("padding-global")
   );
@@ -247,37 +278,104 @@ function patchTopLevelSectionWrapper(node: BuildNode, warnings: SkeletonPlan["wa
     return node;
   }
 
-  const hasSpacingWrapperClass = firstChild.classNames.some((className) =>
-    PADDING_WRAPPER_CLASS_PATTERN.test(className)
-  );
-  const looksLikeMediaWrapper = firstChild.classNames.some((className) =>
-    MEDIA_WRAPPER_CLASS_PATTERN.test(className)
-  );
+  if (firstChild.tag === "div") {
+    const hasSpacingWrapperClass = firstChild.classNames.some((className) =>
+      PADDING_WRAPPER_CLASS_PATTERN.test(className)
+    );
+    const looksLikeMediaWrapper = firstChild.classNames.some((className) =>
+      MEDIA_WRAPPER_CLASS_PATTERN.test(className)
+    );
 
-  if (!hasSpacingWrapperClass || looksLikeMediaWrapper) {
+    if (hasSpacingWrapperClass && !looksLikeMediaWrapper) {
+      const nextClassNames = [
+        "padding-global",
+        ...firstChild.classNames.filter((className) => !PADDING_WRAPPER_CLASS_PATTERN.test(className))
+      ];
+
+      warnings.push({
+        code: "normalized-section-wrapper",
+        message: "Normalized the first section wrapper to .padding-global for Client-First consistency.",
+        level: "warning"
+      });
+
+      return {
+        ...node,
+        children: [
+          {
+            ...firstChild,
+            classNames: nextClassNames
+          },
+          ...node.children.slice(1)
+        ]
+      };
+    }
+  }
+
+  const paddingGlobalWrapper: BuildNode = {
+    id: `${node.id}-padding-global`,
+    type: "box",
+    tag: "div",
+    classNames: ["padding-global"],
+    children: []
+  };
+  const containerWrapper: BuildNode = {
+    id: `${node.id}-container-large`,
+    type: "box",
+    tag: "div",
+    classNames: ["container-large"],
+    children: []
+  };
+  const sectionPaddingWrapper: BuildNode = {
+    id: `${node.id}-section-padding`,
+    type: "box",
+    tag: "div",
+    classNames: ["padding-section-medium"],
+    children: []
+  };
+
+  let nextChildren = node.children;
+  let insertedPaddingGlobal = false;
+  let insertedContainer = false;
+  let insertedSectionPadding = false;
+  const shouldWrapSparseContent =
+    looksLikeContainerWrapper(firstChild) ||
+    (node.children.length >= 2 && node.children.every(isTopLevelContentNode));
+
+  if (!shouldWrapSparseContent) {
     return node;
   }
 
-  const nextClassNames = [
-    "padding-global",
-    ...firstChild.classNames.filter((className) => !PADDING_WRAPPER_CLASS_PATTERN.test(className))
-  ];
+  if (!hasClass(nextChildren[0], "padding-global")) {
+    nextChildren = wrapChildren(nextChildren, paddingGlobalWrapper);
+    insertedPaddingGlobal = true;
+  }
+
+  const paddingGlobalChild = nextChildren[0];
+  if (!looksLikeContainerWrapper(paddingGlobalChild?.children[0])) {
+    paddingGlobalChild.children = wrapChildren(paddingGlobalChild.children, containerWrapper);
+    insertedContainer = true;
+  }
+
+  const containerChild = paddingGlobalChild.children[0];
+  if (!looksLikeSpacingWrapper(containerChild?.children[0])) {
+    containerChild.children = wrapChildren(containerChild.children, sectionPaddingWrapper);
+    insertedSectionPadding = true;
+  }
+
+  if (!insertedPaddingGlobal && !insertedContainer && !insertedSectionPadding) {
+    return node;
+  }
 
   warnings.push({
-    code: "normalized-section-wrapper",
-    message: "Normalized the first section wrapper to .padding-global for Client-First consistency.",
+    code: "inserted-client-first-wrappers",
+    message:
+      "Inserted missing Client-First wrappers so the section uses padding-global, container-large, and padding-section-medium.",
     level: "warning"
   });
 
   return {
     ...node,
-    children: [
-      {
-        ...firstChild,
-        classNames: nextClassNames
-      },
-      ...node.children.slice(1)
-    ]
+    children: nextChildren
   };
 }
 

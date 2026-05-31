@@ -209,4 +209,23 @@ describe("parseSkeletonTreeText", () => {
     expect(normalized.elementTree.classNames).toEqual(["section_footer"]);
     expect(normalized.elementTree.children[0]?.classNames).toEqual(["padding-global"]);
   });
+
+  it("inserts missing Client-First wrappers around sparse section content", () => {
+    const normalized = normalizeSkeletonPlan(
+      parseSkeletonTreeText(
+        basePlan(),
+        'section.section_jurisdictions\n  div.container-large\n    h2.heading-style-h2 "Jurisdictions Served"\n    p.text-size-medium "We are admitted to practice."'
+      )
+    );
+
+    expect(serializeSkeletonTree(normalized.elementTree)).toContain("div.padding-global");
+    expect(serializeSkeletonTree(normalized.elementTree)).toContain("div.container-large");
+    expect(serializeSkeletonTree(normalized.elementTree)).toContain(
+      "div.padding-section-medium"
+    );
+    expect(normalized.elementTree.children[0]?.classNames).toEqual(["padding-global"]);
+    expect(
+      normalized.elementTree.children[0]?.children[0]?.children[0]?.classNames
+    ).toEqual(["padding-section-medium"]);
+  });
 });
