@@ -326,6 +326,24 @@ function detectSectionOrder(
   return jsxMatch >= 0 ? jsxMatch : null;
 }
 
+function isBuildableSectionComponent(
+  snapshot: RepositorySnapshot,
+  sourceFile: string,
+  componentName: string
+): boolean {
+  if (/\/(sections|pages)\//.test(sourceFile)) {
+    return true;
+  }
+
+  if (/(Section|Page|Hero|Banner)$/i.test(componentName)) {
+    return true;
+  }
+
+  const sourceContent =
+    snapshot.files.find((file) => file.path === sourceFile)?.content ?? "";
+  return /<(section|main|article|aside)\b/i.test(sourceContent);
+}
+
 function routeFromPagePath(filePath: string): string {
   if (isLegacyPagesFile(filePath)) {
     const routeBase = filePath
@@ -385,6 +403,77 @@ function assetReferencesFromSource(sourceCode: string): string[] {
   );
 }
 
+function extractInlineSections(content: string): Array<{
+  name: string;
+  sectionKey: string;
+  sourceCode: string;
+  sortOrder: number;
+}> {
+  const sections: Array<{
+    name: string;
+    sectionKey: string;
+    sourceCode: string;
+    sortOrder: number;
+  }> = [];
+  const openTag = /<section\b/g;
+  const closeTag = /<\/section>/g;
+  let searchIndex = 0;
+
+  while (true) {
+    openTag.lastIndex = searchIndex;
+    const openMatch = openTag.exec(content);
+    if (!openMatch) {
+      break;
+    }
+
+    let depth = 1;
+    let endIndex = -1;
+    let scanIndex = openMatch.index + openMatch[0].length;
+    while (depth > 0) {
+      openTag.lastIndex = scanIndex;
+      closeTag.lastIndex = scanIndex;
+      const nextOpen = openTag.exec(content);
+      const nextClose = closeTag.exec(content);
+      if (!nextClose) {
+        break;
+      }
+      if (nextOpen && nextOpen.index < nextClose.index) {
+        depth += 1;
+        scanIndex = nextOpen.index + nextOpen[0].length;
+        continue;
+      }
+      depth -= 1;
+      endIndex = nextClose.index + nextClose[0].length;
+      scanIndex = endIndex;
+    }
+
+    if (endIndex === -1) {
+      break;
+    }
+
+    const sourceCode = content.slice(openMatch.index, endIndex);
+    const before = content.slice(Math.max(0, openMatch.index - 240), openMatch.index);
+    const commentMatches = [
+      ...before.matchAll(/\{\s*\/\*\s*([\s\S]*?)\s*\*\/\s*\}/g)
+    ].filter((match) => /^\s*$/.test(before.slice((match.index ?? 0) + match[0].length)));
+    const commentName = commentMatches.at(-1)?.[1]?.trim();
+    const headingMatch = sourceCode.match(/<h[1-6][^>]*>\s*([^<]{2,80})\s*<\/h[1-6]>/i);
+    const rawName =
+      commentName?.replace(/\s+Section$/i, "") ??
+      headingMatch?.[1]?.trim() ??
+      `Section ${sections.length + 1}`;
+    sections.push({
+      name: humanizeComponentName(rawName),
+      sectionKey: slugify(humanizeComponentName(rawName)) ?? `section-${sections.length + 1}`,
+      sourceCode,
+      sortOrder: openMatch.index
+    });
+    searchIndex = endIndex;
+  }
+
+  return sections;
+}
+
 function derivePageFallbackSectionKey(page: RepoPageRecord): string {
   if (page.route === "/") {
     return "home";
@@ -421,6 +510,31 @@ export class MisRepoExtractor {
       };
       pages.push(page);
       const sectionsBeforePage = sections.length;
+      const inlineSections = extractInlineSections(pageFile.content);
+
+      if (inlineSections.length > 0) {
+        inlineSections.forEach((inlineSection, inlineIndex) => {
+          sections.push({
+            id: stableId(pageId, "inline-section", String(inlineIndex)),
+            repoId,
+            pageId,
+            name: inlineSection.name,
+            sectionKey: inlineSection.sectionKey,
+            sourceFile: pageFile.path,
+            importPath: pageFile.path,
+            sortOrder: inlineIndex,
+            componentName: `${inlineSection.name.replace(/\s+/g, "")}Section`,
+            metadata: {
+              parseStatus: "parsed",
+              confidence: 0.88,
+              displayOrder: inlineIndex,
+              inferredFromPageFile: true,
+              inlineSourceCode: inlineSection.sourceCode
+            }
+          });
+        });
+        return;
+      }
 
       const imports = parseImports(pageFile.content);
       imports
@@ -444,6 +558,9 @@ export class MisRepoExtractor {
             item
           ): item is typeof item & { sourceFile: string; sortOrder: number } =>
             Boolean(item.sourceFile) && item.sortOrder !== null
+        )
+        .filter((item) =>
+          isBuildableSectionComponent(snapshot, item.sourceFile, item.componentName)
         )
         .sort((left, right) => left.sortOrder - right.sortOrder)
         .forEach((item, sortOrder) => {
@@ -498,7 +615,11 @@ export class MisRepoExtractor {
     snapshot: RepositorySnapshot;
     sharedStyleContext: SharedStyleContext;
   }): SectionContext {
-    const sourceCode = fileByPath(params.snapshot, params.section.sourceFile);
+    const inlineSourceCode =
+      typeof params.section.metadata.inlineSourceCode === "string"
+        ? params.section.metadata.inlineSourceCode
+        : null;
+    const sourceCode = inlineSourceCode ?? fileByPath(params.snapshot, params.section.sourceFile);
     const relevantStylesheets = params.snapshot.files
       .filter((file) => isRelevantStylesheet(file.path))
       .map((file) => ({

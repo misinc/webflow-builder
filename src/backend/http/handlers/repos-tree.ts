@@ -36,7 +36,10 @@ export const handler: Handler = async (event) => {
           .filter((section) => section.pageId === page.id)
           .map((section) => ({
             ...section,
-            sourceCode: sourceByPath.get(section.sourceFile)
+            sourceCode:
+              (typeof section.metadata.inlineSourceCode === "string"
+                ? section.metadata.inlineSourceCode
+                : null) ?? sourceByPath.get(section.sourceFile)
           }))
       }))
     }, event);

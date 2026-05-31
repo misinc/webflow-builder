@@ -412,10 +412,10 @@ describe("MisRepoExtractor", () => {
             export default function AboutPage() {
               return (
                 <main>
-                  <section>
+                  <div>
                     <h1>About Windsor Kimball APC</h1>
                     <p>Firm overview content.</p>
-                  </section>
+                  </div>
                 </main>
               );
             }
@@ -432,5 +432,132 @@ describe("MisRepoExtractor", () => {
     ]);
     expect(index.sections.map((section) => section.sectionKey)).toEqual(["about"]);
     expect(index.sections.map((section) => section.name)).toEqual(["About"]);
+  });
+
+  it("ignores helper imports when indexing page sections", () => {
+    const extractor = new MisRepoExtractor();
+    const snapshot: RepositorySnapshot = {
+      owner: "misinc",
+      name: "windsorkimball",
+      defaultBranch: "main",
+      commitSha: "fixture-helper-imports-commit",
+      files: [
+        {
+          path: "src/app/pages/about.tsx",
+          content: `
+            import { ImageWithFallback } from "../components/figma/ImageWithFallback";
+            import { Seo } from "../components/seo";
+            import HeroBanner from "@/components/home/HeroBanner";
+
+            export default function AboutPage() {
+              return (
+                <main>
+                  <Seo title="About" />
+                  <HeroBanner />
+                  <ImageWithFallback src="/room.jpg" alt="Conference room" />
+                </main>
+              );
+            }
+          `
+        },
+        {
+          path: "src/app/components/figma/ImageWithFallback.tsx",
+          content:
+            "export function ImageWithFallback() { return <img src='/room.jpg' alt='Conference room' />; }"
+        },
+        {
+          path: "src/app/components/seo.tsx",
+          content: "export function Seo() { return null; }"
+        },
+        {
+          path: "src/components/home/HeroBanner.tsx",
+          content: "export default function HeroBanner() { return <section>Hero</section>; }"
+        }
+      ]
+    };
+
+    const index = extractor.extractRepoIndex("repo-1", snapshot);
+
+    expect(index.sections.map((section) => section.name)).toEqual(["Hero"]);
+    expect(index.sections.map((section) => section.sectionKey)).toEqual(["hero"]);
+  });
+
+  it("extracts inline top-level sections from page markup", () => {
+    const extractor = new MisRepoExtractor();
+    const snapshot: RepositorySnapshot = {
+      owner: "misinc",
+      name: "windsorkimball",
+      defaultBranch: "main",
+      commitSha: "fixture-inline-sections-commit",
+      files: [
+        {
+          path: "src/app/pages/about.tsx",
+          content: `
+            import { ImageWithFallback } from "../components/figma/ImageWithFallback";
+            import { Seo } from "../components/seo";
+
+            export function AboutPage() {
+              return (
+                <div>
+                  <Seo title="About" />
+
+                  {/* Header Section */}
+                  <section className="hero">
+                    <h1>About Windsor Kimball APC</h1>
+                    <p>Intro copy.</p>
+                  </section>
+
+                  {/* Our Approach */}
+                  <section className="approach">
+                    <div>
+                      <h2>Our Approach</h2>
+                      <p>Approach copy.</p>
+                    </div>
+                    <ImageWithFallback src="/room.jpg" alt="Conference room" />
+                  </section>
+
+                  {/* Attorney Profiles */}
+                  <section className="profiles">
+                    <h2>Our Attorneys</h2>
+                  </section>
+
+                  {/* Jurisdictions */}
+                  <section className="jurisdictions">
+                    <h2>Jurisdictions Served</h2>
+                  </section>
+                </div>
+              );
+            }
+          `
+        },
+        {
+          path: "src/app/components/figma/ImageWithFallback.tsx",
+          content:
+            "export function ImageWithFallback() { return <img src='/room.jpg' alt='Conference room' />; }"
+        },
+        {
+          path: "src/app/components/seo.tsx",
+          content: "export function Seo() { return null; }"
+        }
+      ]
+    };
+
+    const index = extractor.extractRepoIndex("repo-1", snapshot);
+
+    expect(index.sections.map((section) => section.name)).toEqual([
+      "Header",
+      "Our Approach",
+      "Attorney Profiles",
+      "Jurisdictions"
+    ]);
+    expect(index.sections.map((section) => section.sectionKey)).toEqual([
+      "header",
+      "our-approach",
+      "attorney-profiles",
+      "jurisdictions"
+    ]);
+    expect(index.sections.every((section) => section.sourceFile === "src/app/pages/about.tsx")).toBe(
+      true
+    );
   });
 });
