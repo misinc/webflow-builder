@@ -1,3 +1,4 @@
+import path from "node:path";
 import {
   RepoPageRecord,
   RepoSectionRecord,
@@ -36,8 +37,8 @@ function isPageFile(filePath: string): boolean {
 
 function isSectionFile(filePath: string): boolean {
   return (
-    /^(?:src\/)?app\/components\/sections\/.+\.(tsx|jsx|ts|js)$/.test(filePath) ||
-    /^(?:src\/)?components\/sections\/.+\.(tsx|jsx|ts|js)$/.test(filePath)
+    /^(?:src\/)?app\/components\/.+\.(tsx|jsx|ts|js)$/.test(filePath) ||
+    /^(?:src\/)?components\/.+\.(tsx|jsx|ts|js)$/.test(filePath)
   );
 }
 
@@ -59,6 +60,17 @@ function inferSupportedSectionKey(input: string): string | null {
   return null;
 }
 
+function humanizeComponentName(input: string): string {
+  return input
+    .replace(/\.(tsx|jsx|ts|js)$/, "")
+    .replace(/(Section|Block|Component|Module|Wrapper|Layout)$/i, "")
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/[-_]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
 function displayNameFromSectionKey(sectionKey: string, fallback: string): string {
   switch (sectionKey) {
     case "hero":
@@ -68,51 +80,83 @@ function displayNameFromSectionKey(sectionKey: string, fallback: string): string
     case "solutions":
       return "Solutions";
     default:
-      return fallback;
+      return humanizeComponentName(fallback);
   }
 }
 
-function sectionComponentPath(importPath: string): string | null {
-  const normalized = importPath.replace(/^@\//, "src/").replace(/^\.\//, "");
-  const match = normalized.match(
-    /(?:src\/app\/components\/sections|app\/components\/sections|src\/components\/sections|components\/sections)\/(.+)$/
-  );
-  if (!match) {
-    return null;
-  }
-  return /\.(tsx|jsx|ts|js)$/.test(match[1]) ? match[1] : `${match[1]}.tsx`;
-}
-
-function isSectionsBarrelImport(importPath: string): boolean {
-  const normalized = importPath.replace(/^@\//, "src/").replace(/^\.\//, "");
+function isLocalImportPath(importPath: string): boolean {
   return (
-    [
-      "src/app/components/sections",
-      "src/app/components/sections/index",
-      "src/app/components/sections/index.ts",
-      "src/app/components/sections/index.tsx",
-      "src/app/components/sections/index.js",
-      "src/app/components/sections/index.jsx",
-      "app/components/sections",
-      "app/components/sections/index",
-      "app/components/sections/index.ts",
-      "app/components/sections/index.tsx",
-      "app/components/sections/index.js",
-      "app/components/sections/index.jsx",
-      "src/components/sections",
-      "src/components/sections/index",
-      "src/components/sections/index.ts",
-      "src/components/sections/index.tsx",
-      "src/components/sections/index.js",
-      "src/components/sections/index.jsx",
-      "components/sections",
-      "components/sections/index",
-      "components/sections/index.ts",
-      "components/sections/index.tsx",
-      "components/sections/index.js",
-      "components/sections/index.jsx"
-    ].includes(normalized)
+    importPath.startsWith("@/") ||
+    importPath.startsWith("./") ||
+    importPath.startsWith("../") ||
+    importPath.startsWith("/")
   );
+}
+
+function hasScriptExtension(filePath: string): boolean {
+  return /\.(tsx|jsx|ts|js)$/.test(filePath);
+}
+
+function toImportBaseCandidates(importPath: string, importerPath: string): string[] {
+  if (importPath.startsWith("@/")) {
+    const rest = importPath.slice(2);
+    return [`src/${rest}`, rest];
+  }
+
+  if (importPath.startsWith("./") || importPath.startsWith("../")) {
+    return [path.posix.normalize(path.posix.join(path.posix.dirname(importerPath), importPath))];
+  }
+
+  if (importPath.startsWith("/")) {
+    const rest = importPath.slice(1);
+    return [rest, `src/${rest}`];
+  }
+
+  return [];
+}
+
+function expandImportCandidates(importPath: string, importerPath: string): string[] {
+  const candidates = new Set<string>();
+  for (const base of toImportBaseCandidates(importPath, importerPath)) {
+    if (hasScriptExtension(base)) {
+      candidates.add(base);
+      continue;
+    }
+
+    for (const suffix of [
+      ".tsx",
+      ".jsx",
+      ".ts",
+      ".js",
+      "/index.tsx",
+      "/index.jsx",
+      "/index.ts",
+      "/index.js"
+    ]) {
+      candidates.add(`${base}${suffix}`);
+    }
+  }
+  return [...candidates];
+}
+
+function deriveSectionKey(componentName: string, sourceFile: string): string {
+  const normalizedComponent = componentName.replace(
+    /(Section|Block|Component|Module|Wrapper|Layout)$/i,
+    ""
+  );
+  return (
+    inferSupportedSectionKey(componentName) ??
+    inferSupportedSectionKey(sourceFile) ??
+    slugify(humanizeComponentName(normalizedComponent)) ??
+    slugify(sourceFile.split("/").pop() ?? sourceFile) ??
+    "section"
+  );
+}
+
+function fileExportsComponent(fileContent: string, componentName: string): boolean {
+  return new RegExp(
+    `export\\s+(?:default\\s+function|function|const|class)\\s+${componentName}\\b`
+  ).test(fileContent);
 }
 
 function fileByPath(snapshot: RepositorySnapshot, filePath: string): string {
@@ -130,14 +174,16 @@ function parseImports(content: string): Array<{
 }> {
   const defaultMatches = [
     ...content.matchAll(
-      /import\s+([A-Za-z0-9_]+)\s+from\s+["']([^"']*components\/sections\/[^"']+)["']/g
+      /import\s+([A-Z][A-Za-z0-9_]*)\s+from\s+["']([^"']+)["']/g
     )
-  ];
+  ].filter((match) => isLocalImportPath(match[2]));
   const namedMatches = [
     ...content.matchAll(
-      /import\s*{\s*([^}]+)\s*}\s*from\s*["']([^"']*components\/sections(?:\/index)?(?:\.[a-z]+)?)["']/gs
+      /import\s*{\s*([^}]+)\s*}\s*from\s*["']([^"']+)["']/gs
     )
-  ].flatMap((match) =>
+  ]
+    .filter((match) => isLocalImportPath(match[2]))
+    .flatMap((match) =>
     match[1]
       .split(",")
       .map((part) => part.trim())
@@ -149,7 +195,8 @@ function parseImports(content: string): Array<{
           importPath: match[2]
         };
       })
-  );
+    )
+    .filter((item) => /^[A-Z]/.test(item.componentName));
 
   return [...defaultMatches.map((match) => ({
     componentName: match[1],
@@ -160,25 +207,24 @@ function parseImports(content: string): Array<{
 function resolveSectionSourceFile(
   snapshot: RepositorySnapshot,
   importPath: string,
-  componentName: string
+  componentName: string,
+  importerPath: string
 ): string | null {
-  const directMatch = sectionComponentPath(importPath);
-  if (directMatch) {
-    const directCandidates = [
-      `src/app/components/sections/${directMatch}`,
-      `app/components/sections/${directMatch}`,
-      `src/components/sections/${directMatch}`,
-      `components/sections/${directMatch}`
-    ];
-    const exactPath = directCandidates.find((candidate) =>
-      snapshot.files.some((file) => file.path === candidate)
-    );
-    if (exactPath) {
-      return exactPath;
+  const directPath = expandImportCandidates(importPath, importerPath).find((candidate) =>
+    snapshot.files.some((file) => file.path === candidate)
+  );
+  if (directPath) {
+    const directFile = snapshot.files.find((file) => file.path === directPath) ?? null;
+    const baseName = directPath.split("/").pop()?.replace(/\.(tsx|jsx|ts|js)$/, "");
+    if (
+      directFile &&
+      (baseName === componentName || fileExportsComponent(directFile.content, componentName))
+    ) {
+      return directPath;
     }
   }
 
-  if (!isSectionsBarrelImport(importPath)) {
+  if (!isLocalImportPath(importPath)) {
     return null;
   }
 
@@ -192,9 +238,7 @@ function resolveSectionSourceFile(
   }
 
   const exportedSymbolMatch = sectionFiles.find((file) =>
-    new RegExp(
-      `export\\s+(?:default\\s+function|function|const)\\s+${componentName}\\b`
-    ).test(file.content)
+    fileExportsComponent(file.content, componentName)
   );
   if (exportedSymbolMatch) {
     return exportedSymbolMatch.path;
@@ -207,9 +251,9 @@ function detectSectionOrder(
   content: string,
   componentName: string,
   fallbackIndex: number
-): number {
+): number | null {
   const jsxMatch = content.indexOf(`<${componentName}`);
-  return jsxMatch >= 0 ? jsxMatch : fallbackIndex;
+  return jsxMatch >= 0 ? jsxMatch : null;
 }
 
 function routeFromPagePath(filePath: string): string {
@@ -307,7 +351,8 @@ export class MisRepoExtractor {
           sourceFile: resolveSectionSourceFile(
             snapshot,
             item.importPath,
-            item.componentName
+            item.componentName,
+            pageFile.path
           ),
           sortOrder: detectSectionOrder(
             pageFile.content,
@@ -315,15 +360,15 @@ export class MisRepoExtractor {
             importIndex
           )
         }))
-        .filter((item): item is typeof item & { sourceFile: string } => Boolean(item.sourceFile))
+        .filter(
+          (
+            item
+          ): item is typeof item & { sourceFile: string; sortOrder: number } =>
+            Boolean(item.sourceFile) && item.sortOrder !== null
+        )
         .sort((left, right) => left.sortOrder - right.sortOrder)
         .forEach((item, sortOrder) => {
-          const sectionKey =
-            inferSupportedSectionKey(item.componentName) ??
-            inferSupportedSectionKey(item.sourceFile);
-          if (!sectionKey) {
-            return;
-          }
+          const sectionKey = deriveSectionKey(item.componentName, item.sourceFile);
           sections.push({
             id: stableId(pageId, item.componentName),
             repoId,

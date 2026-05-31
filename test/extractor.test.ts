@@ -273,4 +273,65 @@ describe("MisRepoExtractor", () => {
       "components/sections/SolutionsSection.tsx"
     ]);
   });
+
+  it("indexes page sections from broader component folders", () => {
+    const extractor = new MisRepoExtractor();
+    const snapshot: RepositorySnapshot = {
+      owner: "misinc",
+      name: "windsorkimball",
+      defaultBranch: "main",
+      commitSha: "fixture-generic-components-commit",
+      files: [
+        {
+          path: "src/app/pages/home.tsx",
+          content: `
+            import HeroBanner from "@/components/home/HeroBanner";
+            import PracticeAreasSection from "@/components/home/PracticeAreasSection";
+            import FaqSection from "@/components/home/FaqSection";
+
+            export default function HomePage() {
+              return (
+                <>
+                  <HeroBanner />
+                  <PracticeAreasSection />
+                  <FaqSection />
+                </>
+              );
+            }
+          `
+        },
+        {
+          path: "src/components/home/HeroBanner.tsx",
+          content: "export default function HeroBanner() { return <section>Hero</section>; }"
+        },
+        {
+          path: "src/components/home/PracticeAreasSection.tsx",
+          content:
+            "export default function PracticeAreasSection() { return <section>Practice Areas</section>; }"
+        },
+        {
+          path: "src/components/home/FaqSection.tsx",
+          content: "export default function FaqSection() { return <section>FAQ</section>; }"
+        }
+      ]
+    };
+
+    const index = extractor.extractRepoIndex("repo-1", snapshot);
+
+    expect(index.sections.map((section) => section.sourceFile)).toEqual([
+      "src/components/home/HeroBanner.tsx",
+      "src/components/home/PracticeAreasSection.tsx",
+      "src/components/home/FaqSection.tsx"
+    ]);
+    expect(index.sections.map((section) => section.sectionKey)).toEqual([
+      "hero",
+      "practice-areas",
+      "faq"
+    ]);
+    expect(index.sections.map((section) => section.name)).toEqual([
+      "Hero",
+      "Practice Areas",
+      "Faq"
+    ]);
+  });
 });
