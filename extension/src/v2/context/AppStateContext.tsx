@@ -234,6 +234,7 @@ interface AppStateContextValue {
   selectRepo: (repoId: string) => void;
   connectAndSyncRepo: (input: Pick<RepoConnectionInput, "owner" | "name" | "repoUrl">) => Promise<boolean>;
   ensureSelectedRepoReady: () => Promise<boolean>;
+  rescanSelectedRepo: () => Promise<boolean>;
   refreshBootstrap: () => Promise<void>;
   designerContext: DesignerContext | null;
   livePages: WebflowSitePage[];
@@ -1672,6 +1673,42 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
   }, [bootstrapState, selectedRepo, session?.userId, withMutation]);
 
+  const rescanSelectedRepo = useCallback(async () => {
+    if (!selectedRepo) {
+      setError("Choose a repository first.");
+      return false;
+    }
+
+    try {
+      return await withMutation("Re-scanning repository", async () => {
+        let repoId = selectedRepo.id;
+        if (selectedRepo.status === "available") {
+          const requestedBy = session?.userId ?? "webflow-builder";
+          const connected = await backend.connectRepo({
+            owner: selectedRepo.owner,
+            name: selectedRepo.name,
+            repoUrl: selectedRepo.repoUrl,
+            provider: "github",
+            requestedBy
+          });
+          repoId = connected.repo.id;
+        }
+
+        await backend.syncRepo(repoId);
+        const { bootstrapPayload } = await bootstrapState();
+        const nextRepoId =
+          bootstrapPayload.repos.find((repo) => repo.fullName === selectedRepo.fullName)?.id ??
+          repoId;
+        setSelectedRepoId(nextRepoId);
+        setError(null);
+        return true;
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to re-scan the repository.");
+      return false;
+    }
+  }, [bootstrapState, selectedRepo, session?.userId, withMutation]);
+
   const value = useMemo<AppStateContextValue>(
     () => ({
       isBootstrapping,
@@ -1690,6 +1727,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       },
       connectAndSyncRepo,
       ensureSelectedRepoReady,
+      rescanSelectedRepo,
       refreshBootstrap: async () => {
         await withMutation("Refreshing repository access", async () => {
           await bootstrapState();
@@ -1764,6 +1802,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       bootstrapDiagnostics,
       connectAndSyncRepo,
       ensureSelectedRepoReady,
+      rescanSelectedRepo,
       componentBannerDismissed,
       componentOpportunities,
       createComponentsFromOpportunities,

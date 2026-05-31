@@ -71,6 +71,12 @@ function humanizeComponentName(input: string): string {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
+function componentNameFromImportPath(importPath: string): string {
+  const normalized = importPath.replace(/\/index$/, "");
+  const baseName = normalized.split("/").pop() ?? normalized;
+  return baseName.replace(/\.(tsx|jsx|ts|js)$/, "");
+}
+
 function displayNameFromSectionKey(sectionKey: string, fallback: string): string {
   switch (sectionKey) {
     case "hero":
@@ -171,12 +177,19 @@ function fileByPath(snapshot: RepositorySnapshot, filePath: string): string {
 function parseImports(content: string): Array<{
   componentName: string;
   importPath: string;
+  usage: "jsx" | "reexport";
 }> {
   const defaultMatches = [
     ...content.matchAll(
       /import\s+([A-Z][A-Za-z0-9_]*)\s+from\s+["']([^"']+)["']/g
     )
-  ].filter((match) => isLocalImportPath(match[2]));
+  ]
+    .filter((match) => isLocalImportPath(match[2]))
+    .map((match) => ({
+      componentName: match[1],
+      importPath: match[2],
+      usage: "jsx" as const
+    }));
   const namedMatches = [
     ...content.matchAll(
       /import\s*{\s*([^}]+)\s*}\s*from\s*["']([^"']+)["']/gs
@@ -192,16 +205,51 @@ function parseImports(content: string): Array<{
         const aliasMatch = specifier.match(/^([A-Za-z0-9_]+)\s+as\s+([A-Za-z0-9_]+)$/);
         return {
           componentName: aliasMatch ? aliasMatch[2] : specifier,
-          importPath: match[2]
+          importPath: match[2],
+          usage: "jsx" as const
         };
       })
     )
     .filter((item) => /^[A-Z]/.test(item.componentName));
 
-  return [...defaultMatches.map((match) => ({
-    componentName: match[1],
-    importPath: match[2]
-  })), ...namedMatches];
+  const reExportMatches = [
+    ...content.matchAll(
+      /export\s*{\s*([^}]+)\s*}\s*from\s*["']([^"']+)["']/gs
+    )
+  ]
+    .filter((match) => isLocalImportPath(match[2]))
+    .flatMap((match) =>
+      match[1]
+        .split(",")
+        .map((part) => part.trim())
+        .filter(Boolean)
+        .flatMap((specifier) => {
+          if (/^default$/i.test(specifier)) {
+            return [
+              {
+                componentName: componentNameFromImportPath(match[2]),
+                importPath: match[2],
+                usage: "reexport" as const
+              }
+            ];
+          }
+
+          const defaultAliasMatch = specifier.match(/^default\s+as\s+([A-Za-z0-9_]+)$/i);
+          if (defaultAliasMatch) {
+            return [
+              {
+                componentName: defaultAliasMatch[1],
+                importPath: match[2],
+                usage: "reexport" as const
+              }
+            ];
+          }
+
+          return [];
+        })
+    );
+
+  return [...defaultMatches, ...namedMatches, ...reExportMatches];
 }
 
 function resolveSectionSourceFile(
@@ -250,8 +298,12 @@ function resolveSectionSourceFile(
 function detectSectionOrder(
   content: string,
   componentName: string,
-  fallbackIndex: number
+  fallbackIndex: number,
+  usage: "jsx" | "reexport"
 ): number | null {
+  if (usage === "reexport") {
+    return fallbackIndex;
+  }
   const jsxMatch = content.indexOf(`<${componentName}`);
   return jsxMatch >= 0 ? jsxMatch : null;
 }
@@ -357,7 +409,8 @@ export class MisRepoExtractor {
           sortOrder: detectSectionOrder(
             pageFile.content,
             item.componentName,
-            importIndex
+            importIndex,
+            item.usage
           )
         }))
         .filter(

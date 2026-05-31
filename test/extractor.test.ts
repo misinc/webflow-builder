@@ -334,4 +334,37 @@ describe("MisRepoExtractor", () => {
       "Faq"
     ]);
   });
+
+  it("indexes page components re-exported from route files", () => {
+    const extractor = new MisRepoExtractor();
+    const snapshot: RepositorySnapshot = {
+      owner: "misinc",
+      name: "windsorkimball",
+      defaultBranch: "main",
+      commitSha: "fixture-reexport-commit",
+      files: [
+        {
+          path: "src/app/pages/about.tsx",
+          content: `
+            export { default } from "@/components/pages/AboutPage";
+            export { metadata } from "@/components/pages/AboutPage";
+          `
+        },
+        {
+          path: "src/components/pages/AboutPage.tsx",
+          content:
+            "export default function AboutPage() { return <section>About</section>; } export const metadata = {};"
+        }
+      ]
+    };
+
+    const index = extractor.extractRepoIndex("repo-1", snapshot);
+
+    expect(index.pages).toHaveLength(1);
+    expect(index.sections.map((section) => section.sourceFile)).toEqual([
+      "src/components/pages/AboutPage.tsx"
+    ]);
+    expect(index.sections.map((section) => section.sectionKey)).toEqual(["about-page"]);
+    expect(index.sections.map((section) => section.name)).toEqual(["About Page"]);
+  });
 });

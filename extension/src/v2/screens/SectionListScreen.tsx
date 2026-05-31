@@ -34,7 +34,10 @@ export function SectionListScreen() {
     currentSections,
     designerContext,
     dismissComponentBanner,
+    isMutating,
+    loadingLabel,
     refreshComponentOpportunities,
+    rescanSelectedRepo,
     selectSection
   } = useAppState();
   const builtCount =
@@ -75,9 +78,20 @@ export function SectionListScreen() {
             : "Choose a repo page before building"
         }
         trailing={
-          <Button variant="ghost" size="sm" onClick={() => void refreshComponentOpportunities()}>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={isMutating}
+            onClick={() => {
+              void rescanSelectedRepo().then((rescanned) => {
+                if (rescanned) {
+                  void refreshComponentOpportunities();
+                }
+              });
+            }}
+          >
             <RefreshCw size={12} />
-            Re-scan
+            {isMutating && loadingLabel ? loadingLabel : "Re-scan"}
           </Button>
         }
       />
