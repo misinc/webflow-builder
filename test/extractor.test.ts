@@ -170,4 +170,107 @@ describe("MisRepoExtractor", () => {
       "src/app/components/sections/SolutionsSection.tsx"
     ]);
   });
+
+  it("indexes common Next app-router pages for mapping", () => {
+    const extractor = new MisRepoExtractor();
+    const snapshot: RepositorySnapshot = {
+      owner: "misinc",
+      name: "windsorkimball",
+      defaultBranch: "main",
+      commitSha: "fixture-app-router-commit",
+      files: [
+        {
+          path: "app/page.tsx",
+          content: `
+            import Hero from "@/components/sections/Hero";
+            export default function Page() {
+              return <Hero />;
+            }
+          `
+        },
+        {
+          path: "app/about/page.tsx",
+          content: `
+            export default function Page() {
+              return <main>About</main>;
+            }
+          `
+        },
+        {
+          path: "app/contact/page.tsx",
+          content: `
+            export default function Page() {
+              return <main>Contact</main>;
+            }
+          `
+        },
+        {
+          path: "components/sections/Hero.tsx",
+          content: "export default function Hero() { return <section>Hero</section>; }"
+        }
+      ]
+    };
+
+    const index = extractor.extractRepoIndex("repo-1", snapshot);
+
+    expect(index.pages.map((page) => page.sourceFile)).toEqual([
+      "app/about/page.tsx",
+      "app/contact/page.tsx",
+      "app/page.tsx"
+    ]);
+    expect(index.pages.map((page) => page.route)).toEqual(["/about", "/contact", "/"]);
+    expect(index.pages.map((page) => page.name)).toEqual(["About", "Contact", "Home"]);
+  });
+
+  it("resolves section components outside the legacy src/app tree", () => {
+    const extractor = new MisRepoExtractor();
+    const snapshot: RepositorySnapshot = {
+      owner: "misinc",
+      name: "windsorkimball",
+      defaultBranch: "main",
+      commitSha: "fixture-components-commit",
+      files: [
+        {
+          path: "app/page.tsx",
+          content: `
+            import HeroSection from "@/components/sections/HeroSection";
+            import ServicesSection from "@/components/sections/ServicesSection";
+            import SolutionsSection from "@/components/sections/SolutionsSection";
+
+            export default function Page() {
+              return (
+                <>
+                  <HeroSection />
+                  <ServicesSection />
+                  <SolutionsSection />
+                </>
+              );
+            }
+          `
+        },
+        {
+          path: "components/sections/HeroSection.tsx",
+          content: "export default function HeroSection() { return <section>Hero</section>; }"
+        },
+        {
+          path: "components/sections/ServicesSection.tsx",
+          content:
+            "export default function ServicesSection() { return <section>Services</section>; }"
+        },
+        {
+          path: "components/sections/SolutionsSection.tsx",
+          content:
+            "export default function SolutionsSection() { return <section>Solutions</section>; }"
+        }
+      ]
+    };
+
+    const index = extractor.extractRepoIndex("repo-1", snapshot);
+
+    expect(index.sections.map((section) => section.sourceFile)).toEqual([
+      "components/sections/HeroSection.tsx",
+      "components/sections/ServicesSection.tsx",
+      "components/sections/SolutionsSection.tsx"
+    ]);
+  });
 });

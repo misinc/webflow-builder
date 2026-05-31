@@ -27,7 +27,10 @@ function formatRepoMeta(updatedAt: string | null, branch: string, pageCount: num
 export function ChooseRepoScreen() {
   const { navigate } = useNavigation();
   const {
+    ensureSelectedRepoReady,
     isBootstrapping,
+    isMutating,
+    loadingLabel,
     repos,
     selectedRepoId,
     selectRepo,
@@ -59,10 +62,16 @@ export function ChooseRepoScreen() {
           <div className="flex-1" />
           <Button
             variant="primary"
-            onClick={() => navigate("map-pages")}
-            disabled={!selectedRepoId}
+            onClick={() => {
+              void ensureSelectedRepoReady().then((ready) => {
+                if (ready) {
+                  navigate("map-pages");
+                }
+              });
+            }}
+            disabled={!selectedRepoId || isMutating}
           >
-            Continue
+            {loadingLabel ?? "Continue"}
           </Button>
         </>
       }

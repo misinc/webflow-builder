@@ -10,6 +10,45 @@ import { slugify, stableId } from "../utils.js";
 
 const SUPPORTED_SECTION_KEYS = new Set(["hero", "services", "solutions"]);
 
+function isLegacyPagesFile(filePath: string): boolean {
+  return /^src\/app\/pages\/.+\.(tsx|jsx|ts|js)$/.test(filePath);
+}
+
+function isAppRouterPageFile(filePath: string): boolean {
+  return /^(?:src\/)?app(?:\/.+)?\/page\.(tsx|jsx|ts|js)$/.test(filePath);
+}
+
+function isPagesRouterFile(filePath: string): boolean {
+  return (
+    /^(?:src\/)?pages\/.+\.(tsx|jsx|ts|js)$/.test(filePath) &&
+    !/^(?:src\/)?pages\/api\//.test(filePath) &&
+    !/^(?:src\/)?pages\/(?:_app|_document|_error)\.(tsx|jsx|ts|js)$/.test(filePath)
+  );
+}
+
+function isPageFile(filePath: string): boolean {
+  return (
+    isLegacyPagesFile(filePath) ||
+    isAppRouterPageFile(filePath) ||
+    isPagesRouterFile(filePath)
+  );
+}
+
+function isSectionFile(filePath: string): boolean {
+  return (
+    /^(?:src\/)?app\/components\/sections\/.+\.(tsx|jsx|ts|js)$/.test(filePath) ||
+    /^(?:src\/)?components\/sections\/.+\.(tsx|jsx|ts|js)$/.test(filePath)
+  );
+}
+
+function isRelevantStylesheet(filePath: string): boolean {
+  return (
+    /^src\/styles\/.+\.(css|scss|ts)$/.test(filePath) ||
+    /^(?:src\/)?styles\/.+\.(css|scss|ts)$/.test(filePath) ||
+    /^(?:src\/)?app\/.+\.(css|scss)$/.test(filePath)
+  );
+}
+
 function inferSupportedSectionKey(input: string): string | null {
   const normalized = slugify(input);
   for (const key of SUPPORTED_SECTION_KEYS) {
@@ -35,25 +74,44 @@ function displayNameFromSectionKey(sectionKey: string, fallback: string): string
 
 function sectionComponentPath(importPath: string): string | null {
   const normalized = importPath.replace(/^@\//, "src/").replace(/^\.\//, "");
-  const match = normalized.match(/src\/app\/components\/sections\/(.+)$/);
+  const match = normalized.match(
+    /(?:src\/app\/components\/sections|app\/components\/sections|src\/components\/sections|components\/sections)\/(.+)$/
+  );
   if (!match) {
     return null;
   }
-  const withExtension = /\.(tsx|jsx|ts|js)$/.test(match[1])
-    ? match[1]
-    : `${match[1]}.tsx`;
-  return `src/app/components/sections/${withExtension}`;
+  return /\.(tsx|jsx|ts|js)$/.test(match[1]) ? match[1] : `${match[1]}.tsx`;
 }
 
 function isSectionsBarrelImport(importPath: string): boolean {
   const normalized = importPath.replace(/^@\//, "src/").replace(/^\.\//, "");
   return (
-    normalized === "src/app/components/sections" ||
-    normalized === "src/app/components/sections/index" ||
-    normalized === "src/app/components/sections/index.ts" ||
-    normalized === "src/app/components/sections/index.tsx" ||
-    normalized === "src/app/components/sections/index.js" ||
-    normalized === "src/app/components/sections/index.jsx"
+    [
+      "src/app/components/sections",
+      "src/app/components/sections/index",
+      "src/app/components/sections/index.ts",
+      "src/app/components/sections/index.tsx",
+      "src/app/components/sections/index.js",
+      "src/app/components/sections/index.jsx",
+      "app/components/sections",
+      "app/components/sections/index",
+      "app/components/sections/index.ts",
+      "app/components/sections/index.tsx",
+      "app/components/sections/index.js",
+      "app/components/sections/index.jsx",
+      "src/components/sections",
+      "src/components/sections/index",
+      "src/components/sections/index.ts",
+      "src/components/sections/index.tsx",
+      "src/components/sections/index.js",
+      "src/components/sections/index.jsx",
+      "components/sections",
+      "components/sections/index",
+      "components/sections/index.ts",
+      "components/sections/index.tsx",
+      "components/sections/index.js",
+      "components/sections/index.jsx"
+    ].includes(normalized)
   );
 }
 
@@ -106,16 +164,25 @@ function resolveSectionSourceFile(
 ): string | null {
   const directMatch = sectionComponentPath(importPath);
   if (directMatch) {
-    return directMatch;
+    const directCandidates = [
+      `src/app/components/sections/${directMatch}`,
+      `app/components/sections/${directMatch}`,
+      `src/components/sections/${directMatch}`,
+      `components/sections/${directMatch}`
+    ];
+    const exactPath = directCandidates.find((candidate) =>
+      snapshot.files.some((file) => file.path === candidate)
+    );
+    if (exactPath) {
+      return exactPath;
+    }
   }
 
   if (!isSectionsBarrelImport(importPath)) {
     return null;
   }
 
-  const sectionFiles = snapshot.files.filter((file) =>
-    /^src\/app\/components\/sections\/.+\.(tsx|jsx|ts|js)$/.test(file.path)
-  );
+  const sectionFiles = snapshot.files.filter((file) => isSectionFile(file.path));
   const exactNameMatch = sectionFiles.find((file) => {
     const baseName = file.path.split("/").pop()?.replace(/\.(tsx|jsx|ts|js)$/, "");
     return baseName === componentName;
@@ -146,16 +213,46 @@ function detectSectionOrder(
 }
 
 function routeFromPagePath(filePath: string): string {
+  if (isLegacyPagesFile(filePath)) {
+    const routeBase = filePath
+      .replace(/^src\/app\/pages\//, "")
+      .replace(/\.(tsx|jsx|ts|js)$/, "")
+      .replace(/\/index$/, "");
+    return routeBase === "index" || routeBase === "" ? "/" : `/${routeBase}`;
+  }
+
+  if (isAppRouterPageFile(filePath)) {
+    const routeBase = filePath
+      .replace(/^(?:src\/)?app\//, "")
+      .replace(/\/page\.(tsx|jsx|ts|js)$/, "")
+      .replace(/^page\.(tsx|jsx|ts|js)$/, "");
+    const segments = routeBase
+      .split("/")
+      .filter(Boolean)
+      .filter((segment) => !/^\(.*\)$/.test(segment))
+      .filter((segment) => !segment.startsWith("@"));
+    return segments.length === 0 ? "/" : `/${segments.join("/")}`;
+  }
+
   const routeBase = filePath
-    .replace(/^src\/app\/pages\//, "")
-    .replace(/\.(tsx|jsx|ts|js)$/, "");
-  return routeBase === "index" ? "/" : `/${routeBase}`;
+    .replace(/^(?:src\/)?pages\//, "")
+    .replace(/\.(tsx|jsx|ts|js)$/, "")
+    .replace(/\/index$/, "");
+  return routeBase === "index" || routeBase === "" ? "/" : `/${routeBase}`;
 }
 
 function pageNameFromPath(filePath: string): string {
-  const basename = filePath.split("/").pop() ?? filePath;
-  const raw = basename.replace(/\.(tsx|jsx|ts|js)$/, "");
-  return raw === "index" ? "Home" : raw.replace(/[-_]/g, " ");
+  const route = routeFromPagePath(filePath);
+  if (route === "/") {
+    return "Home";
+  }
+
+  const segments = route.split("/").filter(Boolean);
+  const raw = segments[segments.length - 1] ?? "Page";
+  return raw
+    .replace(/[\[\]]/g, "")
+    .replace(/[-_]/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 function contentHintsFromSource(sourceCode: string): string[] {
@@ -181,9 +278,9 @@ export interface ExtractedRepoIndex {
 
 export class MisRepoExtractor {
   extractRepoIndex(repoId: string, snapshot: RepositorySnapshot): ExtractedRepoIndex {
-    const pageFiles = snapshot.files.filter((file) =>
-      /^src\/app\/pages\/.+\.(tsx|jsx|ts|js)$/.test(file.path)
-    );
+    const pageFiles = snapshot.files
+      .filter((file) => isPageFile(file.path))
+      .sort((left, right) => left.path.localeCompare(right.path));
     const pages: RepoPageRecord[] = [];
     const sections: RepoSectionRecord[] = [];
 
@@ -258,7 +355,7 @@ export class MisRepoExtractor {
   }): SectionContext {
     const sourceCode = fileByPath(params.snapshot, params.section.sourceFile);
     const relevantStylesheets = params.snapshot.files
-      .filter((file) => file.path.startsWith("src/styles/"))
+      .filter((file) => isRelevantStylesheet(file.path))
       .map((file) => ({
         path: file.path,
         content: file.content

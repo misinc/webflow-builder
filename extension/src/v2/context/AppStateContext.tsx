@@ -233,6 +233,7 @@ interface AppStateContextValue {
   selectedRepo: V2AvailableRepo | null;
   selectRepo: (repoId: string) => void;
   connectAndSyncRepo: (input: Pick<RepoConnectionInput, "owner" | "name" | "repoUrl">) => Promise<boolean>;
+  ensureSelectedRepoReady: () => Promise<boolean>;
   refreshBootstrap: () => Promise<void>;
   designerContext: DesignerContext | null;
   livePages: WebflowSitePage[];
@@ -1613,6 +1614,58 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     [bootstrapState, session?.userId, withMutation]
   );
 
+  const ensureSelectedRepoReady = useCallback(async () => {
+    if (!selectedRepo) {
+      setError("Choose a repository first.");
+      return false;
+    }
+
+    const needsConnect = selectedRepo.status === "available";
+    const needsSync =
+      needsConnect ||
+      selectedRepo.status === "syncing" ||
+      selectedRepo.status === "failed" ||
+      !selectedRepo.lastSyncedAt ||
+      selectedRepo.pageCount === 0;
+
+    if (!needsSync) {
+      setError(null);
+      return true;
+    }
+
+    try {
+      return await withMutation(
+        needsConnect ? "Connecting repository" : "Syncing repository",
+        async () => {
+          let repoId = selectedRepo.id;
+          if (needsConnect) {
+            const requestedBy = session?.userId ?? "webflow-builder";
+            const connected = await backend.connectRepo({
+              owner: selectedRepo.owner,
+              name: selectedRepo.name,
+              repoUrl: selectedRepo.repoUrl,
+              provider: "github",
+              requestedBy
+            });
+            repoId = connected.repo.id;
+          }
+
+          await backend.syncRepo(repoId);
+          const { bootstrapPayload } = await bootstrapState();
+          const nextRepoId =
+            bootstrapPayload.repos.find((repo) => repo.fullName === selectedRepo.fullName)?.id ??
+            repoId;
+          setSelectedRepoId(nextRepoId);
+          setError(null);
+          return true;
+        }
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to prepare the repository.");
+      return false;
+    }
+  }, [bootstrapState, selectedRepo, session?.userId, withMutation]);
+
   const value = useMemo<AppStateContextValue>(
     () => ({
       isBootstrapping,
@@ -1630,6 +1683,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         resetSectionRunState(null);
       },
       connectAndSyncRepo,
+      ensureSelectedRepoReady,
       refreshBootstrap: async () => {
         await withMutation("Refreshing repository access", async () => {
           await bootstrapState();
@@ -1703,6 +1757,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       completeCurrentPage,
       bootstrapDiagnostics,
       connectAndSyncRepo,
+      ensureSelectedRepoReady,
       componentBannerDismissed,
       componentOpportunities,
       createComponentsFromOpportunities,

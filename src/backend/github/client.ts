@@ -43,10 +43,19 @@ interface GitHubAppCredentials {
 }
 
 function isRelevantRepoFile(filePath: string): boolean {
+  if (/^(?:src\/)?pages\/api\//.test(filePath)) {
+    return false;
+  }
+
   return (
     /^src\/app\/pages\/.+\.(tsx|jsx|ts|js)$/.test(filePath) ||
-    /^src\/app\/components\/sections\/.+\.(tsx|jsx|ts|js)$/.test(filePath) ||
-    /^src\/styles\/.+\.(css|scss|ts)$/.test(filePath)
+    /^(?:src\/)?app(?:\/.+)?\/page\.(tsx|jsx|ts|js)$/.test(filePath) ||
+    /^(?:src\/)?pages\/(?!_app\.|_document\.|_error\.).+\.(tsx|jsx|ts|js)$/.test(filePath) ||
+    /^(?:src\/)?app\/components\/sections\/.+\.(tsx|jsx|ts|js)$/.test(filePath) ||
+    /^(?:src\/)?components\/sections\/.+\.(tsx|jsx|ts|js)$/.test(filePath) ||
+    /^src\/styles\/.+\.(css|scss|ts)$/.test(filePath) ||
+    /^(?:src\/)?styles\/.+\.(css|scss|ts)$/.test(filePath) ||
+    /^(?:src\/)?app\/.+\.(css|scss)$/.test(filePath)
   );
 }
 
