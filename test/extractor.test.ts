@@ -560,4 +560,65 @@ describe("MisRepoExtractor", () => {
       true
     );
   });
+
+  it("resolves imported JSX image assets for inline sections", () => {
+    const extractor = new MisRepoExtractor();
+    const snapshot: RepositorySnapshot = {
+      owner: "misinc",
+      name: "windsorkimball",
+      defaultBranch: "main",
+      commitSha: "fixture-inline-assets-commit",
+      files: [
+        {
+          path: "src/app/pages/about.tsx",
+          content: `
+            import { ImageWithFallback } from "../components/figma/ImageWithFallback";
+            import katyPhoto from "../../assets/Katy Kimball Windsor.jpg";
+            import markPhoto from "../../assets/Mark Windsor.jpg";
+
+            export function AboutPage() {
+              return (
+                <div>
+                  <section className="profiles">
+                    <h2>Our Attorneys</h2>
+                    <div>
+                      <ImageWithFallback src={markPhoto} alt="Portrait of Mark Windsor" />
+                      <ImageWithFallback src={katyPhoto} alt="Portrait of Katy Kimball Windsor" />
+                    </div>
+                  </section>
+                </div>
+              );
+            }
+          `
+        },
+        {
+          path: "src/app/components/figma/ImageWithFallback.tsx",
+          content:
+            "export function ImageWithFallback() { return <img src='/room.jpg' alt='Conference room' />; }"
+        }
+      ]
+    };
+
+    const index = extractor.extractRepoIndex("repo-1", snapshot);
+    const section = index.sections[0];
+    const page = index.pages[0];
+    const sectionContext = extractor.buildSectionContext({
+      repoId: "repo-1",
+      page,
+      section,
+      snapshot,
+      sharedStyleContext: {
+        siteId: "site-1",
+        capturedAt: new Date().toISOString(),
+        classes: [],
+        variables: [],
+        styleIds: []
+      }
+    });
+
+    expect(sectionContext.assetReferences).toEqual([
+      "../../assets/Mark Windsor.jpg",
+      "../../assets/Katy Kimball Windsor.jpg"
+    ]);
+  });
 });

@@ -199,6 +199,30 @@ function collectClassNames(node: BuildNode): string[] {
   return [node.classNames, ...node.children.map(collectClassNames)].flat();
 }
 
+function collectImageNodeIds(node: BuildNode): string[] {
+  return [
+    ...(normalizeTagToken(node.tag) === "img" ? [node.id] : []),
+    ...node.children.flatMap(collectImageNodeIds)
+  ];
+}
+
+function remapAssetBindings(
+  assetBindings: SkeletonPlan["assetBindings"],
+  root: BuildNode
+): SkeletonPlan["assetBindings"] {
+  if (assetBindings.length === 0) {
+    return assetBindings;
+  }
+
+  const imageNodeIds = collectImageNodeIds(root);
+  return assetBindings
+    .slice(0, imageNodeIds.length)
+    .map((binding, index) => ({
+      ...binding,
+      nodeId: imageNodeIds[index]!
+    }));
+}
+
 function countInvalidClassNames(node: BuildNode): number {
   return (
     node.classNames.filter((className) => !isClientFirstName(className)).length +
@@ -342,7 +366,8 @@ export function parseSkeletonTreeText(
   return {
     ...plan,
     treeText,
-    elementTree: root
+    elementTree: root,
+    assetBindings: remapAssetBindings(plan.assetBindings, root)
   };
 }
 

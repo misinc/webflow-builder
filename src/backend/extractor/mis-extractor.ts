@@ -8,6 +8,7 @@ import {
 import { dedupe, inferSharedCategory } from "../../shared/client-first.js";
 import { RepositorySnapshot } from "../github/client.js";
 import { slugify, stableId } from "../utils.js";
+import { extractAssetReferencesFromSource } from "./asset-references.js";
 
 const SUPPORTED_SECTION_KEYS = new Set(["hero", "services", "solutions"]);
 
@@ -395,11 +396,12 @@ function contentHintsFromSource(sourceCode: string): string[] {
   return dedupe(strings);
 }
 
-function assetReferencesFromSource(sourceCode: string): string[] {
+function assetReferencesFromSource(sourceCode: string, contextCode?: string): string[] {
   return dedupe(
-    [...sourceCode.matchAll(/(?:src|image|poster)=["']([^"']+)["']/g)].map(
-      (match) => match[1]
-    )
+    extractAssetReferencesFromSource({
+      sourceCode,
+      contextCode
+    })
   );
 }
 
@@ -651,7 +653,10 @@ export class MisRepoExtractor {
       sectionOrder: params.section.sortOrder,
       sourceCode,
       relevantStylesheets,
-      assetReferences: assetReferencesFromSource(sourceCode),
+      assetReferences: assetReferencesFromSource(
+        sourceCode,
+        inlineSourceCode ? fileByPath(params.snapshot, params.page.sourceFile) : undefined
+      ),
       contentHints: contentHintsFromSource(sourceCode),
       relatedSharedClasses
     };

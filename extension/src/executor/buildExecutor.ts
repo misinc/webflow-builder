@@ -99,6 +99,28 @@ async function applyTextContentTree(params: {
   }
 }
 
+async function applyAssetBindings(params: {
+  bridge: WebflowDesignerBridge;
+  assetBindings: SkeletonPlan["assetBindings"] | BuildPlan["assetBindings"];
+  nodeIdMap: Map<string, string>;
+  missingAssets: string[];
+  signal?: AbortSignal | null;
+}): Promise<void> {
+  for (const assetBinding of params.assetBindings) {
+    throwIfAborted(params.signal);
+    const runtimeNodeId = params.nodeIdMap.get(assetBinding.nodeId);
+    if (!runtimeNodeId) continue;
+    const result = await params.bridge.bindAsset(
+      runtimeNodeId,
+      assetBinding.source,
+      assetBinding.fallback
+    );
+    if (!result.resolved) {
+      params.missingAssets.push(assetBinding.source);
+    }
+  }
+}
+
 export async function executeSkeletonPlanIntoRoot(params: {
   bridge: WebflowDesignerBridge;
   rootNodeId: string;
@@ -131,6 +153,15 @@ export async function executeSkeletonPlanIntoRoot(params: {
       lastChildId = nodeIdMap.get(child.id) ?? null;
     }
 
+    const missingAssets: string[] = [];
+    await applyAssetBindings({
+      bridge: params.bridge,
+      assetBindings: params.plan.assetBindings,
+      nodeIdMap,
+      missingAssets,
+      signal: params.signal
+    });
+
     return {
       success: true,
       createdNodeIds,
@@ -138,7 +169,7 @@ export async function executeSkeletonPlanIntoRoot(params: {
       reusedClasses: params.plan.reusableClasses,
       createdClasses: [],
       warnings: params.plan.warnings,
-      missingAssets: [],
+      missingAssets,
       rollbackOutcome: null,
       rootNodeId: params.rootNodeId
     };
@@ -264,19 +295,13 @@ export async function executeBuildPlan(params: {
       }
     }
 
-    for (const assetBinding of params.plan.assetBindings) {
-      throwIfAborted(params.signal);
-      const runtimeNodeId = nodeIdMap.get(assetBinding.nodeId);
-      if (!runtimeNodeId) continue;
-      const result = await params.bridge.bindAsset(
-        runtimeNodeId,
-        assetBinding.source,
-        assetBinding.fallback
-      );
-      if (!result.resolved) {
-        missingAssets.push(assetBinding.source);
-      }
-    }
+    await applyAssetBindings({
+      bridge: params.bridge,
+      assetBindings: params.plan.assetBindings,
+      nodeIdMap,
+      missingAssets,
+      signal: params.signal
+    });
 
     return {
       success: true,
@@ -367,7 +392,7 @@ export async function executeSkeletonPlan(params: {
       classAssignments: collectAssignments(params.plan.elementTree),
       styleDefinitions: [],
       variableBindings: [],
-      assetBindings: [],
+      assetBindings: params.plan.assetBindings,
       warnings: params.plan.warnings
     }
   });

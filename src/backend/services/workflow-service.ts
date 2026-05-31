@@ -34,6 +34,7 @@ import {
 } from "../../shared/contracts.js";
 import { BlobStore } from "../blob/blob-store.js";
 import { MisRepoExtractor } from "../extractor/mis-extractor.js";
+import { extractAssetReferencesFromSource } from "../extractor/asset-references.js";
 import { RepositorySnapshot } from "../github/client.js";
 import { HeuristicBuildPlanner } from "../planner/heuristic-planner.js";
 import { PlanningProvider, providerWarning } from "../planner/planning-provider.js";
@@ -809,9 +810,9 @@ export class WorkflowService {
         ? "debug://pasted-section.html"
         : "debug://PastedSection.tsx";
     const assetReferences = dedupe(
-      [...request.code.matchAll(/(?:src|image|poster)=["'`]([^"'`]+)["'`]/g)].map(
-        (match) => match[1]
-      )
+      extractAssetReferencesFromSource({
+        sourceCode: request.code
+      })
     );
     const sectionContext = {
       repoId: "debug-playground",

@@ -335,11 +335,19 @@ describe("OpenAIPlanningProvider footer skeleton normalization", () => {
       sectionContext: {
         ...input.sectionContext,
         sectionName: "Attorneys",
-        sourceCode: attorneysHtml
+        sourceCode: attorneysHtml,
+        assetReferences: [
+          "/assets/Mark%20Windsor-DOtmifFO.jpg",
+          "/assets/Katy%20Kimball%20Windsor-BGiwCZ2u.jpg"
+        ]
       },
       serializedSection: {
         ...input.serializedSection,
         summary: "Attorneys section with repeated profile entries.",
+        assetReferences: [
+          "/assets/Mark%20Windsor-DOtmifFO.jpg",
+          "/assets/Katy%20Kimball%20Windsor-BGiwCZ2u.jpg"
+        ],
         sourceExcerpt: "<section>",
         content: [
           { kind: "h2", label: "h2", value: "Our Attorneys" },
@@ -355,8 +363,68 @@ describe("OpenAIPlanningProvider footer skeleton normalization", () => {
     expect(plan.treeText).toContain('"Mark Windsor"');
     expect(plan.treeText).toContain('"Katy Kimball Windsor"');
     expect(plan.treeText).toContain("div.attorneys_list");
+    expect(plan.treeText).toContain("img.attorneys_image");
+    expect(plan.assetBindings).toEqual([
+      {
+        nodeId: "section-1-component-item-1-0-0-0-0",
+        source: "/assets/Mark%20Windsor-DOtmifFO.jpg",
+        fallback: "placeholder"
+      },
+      {
+        nodeId: "section-1-component-item-2-0-0-0-0",
+        source: "/assets/Katy%20Kimball%20Windsor-BGiwCZ2u.jpg",
+        fallback: "placeholder"
+      }
+    ]);
     expect(plan.warnings.some((warning) => warning.code === "skeleton-html-fallback")).toBe(true);
     expect(plan.warnings.some((warning) => warning.code === "skeleton-error")).toBe(true);
+  });
+
+  it("converts JSX image components into img nodes in the timeout fallback", async () => {
+    const abortError = new Error("aborted");
+    abortError.name = "AbortError";
+
+    vi.stubGlobal("fetch", vi.fn(async () => {
+      throw abortError;
+    }));
+
+    const jsxSection = `<section className="bg-white py-20"><div className="max-w-7xl mx-auto px-6 lg:px-8"><h2 className="text-3xl mb-12 text-foreground text-center">Our Attorneys</h2><div className="grid grid-cols-1 lg:grid-cols-3 gap-8"><div className="lg:col-span-1"><div className="relative aspect-[3/4] mb-6 overflow-hidden rounded"><ImageWithFallback src={markPhoto} alt="Portrait of Mark Windsor" className="w-full h-full object-cover" /></div><h3 className="text-2xl mb-2">Mark Windsor</h3><p className="text-sm text-muted-foreground mb-4">Partner</p></div></div></div></section>`;
+
+    const provider = new OpenAIPlanningProvider("test-key", "test-model");
+    const plan = await provider.generateSkeleton({
+      ...input,
+      metadata: {
+        ...input.metadata,
+        sectionName: "Attorney Profiles"
+      },
+      sectionContext: {
+        ...input.sectionContext,
+        sectionName: "Attorney Profiles",
+        sourceCode: jsxSection,
+        assetReferences: ["../../assets/Mark Windsor.jpg"]
+      },
+      serializedSection: {
+        ...input.serializedSection,
+        summary: "Attorney profile section with a portrait image.",
+        assetReferences: ["../../assets/Mark Windsor.jpg"],
+        sourceExcerpt: "<section>",
+        content: [
+          { kind: "h2", label: "h2", value: "Our Attorneys" },
+          { kind: "img", label: "img", value: "Portrait of Mark Windsor" },
+          { kind: "h3", label: "h3", value: "Mark Windsor" }
+        ]
+      }
+    });
+
+    expect(plan.treeText).toContain("img.attorney-profiles_image");
+    expect(plan.treeText).toContain('"Mark Windsor"');
+    expect(plan.assetBindings).toEqual([
+      {
+        nodeId: "section-1-component-1-0-0-0",
+        source: "../../assets/Mark Windsor.jpg",
+        fallback: "placeholder"
+      }
+    ]);
   });
 
   it("honors includeContent=false for the HTML-derived timeout fallback", async () => {

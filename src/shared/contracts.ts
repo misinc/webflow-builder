@@ -309,6 +309,7 @@ export const skeletonPlanSchema = z.object({
   sectionMetadata: sectionMetadataSchema,
   treeText: z.string().min(1),
   elementTree: buildNodeSchema,
+  assetBindings: z.array(assetBindingSchema).default([]),
   reusableClasses: z.array(z.string()).default([]),
   suggestedNewClasses: z.array(z.string()).default([]),
   warnings: z.array(plannerWarningSchema).default([])

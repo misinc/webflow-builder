@@ -24,6 +24,7 @@ function basePlan(): SkeletonPlan {
       classNames: ["placeholder"],
       children: []
     },
+    assetBindings: [],
     reusableClasses: [],
     suggestedNewClasses: [],
     warnings: []
@@ -170,6 +171,30 @@ describe("parseSkeletonTreeText", () => {
     expect(anchor?.tag).toBe("a");
     expect(anchor?.children[0]?.tag).toBe("img");
     expect(anchor?.children[0]?.classNames).toEqual(["footer_logo"]);
+  });
+
+  it("remaps asset bindings to regenerated image node ids after tree edits", () => {
+    const parsed = parseSkeletonTreeText(
+      {
+        ...basePlan(),
+        assetBindings: [
+          {
+            nodeId: "legacy-image",
+            source: "../../assets/Mark Windsor.jpg",
+            fallback: "placeholder"
+          }
+        ]
+      },
+      "section.section-name\n  img.section-name_image"
+    );
+
+    expect(parsed.assetBindings).toEqual([
+      {
+        nodeId: "section-1-edited-1",
+        source: "../../assets/Mark Windsor.jpg",
+        fallback: "placeholder"
+      }
+    ]);
   });
 
   it("preserves a footer root instead of converting it to a div or section", () => {

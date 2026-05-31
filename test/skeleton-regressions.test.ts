@@ -39,6 +39,7 @@ function basePlan(sectionName: string): SkeletonPlan {
       classNames: ["placeholder"],
       children: []
     },
+    assetBindings: [],
     reusableClasses: [],
     suggestedNewClasses: [],
     warnings: []

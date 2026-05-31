@@ -397,6 +397,14 @@ function findFirstNode(
   return null;
 }
 
+function findAllNodeIds(
+  node: BuildNode,
+  predicate: (candidate: BuildNode) => boolean
+): string[] {
+  const matches = predicate(node) ? [node.id] : [];
+  return [...matches, ...node.children.flatMap((child) => findAllNodeIds(child, predicate))];
+}
+
 export class HeuristicBuildPlanner {
   plan(params: {
     pageId: string;
@@ -483,16 +491,24 @@ export class HeuristicBuildPlanner {
       });
     }
 
-    const assetTargetNode =
-      findFirstNode(elementTree, (node) => node.tag === "img")?.id ??
+    const imageNodeIds = findAllNodeIds(elementTree, (node) => node.tag === "img");
+    const fallbackAssetTargetNode =
       findFirstNode(elementTree, (node) => node.id.endsWith("-visual"))?.id ??
       elementTree.id;
-
-    const assetBindings = params.sectionContext.assetReferences.map((source) => ({
-      nodeId: assetTargetNode,
-      source,
-      fallback: "placeholder" as const
-    }));
+    const assetBindings =
+      imageNodeIds.length > 0
+        ? params.sectionContext.assetReferences
+            .slice(0, imageNodeIds.length)
+            .map((source, index) => ({
+              nodeId: imageNodeIds[index]!,
+              source,
+              fallback: "placeholder" as const
+            }))
+        : params.sectionContext.assetReferences.map((source) => ({
+            nodeId: fallbackAssetTargetNode,
+            source,
+            fallback: "placeholder" as const
+          }));
 
     if (assetBindings.length > 0) {
       warnings.push({

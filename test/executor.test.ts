@@ -92,7 +92,11 @@ class FailingBridge implements WebflowDesignerBridge {
 
   async bindVariable() {}
 
-  async bindAsset() {
+  async bindAsset(
+    _nodeId: string,
+    _source: string,
+    _fallback: "placeholder" | "warning-only"
+  ) {
     return { resolved: false };
   }
 
@@ -278,6 +282,7 @@ describe("executeBuildPlan", () => {
           ],
           textContent: undefined
         },
+        assetBindings: [],
         reusableClasses: [],
         suggestedNewClasses: [],
         warnings: []
@@ -344,6 +349,7 @@ describe("executeBuildPlan", () => {
             }
           ]
         },
+        assetBindings: [],
         reusableClasses: [],
         suggestedNewClasses: [],
         warnings: []
@@ -354,5 +360,79 @@ describe("executeBuildPlan", () => {
     expect(
       textContentCalls.filter((content) => content === "FOUNDED IN 1995")
     ).toHaveLength(2);
+  });
+
+  it("applies skeleton asset bindings during insertion", async () => {
+    class AssetBridge extends FailingBridge {
+      public bindCalls: Array<{ nodeId: string; source: string }> = [];
+
+      override async createNode() {
+        return { id: "image-node-1" };
+      }
+
+      override async applyClasses() {}
+
+      override async bindAsset(
+        nodeId: string,
+        source: string,
+        _fallback: "placeholder" | "warning-only"
+      ) {
+        this.bindCalls.push({ nodeId, source });
+        return { resolved: false };
+      }
+    }
+
+    const bridge = new AssetBridge();
+    const context = await bridge.getContext();
+    const result = await executeSkeletonPlan({
+      bridge,
+      context,
+      placementMode: "append",
+      placementTarget: null,
+      plan: {
+        sectionMetadata: {
+          repoId: "repo-1",
+          pageId: "page-1",
+          sectionId: "section-1",
+          pageName: "Home",
+          sectionName: "Attorneys",
+          sourceFile: "Attorneys.tsx"
+        },
+        treeText: "section.section_attorneys\n  img.attorneys_image",
+        elementTree: {
+          id: "root",
+          type: "section",
+          tag: "section",
+          classNames: ["section_attorneys"],
+          children: [
+            {
+              id: "image-1",
+              type: "image",
+              tag: "img",
+              classNames: ["attorneys_image"],
+              children: []
+            }
+          ]
+        },
+        assetBindings: [
+          {
+            nodeId: "image-1",
+            source: "../../assets/Mark Windsor.jpg",
+            fallback: "placeholder"
+          }
+        ],
+        reusableClasses: [],
+        suggestedNewClasses: [],
+        warnings: []
+      }
+    });
+
+    expect(bridge.bindCalls).toEqual([
+      {
+        nodeId: "image-node-1",
+        source: "../../assets/Mark Windsor.jpg"
+      }
+    ]);
+    expect(result.missingAssets).toEqual(["../../assets/Mark Windsor.jpg"]);
   });
 });

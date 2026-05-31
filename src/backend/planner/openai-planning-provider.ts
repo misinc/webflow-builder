@@ -547,6 +547,24 @@ function normalizeSkeleton(raw: unknown, fallback: SkeletonPlan): SkeletonPlan {
     sectionMetadata: normalizeSectionMetadata(raw.sectionMetadata, fallback.sectionMetadata),
     treeText,
     elementTree: recoveredElementTree,
+    assetBindings: Array.isArray(raw.assetBindings)
+      ? raw.assetBindings
+          .map((item) => {
+            if (
+              !isRecord(item) ||
+              typeof item.nodeId !== "string" ||
+              typeof item.source !== "string"
+            ) {
+              return null;
+            }
+            return {
+              nodeId: item.nodeId,
+              source: item.source,
+              fallback: item.fallback === "warning-only" ? "warning-only" : "placeholder"
+            };
+          })
+          .filter((item): item is SkeletonPlan["assetBindings"][number] => Boolean(item))
+      : fallback.assetBindings,
     reusableClasses: stringArray(raw.reusableClasses),
     suggestedNewClasses: stringArray(raw.suggestedNewClasses),
     warnings: warningsArray(raw.warnings)
@@ -1077,6 +1095,47 @@ function isLikelyEmptyAccordionContent(node: HtmlOutlineNode): boolean {
   );
 }
 
+function collectImageNodeIds(node: BuildNode): string[] {
+  return [
+    ...(node.tag === "img" ? [node.id] : []),
+    ...node.children.flatMap(collectImageNodeIds)
+  ];
+}
+
+function bindAssetsToImageNodes(
+  imageNodeIds: string[],
+  assetReferences: string[]
+): SkeletonPlan["assetBindings"] {
+  if (imageNodeIds.length === 0 || assetReferences.length === 0) {
+    return [];
+  }
+
+  return assetReferences
+    .slice(0, imageNodeIds.length)
+    .map((source, index) => ({
+      nodeId: imageNodeIds[index]!,
+      source,
+      fallback: "placeholder" as const
+    }));
+}
+
+function hydrateSkeletonAssetBindings(
+  plan: SkeletonPlan,
+  assetReferences: string[]
+): SkeletonPlan {
+  if (plan.assetBindings.length > 0 || assetReferences.length === 0) {
+    return plan;
+  }
+
+  return {
+    ...plan,
+    assetBindings: bindAssetsToImageNodes(
+      collectImageNodeIds(plan.elementTree),
+      assetReferences
+    )
+  };
+}
+
 function convertHtmlNode(
   node: HtmlOutlineNode,
   input: PlanningProviderInput,
@@ -1334,6 +1393,10 @@ function htmlFallbackSkeleton(input: PlanningProviderInput): SkeletonPlan | null
     sectionMetadata: input.metadata,
     treeText: serializeSkeletonTree(root),
     elementTree: root,
+    assetBindings: bindAssetsToImageNodes(
+      collectImageNodeIds(root),
+      input.sectionContext.assetReferences
+    ),
     reusableClasses: [
       preferredSharedClass(input, ["padding-global"], "padding-global"),
       preferredSharedClass(input, ["container-large"], "container-large"),
@@ -1495,6 +1558,7 @@ export class OpenAIPlanningProvider implements PlanningProvider {
         "    p.text-size-medium"
       ].join("\n"),
       elementTree: defaultElementTree(input),
+      assetBindings: [],
       reusableClasses: ["container-large", "heading-style-h2", "text-size-medium"],
       suggestedNewClasses: [`section_${sectionKey}`],
       warnings: [
@@ -1512,34 +1576,40 @@ export class OpenAIPlanningProvider implements PlanningProvider {
         input,
         input.openAiTimeoutMs ?? OPENAI_REQUEST_TIMEOUT_MS
       );
-      return canonicalizeSkeletonTreeText(
-        hydrateMissingTextFromContent(
-          normalizeBlockquoteNodes(
-            repairMalformedTextClassTokens(
-              normalizeFooterRoot(normalizeSkeleton(raw, fallback), input)
-            )
-          ),
-          input.serializedSection.content
-        )
+      return hydrateSkeletonAssetBindings(
+        canonicalizeSkeletonTreeText(
+          hydrateMissingTextFromContent(
+            normalizeBlockquoteNodes(
+              repairMalformedTextClassTokens(
+                normalizeFooterRoot(normalizeSkeleton(raw, fallback), input)
+              )
+            ),
+            input.serializedSection.content
+          )
+        ),
+        input.sectionContext.assetReferences
       );
     } catch (error) {
       const richFallback = htmlFallbackSkeleton(input);
-      return canonicalizeSkeletonTreeText(
-        normalizeBlockquoteNodes(
-          normalizeFooterRoot(
-            {
-              ...(richFallback ?? fallback),
-              warnings: [
-                ...(richFallback?.warnings ?? fallback.warnings),
-                providerWarning(
-                  "skeleton-error",
-                  error instanceof Error ? error.message : "OpenAI skeleton generation failed."
-                )
-              ]
-            },
-            input
+      return hydrateSkeletonAssetBindings(
+        canonicalizeSkeletonTreeText(
+          normalizeBlockquoteNodes(
+            normalizeFooterRoot(
+              {
+                ...(richFallback ?? fallback),
+                warnings: [
+                  ...(richFallback?.warnings ?? fallback.warnings),
+                  providerWarning(
+                    "skeleton-error",
+                    error instanceof Error ? error.message : "OpenAI skeleton generation failed."
+                  )
+                ]
+              },
+              input
+            )
           )
-        )
+        ),
+        input.sectionContext.assetReferences
       );
     }
   }

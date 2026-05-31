@@ -1,4 +1,8 @@
 import { SectionContext } from "../../shared/contracts.js";
+import {
+  normalizeImageLikeJsx,
+  parseJsxAttributeValue
+} from "../extractor/asset-references.js";
 
 export interface SerializedSectionContentItem {
   kind: string;
@@ -77,11 +81,7 @@ function looksLikeUtilityClass(className: string): boolean {
 }
 
 function parseAttributeValue(tagSource: string, attributeName: string): string | undefined {
-  const match = tagSource.match(
-    new RegExp(`${attributeName}\\s*=\\s*("([^"]*)"|'([^']*)'|([^\\s>]+))`, "i")
-  );
-  const raw = match?.[2] ?? match?.[3] ?? match?.[4];
-  return raw ? decodeHtmlEntities(raw.trim()) : undefined;
+  return parseJsxAttributeValue(tagSource, attributeName);
 }
 
 function outlineNodeLabel(node: HtmlOutlineNode, includeContent: boolean): string {
@@ -114,6 +114,7 @@ function signatureForElement(node: HtmlOutlineNode): string {
 }
 
 export function parseHtmlOutline(sourceCode: string): HtmlOutlineNode | null {
+  const normalizedSourceCode = normalizeImageLikeJsx(sourceCode);
   const tagPattern = /<!--[\s\S]*?-->|<\/?([a-z][a-z0-9-]*)\b[^>]*>/gi;
   const banned = new Set([
     "script",
@@ -139,7 +140,11 @@ export function parseHtmlOutline(sourceCode: string): HtmlOutlineNode | null {
       cursor = nextIndex;
       return;
     }
-    const text = cleanText(decodeHtmlEntities(sourceCode.slice(cursor, nextIndex).replace(/<[^>]+>/g, " ")));
+    const text = cleanText(
+      decodeHtmlEntities(
+        normalizedSourceCode.slice(cursor, nextIndex).replace(/<[^>]+>/g, " ")
+      )
+    );
     if (text) {
       const current = stack[stack.length - 1];
       current.textContent = current.textContent ? `${current.textContent} ${text}` : text;
@@ -148,7 +153,7 @@ export function parseHtmlOutline(sourceCode: string): HtmlOutlineNode | null {
   }
 
   let match: RegExpExecArray | null;
-  while ((match = tagPattern.exec(sourceCode))) {
+  while ((match = tagPattern.exec(normalizedSourceCode))) {
     const rawTag = match[0];
     const tag = (match[1] ?? "").toLowerCase();
     const tagIndex = match.index;
@@ -244,7 +249,7 @@ export function parseHtmlOutline(sourceCode: string): HtmlOutlineNode | null {
     cursor = tagPattern.lastIndex;
   }
 
-  attachText(sourceCode.length);
+  attachText(normalizedSourceCode.length);
   return roots[0] ?? null;
 }
 
