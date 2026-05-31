@@ -615,7 +615,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [resetSectionRunState, selectedRepoId]);
+  }, [
+    resetSectionRunState,
+    selectedRepo?.lastSyncedAt,
+    selectedRepo?.pageCount,
+    selectedRepo?.status,
+    selectedRepoId
+  ]);
 
   useEffect(() => {
     let cancelled = false;
