@@ -107,6 +107,40 @@ const routeTable = [
   }
 ];
 
+const functionPathMap = new Map([
+  ["v2-bootstrap", "/api/v2/bootstrap"],
+  ["v2-component-opportunities", "/api/v2/component-opportunities"],
+  ["repos-tree", null],
+  ["webflow-bind-site", "/api/webflow/bind-site"],
+  ["workflow-page-complete", "/api/workflow/page/complete"],
+  ["workflow-page-mappings-get", "/api/workflow/page-mappings"],
+  ["workflow-page-mappings-post", "/api/workflow/page-mappings"],
+  ["workflow-queue", "/api/workflow/queue"],
+  ["workflow-section-analyze", "/api/workflow/section/analyze"],
+  ["workflow-section-approve", "/api/workflow/section/approve"],
+  ["workflow-section-generate-skeleton", "/api/workflow/section/generate-skeleton"],
+  ["workflow-section-skip", "/api/workflow/section/skip"],
+  ["workflow-section-style", "/api/workflow/section/style"],
+  ["workflow-section-verify", "/api/workflow/section/verify"]
+]);
+
+function normalizeApiPath(pathname) {
+  const functionMatch = pathname.match(/^\/\.netlify\/functions\/([^/]+)(?:\/(.*))?$/);
+  if (!functionMatch) {
+    return pathname;
+  }
+
+  const [, functionName, suffix] = functionMatch;
+  const mapped = functionPathMap.get(functionName);
+  if (mapped) {
+    return mapped;
+  }
+  if (functionName === "repos-tree" && suffix) {
+    return `/api/repos/${suffix}/tree`;
+  }
+  return pathname;
+}
+
 function collectBody(request) {
   return new Promise((resolve, reject) => {
     const chunks = [];
@@ -128,8 +162,9 @@ function headersFromRequest(request) {
 }
 
 async function handleApi(request, response, url) {
+  const normalizedPath = normalizeApiPath(url.pathname);
   const route = routeTable.find(
-    (entry) => entry.method === request.method && entry.test(url.pathname)
+    (entry) => entry.method === request.method && entry.test(normalizedPath)
   );
   if (!route) {
     response.writeHead(404, { "content-type": "application/json" });
@@ -142,8 +177,8 @@ async function handleApi(request, response, url) {
     httpMethod: request.method || "GET",
     headers: headersFromRequest(request),
     body,
-    path: url.pathname,
-    rawPath: url.pathname,
+    path: normalizedPath,
+    rawPath: normalizedPath,
     rawUrl: url.toString()
   });
 
@@ -176,7 +211,7 @@ async function serveStatic(response, pathname) {
 const server = http.createServer(async (request, response) => {
   try {
     const url = new URL(request.url || "/", `http://${request.headers.host || `127.0.0.1:${port}`}`);
-    if (url.pathname.startsWith("/api/")) {
+    if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/.netlify/functions/")) {
       await handleApi(request, response, url);
       return;
     }
