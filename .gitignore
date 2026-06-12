@@ -11,3 +11,5 @@ extension/dist
 .env.*
 coverage
 build
+.astro
+.wrangler

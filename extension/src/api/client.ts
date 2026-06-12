@@ -143,17 +143,74 @@ function withQuery(urlString: string, params: Record<string, string | null | und
   return url.toString();
 }
 
+type ApiRuntime = "cloud" | "netlify";
+
+const cloudRouteMap: Record<string, string> = {
+  "v2-bootstrap": "/v2/bootstrap",
+  "v2-component-opportunities": "/v2/component-opportunities",
+  "repos-connect": "/repos/connect",
+  "repos-sync": "/repos-sync",
+  "repos-tree": "/repos-tree",
+  "webflow-bind-site": "/webflow/bind-site",
+  "workflow-site-pages": "/workflow/site-pages",
+  "workflow-page-mappings-get": "/workflow/page-mappings",
+  "workflow-page-mappings-post": "/workflow/page-mappings",
+  "workflow-queue": "/workflow/queue",
+  "workflow-section-analyze": "/workflow/section/analyze",
+  "workflow-section-generate-skeleton": "/workflow/section/generate-skeleton",
+  "workflow-debug-generate-skeleton": "/workflow/debug/generate-skeleton",
+  "workflow-debug-generate-skeleton-start": "/workflow/debug/generate-skeleton/start",
+  "workflow-debug-generate-skeleton-background":
+    "/workflow/debug/generate-skeleton/background",
+  "workflow-debug-generate-skeleton-status": "/workflow/debug/generate-skeleton/status",
+  "workflow-section-style": "/workflow/section/style",
+  "workflow-section-verify": "/workflow/section/verify",
+  "workflow-section-approve": "/workflow/section/approve",
+  "workflow-section-skip": "/workflow/section/skip",
+  "workflow-page-complete": "/workflow/page/complete"
+};
+
+function stripTrailingSlash(value: string): string {
+  return value.replace(/\/+$/, "");
+}
+
+function isAbsoluteHttpUrl(value: string): boolean {
+  return /^https?:\/\//.test(value);
+}
+
+function resolveApiRuntime(baseUrl: string): ApiRuntime {
+  const configured = import.meta.env.VITE_API_RUNTIME;
+  if (configured === "cloud" || configured === "netlify") {
+    return configured;
+  }
+  if (baseUrl.includes("/.netlify/functions")) {
+    return "netlify";
+  }
+  return isAbsoluteHttpUrl(baseUrl) ? "cloud" : "netlify";
+}
+
 export class BackendClient {
+  private readonly runtime: ApiRuntime;
+
   constructor(
     private readonly baseUrl =
       (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "/api"
-  ) {}
+  ) {
+    this.runtime = resolveApiRuntime(this.baseUrl);
+  }
 
   private get functionBaseUrl() {
-    return this.baseUrl.replace(/\/api\/?$/, "/.netlify/functions");
+    if (this.baseUrl.includes("/.netlify/functions")) {
+      return stripTrailingSlash(this.baseUrl);
+    }
+    return stripTrailingSlash(this.baseUrl).replace(/\/api\/?$/, "/.netlify/functions");
   }
 
   private functionUrl(functionName: string) {
+    if (this.runtime === "cloud") {
+      const mappedPath = cloudRouteMap[functionName] ?? `/${functionName}`;
+      return `${stripTrailingSlash(this.baseUrl)}${mappedPath}`;
+    }
     return `${this.functionBaseUrl}/${functionName}`;
   }
 

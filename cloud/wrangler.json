@@ -1,0 +1,24 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "webflow-builder-cloud",
+  "main": "./dist/_worker.js/index.js",
+  "compatibility_date": "2025-04-15",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "assets": {
+    "binding": "ASSETS",
+    "directory": "./dist"
+  },
+  "observability": {
+    "enabled": true
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "webflow-builder",
+      "database_id": "replace-after-first-webflow-cloud-deploy",
+      "migrations_dir": "drizzle"
+    }
+  ]
+}

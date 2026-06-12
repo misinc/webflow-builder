@@ -1,0 +1,156 @@
+---
+const healthUrl = "/api/health";
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Webflow Builder Cloud</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #071019;
+        --bg2: #101f2e;
+        --fg: #f4f6f8;
+        --muted: #b7c5d3;
+        --line: rgba(255, 255, 255, 0.12);
+        --accent: #7dd3fc;
+        --accent2: #fbbf24;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        background:
+          radial-gradient(circle at top left, rgba(125, 211, 252, 0.24), transparent 24%),
+          radial-gradient(circle at bottom right, rgba(251, 191, 36, 0.18), transparent 28%),
+          linear-gradient(180deg, var(--bg2), var(--bg));
+        color: var(--fg);
+      }
+
+      main {
+        width: min(980px, calc(100% - 48px));
+        margin: 0 auto;
+        padding: 64px 0 72px;
+      }
+
+      .eyebrow {
+        margin: 0 0 12px;
+        font-size: 12px;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: var(--accent);
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2.4rem, 5vw, 4.8rem);
+        line-height: 0.96;
+      }
+
+      .lede {
+        max-width: 58rem;
+        margin: 20px 0 0;
+        font-size: 1.08rem;
+        line-height: 1.75;
+        color: var(--muted);
+      }
+
+      .grid {
+        display: grid;
+        gap: 20px;
+        margin-top: 36px;
+      }
+
+      @media (min-width: 840px) {
+        .grid {
+          grid-template-columns: 1.4fr 1fr;
+        }
+      }
+
+      .card {
+        border: 1px solid var(--line);
+        border-radius: 28px;
+        background: rgba(255, 255, 255, 0.05);
+        padding: 28px;
+        backdrop-filter: blur(10px);
+      }
+
+      h2 {
+        margin: 0 0 14px;
+        font-size: 1.05rem;
+        text-transform: uppercase;
+        letter-spacing: 0.16em;
+        color: var(--accent2);
+      }
+
+      p,
+      li {
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      code,
+      a {
+        color: var(--fg);
+      }
+
+      a.button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: 8px;
+        border-radius: 999px;
+        padding: 12px 18px;
+        text-decoration: none;
+        border: 1px solid rgba(125, 211, 252, 0.35);
+        background: rgba(125, 211, 252, 0.12);
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 18px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">Webflow Cloud API</p>
+      <h1>Repo Section Builder backend migration target.</h1>
+      <p class="lede">
+        This Astro app is the new Webflow Cloud surface for the backend routes that previously ran
+        on Netlify Functions. The existing Webflow Designer extension stays in the repo root and
+        will be repointed here as the API migration completes.
+      </p>
+
+      <div class="grid">
+        <section class="card">
+          <h2>Current state</h2>
+          <p>
+            The Cloud app scaffold is in place. The next migration step is replacing the current
+            Postgres and Node-specific function runtime with Webflow Cloud-compatible API routes and
+            SQLite-backed persistence.
+          </p>
+          <a class="button" href={healthUrl}>Check API health</a>
+        </section>
+
+        <aside class="card">
+          <h2>Migration notes</h2>
+          <ul>
+            <li>The extension bundle remains separate and unchanged in the repo root.</li>
+            <li>SQLite is the preferred Webflow Cloud storage target for this app.</li>
+            <li>The existing Netlify handler contracts will be preserved where possible.</li>
+          </ul>
+        </aside>
+      </div>
+    </main>
+  </body>
+</html>
