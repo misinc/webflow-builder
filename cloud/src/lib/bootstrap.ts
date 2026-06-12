@@ -1,12 +1,4 @@
 import { desc, eq, sql } from "drizzle-orm";
-import type {
-  V2AvailableRepo,
-  V2BootstrapDiagnostics,
-  V2BootstrapResponse,
-  V2Session,
-  V2SessionAccount
-} from "../../../src/shared/contracts.js";
-import { v2BootstrapResponseSchema } from "../../../src/shared/contracts.js";
 import { getDb } from "../db/getDb";
 import {
   repoPagesTable,
@@ -15,6 +7,52 @@ import {
   repoSyncsTable
 } from "../db/schema";
 import { stableId } from "./ids";
+
+type RepoAccessMode = "github-app" | "github-token" | "local-repo" | "stored-repo" | "none";
+
+type V2SessionAccount = {
+  id: string;
+  login: string;
+  displayName: string;
+  kind: "installation" | "user" | "local" | "stored";
+};
+
+type V2Session = {
+  userId: string;
+  displayName: string;
+  login: string;
+  source: "github-app" | "github-token" | "local-repo" | "stored-repo" | "anonymous";
+  canListRepos: boolean;
+  accounts: V2SessionAccount[];
+  selectedAccountId: string | null;
+};
+
+type V2AvailableRepo = {
+  id: string;
+  owner: string;
+  name: string;
+  fullName: string;
+  repoUrl: string;
+  defaultBranch: string;
+  status: "connected" | "syncing" | "ready" | "failed" | "available";
+  source: "connected" | "installation" | "local-fixture" | "fallback";
+  updatedAt: string | null;
+  lastSyncedAt: string | null;
+  pageCount: number;
+  sectionCount: number;
+};
+
+type V2BootstrapDiagnostics = {
+  repoAccessMode: RepoAccessMode;
+  repoListingError: string | null;
+  repoListingAttempted: boolean;
+};
+
+export type V2BootstrapResponse = {
+  session: V2Session;
+  repos: V2AvailableRepo[];
+  diagnostics: V2BootstrapDiagnostics;
+};
 
 function repoAccessMode(locals: App.Locals): V2BootstrapDiagnostics["repoAccessMode"] {
   const env = locals.runtime.env;
@@ -108,7 +146,7 @@ export async function getBootstrap(locals: App.Locals): Promise<V2BootstrapRespo
   );
 
   const accounts = buildAccounts(repos);
-  return v2BootstrapResponseSchema.parse({
+  return {
     session: buildSession(locals, accounts),
     repos,
     diagnostics: {
@@ -116,5 +154,5 @@ export async function getBootstrap(locals: App.Locals): Promise<V2BootstrapRespo
       repoListingError: null,
       repoListingAttempted: false
     }
-  });
+  };
 }

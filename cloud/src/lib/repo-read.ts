@@ -1,12 +1,4 @@
 import { asc, eq } from "drizzle-orm";
-import {
-  componentOpportunitiesResponseSchema,
-  repoTreeResponseSchema,
-  type ComponentOpportunitiesResponse,
-  type RepoPageRecord,
-  type RepoRecord,
-  type RepoSectionRecord
-} from "../../../src/shared/contracts.js";
 import { getDb } from "../db/getDb";
 import {
   appBlobsTable,
@@ -15,6 +7,69 @@ import {
   repoSectionsTable
 } from "../db/schema";
 import { stableId } from "./ids";
+
+type RepoRecord = {
+  id: string;
+  owner: string;
+  name: string;
+  provider: "github";
+  repoUrl: string;
+  defaultBranch: string;
+  status: "connected" | "syncing" | "ready" | "failed";
+  createdAt: string;
+  updatedAt: string;
+};
+
+type RepoPageRecord = {
+  id: string;
+  repoId: string;
+  name: string;
+  route: string;
+  sourceFile: string;
+  sourceCode?: string;
+  sortOrder: number;
+  metadata: Record<string, unknown>;
+};
+
+type RepoSectionRecord = {
+  id: string;
+  repoId: string;
+  pageId: string;
+  name: string;
+  sectionKey: string;
+  sourceFile: string;
+  sourceCode?: string;
+  importPath: string;
+  sortOrder: number;
+  componentName: string;
+  metadata: Record<string, unknown>;
+};
+
+type RepoTreeResponse = {
+  repo: RepoRecord;
+  pages: Array<{
+    page: RepoPageRecord;
+    sections: RepoSectionRecord[];
+  }>;
+};
+
+type ComponentOpportunity = {
+  id: string;
+  name: string;
+  componentName: string;
+  confidence: "high" | "medium";
+  instances: number;
+  files: number;
+  sourceFiles: string[];
+  sampleRoutes: string[];
+  selectedByDefault: boolean;
+};
+
+type ComponentOpportunitiesResponse = {
+  repoId: string;
+  generatedAt: string;
+  opportunities: ComponentOpportunity[];
+};
 
 interface RepositorySnapshot {
   files?: Array<{
@@ -135,7 +190,7 @@ export async function getRepoTree(locals: App.Locals, repoId: string) {
     (snapshot?.files ?? []).map((file) => [file.path, file.content] as const)
   );
 
-  return repoTreeResponseSchema.parse({
+  return {
     repo: mapRepo(repo),
     pages: pages.map((page) => ({
       page: {
@@ -152,7 +207,7 @@ export async function getRepoTree(locals: App.Locals, repoId: string) {
               : null) ?? sourceByPath.get(section.sourceFile)
         }))
     }))
-  });
+  } satisfies RepoTreeResponse;
 }
 
 export async function getComponentOpportunities(
@@ -222,9 +277,9 @@ export async function getComponentOpportunities(
       return right.files - left.files;
     });
 
-  return componentOpportunitiesResponseSchema.parse({
+  return {
     repoId,
     generatedAt: new Date().toISOString(),
     opportunities
-  });
+  } satisfies ComponentOpportunitiesResponse;
 }

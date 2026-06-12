@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
-import { json, optionsHandler } from "../../../../lib/api";
-import { getRepoTree } from "../../../../lib/repo-read";
+import { json, optionsHandler } from "../../../lib/api";
+import { getRepoTree } from "../../../lib/repo-read";
 
 export const config = {
   runtime: "edge"
