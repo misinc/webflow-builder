@@ -35,8 +35,8 @@ GITHUB_ACCESS_TOKEN=...
 DATABASE_URL=postgresql://...
 DATABASE_URL_UNPOOLED=postgresql://...
 LOCAL_MIS_REPO_PATH=/absolute/path/to/mis-repo
-CANONICAL_WEBFLOW_SITE_ID=6a10876cde32438bc9f52304
-VITE_API_BASE_URL=https://misinc-site-builder.webflow.io/api
+CANONICAL_WEBFLOW_SITE_ID=6a2db2a041dabacd48068930
+VITE_API_BASE_URL=https://misinc-ai-builder.webflow.io/api
 VITE_API_RUNTIME=cloud
 ```
 

@@ -1104,9 +1104,9 @@ class MockWebflowDesignerBridge implements WebflowDesignerBridge {
     const currentPage =
       this.pages.find((page) => page.id === this.currentPageId) ?? this.pages[0];
     return {
-      siteId: "6a10876cde32438bc9f52304",
-      siteName: "Relume Style Guide Clone",
-      siteDomain: "relume-style-guide-clone.webflow.io",
+      siteId: "6a2db2a041dabacd48068930",
+      siteName: "MIS Inc AI Builder",
+      siteDomain: "misinc-ai-builder.webflow.io",
       pageId: currentPage?.id ?? null,
       pageName: currentPage?.name ?? null,
       mode: "design",

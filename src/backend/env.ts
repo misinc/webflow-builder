@@ -27,7 +27,7 @@ export function getEnv(): AppEnv {
     githubAccessToken: process.env.GITHUB_ACCESS_TOKEN,
     localMisRepoPath: process.env.LOCAL_MIS_REPO_PATH,
     canonicalWebflowSiteId:
-      process.env.CANONICAL_WEBFLOW_SITE_ID ?? "6a10876cde32438bc9f52304",
+      process.env.CANONICAL_WEBFLOW_SITE_ID ?? "6a2db2a041dabacd48068930",
     openAiApiKey: process.env.OPENAI_API_KEY,
     openAiModel: process.env.OPENAI_MODEL ?? "gpt-5.4"
   };

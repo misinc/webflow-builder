@@ -13,7 +13,7 @@ import type {
   SectionRunRecord,
   SectionWorkflowState,
   SharedStyleContext
-} from "../../../src/shared/contracts.js";
+} from "../shared/contracts.js";
 import { getDb } from "../db/getDb";
 import {
   appBlobsTable,
@@ -29,11 +29,11 @@ import {
   webflowPageMappingsTable,
   webflowSiteBindingsTable
 } from "../db/schema";
-import { stableId } from "../../../src/backend/utils.js";
+import { stableId } from "../backend/utils.js";
 import type {
   AppRepository,
   WebflowSiteBinding
-} from "../../../src/backend/repositories/app-repository.js";
+} from "../backend/repositories/app-repository.js";
 
 function parseJson<T>(value: string, fallback: T): T {
   try {

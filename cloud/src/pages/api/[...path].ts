@@ -10,7 +10,7 @@ import {
   repoConnectionInputSchema,
   workflowSectionDecisionInputSchema,
   workflowSectionRequestSchema
-} from "../../../../src/shared/contracts.js";
+} from "../../shared/contracts.js";
 import { getCloudServices } from "../../lib/cloud-services";
 
 export const config = {
