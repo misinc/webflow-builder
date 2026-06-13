@@ -1,7 +1,7 @@
 import Database from "better-sqlite3";
 import fs from "node:fs";
-import { Pool } from "pg";
 import path from "node:path";
+import { Pool } from "pg";
 import { TABLES } from "./neon-table-config";
 
 function resolveSqlitePath(inputPath?: string): string {
@@ -12,11 +12,7 @@ function resolveSqlitePath(inputPath?: string): string {
   const stateDir = path.resolve(".wrangler/state/v3/d1/miniflare-D1DatabaseObject");
   const candidates = fs
     .readdirSync(stateDir)
-    .filter(
-      (file) =>
-        file.endsWith(".sqlite") &&
-        file !== "metadata.sqlite"
-    )
+    .filter((file) => file.endsWith(".sqlite") && file !== "metadata.sqlite")
     .sort();
 
   if (candidates.length === 0) {
@@ -26,6 +22,10 @@ function resolveSqlitePath(inputPath?: string): string {
   return path.join(stateDir, candidates[0] as string);
 }
 
+function placeholders(count: number): string {
+  return Array.from({ length: count }, () => "?").join(", ");
+}
+
 async function main() {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
@@ -33,33 +33,31 @@ async function main() {
   }
 
   const sqlitePath = resolveSqlitePath(process.argv[2]);
-  const sqlite = new Database(sqlitePath, { readonly: true });
+  const sqlite = new Database(sqlitePath);
   const pool = new Pool({ connectionString });
 
-  let mismatches = 0;
   try {
-    for (const table of TABLES) {
-      const source = await pool.query<{ count: string }>(`select count(*)::text as count from ${table.name}`);
-      const sourceCount = Number(source.rows[0]?.count ?? 0);
-      const sqliteRow = sqlite
-        .prepare(`select count(*) as count from ${table.name}`)
-        .get() as { count: number };
-      const sqliteCount = Number(sqliteRow.count ?? 0);
+    sqlite.pragma("journal_mode = WAL");
 
-      if (sourceCount !== sqliteCount) {
-        mismatches += 1;
-        console.error(`${table.name}: source=${sourceCount} sqlite=${sqliteCount}`);
-      } else {
-        console.log(`${table.name}: ${sourceCount}`);
-      }
+    for (const table of TABLES) {
+      const result = await pool.query(table.selectSql);
+      const insert = sqlite.prepare(
+        `INSERT OR REPLACE INTO ${table.name} (${table.insertColumns.join(", ")}) VALUES (${placeholders(table.insertColumns.length)})`
+      );
+
+      const tx = sqlite.transaction((rows: Record<string, unknown>[]) => {
+        sqlite.prepare(`DELETE FROM ${table.name}`).run();
+        for (const row of rows) {
+          insert.run(...table.normalizeRow(row));
+        }
+      });
+
+      tx(result.rows as Record<string, unknown>[]);
+      console.log(`${table.name}: ${result.rows.length}`);
     }
   } finally {
     sqlite.close();
     await pool.end();
-  }
-
-  if (mismatches > 0) {
-    throw new Error(`Verification failed for ${mismatches} table(s).`);
   }
 }
 

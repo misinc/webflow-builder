@@ -11,6 +11,7 @@
     "db:generate": "drizzle-kit generate",
     "db:apply:local": "wrangler d1 migrations apply DB --local",
     "db:export:neon": "tsx scripts/export-neon-to-d1.ts",
+    "db:import:sqlite": "tsx scripts/import-neon-to-sqlite.ts",
     "db:verify:sqlite": "tsx scripts/verify-neon-to-sqlite.ts"
   },
   "dependencies": {
