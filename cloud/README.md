@@ -1,7 +1,7 @@
 # Webflow Builder Cloud
 
-This directory is the Webflow Cloud app that will replace the Netlify Function
-surface used by the Webflow Designer extension in the repository root.
+This directory contains the Webflow Cloud backend used by the Webflow Designer
+extension in the repository root.
 
 ## Why Astro
 
@@ -11,33 +11,27 @@ remains separate and continues to live at the repo root.
 
 ## What this app does today
 
-- Provides a deployable Astro Webflow Cloud app scaffold
+- Uses Astro with Webflow Cloud SQLite/D1 storage
+- Reuses the shared backend services and contracts from the repo root
+- Exposes the full API surface expected by the extension under `/api/*`
+- Includes Neon-to-SQLite export and verification scripts in `scripts/`
 - Defines Webflow Cloud config in [webflow.json](./webflow.json)
-- Adds initial Wrangler and Drizzle SQLite config
-- Exposes a simple health route at `/api/health`
-- Exposes initial read routes at `/api/v2/bootstrap`,
-  `/api/v2/component-opportunities`, and `/api/repos-tree/:repoId`
 
-## What still needs to be migrated
+## Remaining deployment work
 
-The existing Netlify functions depend on:
-
-- Postgres-specific Drizzle schema and repository code
-- Node-only GitHub App signing and local file utilities
-- Root-level app wiring that assumes the Netlify function runtime
-
-The next migration step is to port the storage and integration layers to
-Webflow Cloud-compatible implementations:
-
-1. Replace the current Postgres repository with a SQLite/D1-backed repository.
-2. Replace Node-only GitHub signing with an Edge-compatible implementation.
-3. Add an Astro catch-all API route that maps current Netlify endpoints to the
-   migrated handlers.
-4. Repoint the extension `VITE_API_BASE_URL` to the Webflow Cloud app URL.
+1. Replace the placeholder `database_id` in `wrangler.json` with the real
+   Webflow-generated database id after the first deploy.
+2. Apply migrations locally with `npm run db:apply:local` and deploy so
+   Webflow Cloud applies them remotely.
+3. Run `npm run db:export:neon -- <output.sql>` and load that SQL into the
+   Webflow Cloud SQLite database.
+4. Verify the imported data with `npm run db:verify:sqlite`.
+5. Confirm the required GitHub and OpenAI environment variables are set in the
+   Webflow Cloud environment.
 
 ## Extension configuration
 
-When the extension should call the Webflow Cloud app instead of Netlify, set:
+When the extension should call the Webflow Cloud app, set:
 
 - `VITE_API_BASE_URL=https://<your-cloud-app>/api`
 - `VITE_API_RUNTIME=cloud`

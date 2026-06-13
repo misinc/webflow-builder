@@ -1,6 +1,6 @@
 # Repo Section Builder v1
 
-Netlify-hosted TypeScript backend plus a React-based Webflow Designer Extension for compiling MIS repo sections into an active Webflow page.
+Webflow Cloud-backed TypeScript backend plus a React-based Webflow Designer Extension for compiling MIS repo sections into an active Webflow page.
 
 ## What is implemented
 
@@ -19,6 +19,7 @@ Netlify-hosted TypeScript backend plus a React-based Webflow Designer Extension 
 - Local repo development can use `LOCAL_MIS_REPO_PATH` instead of GitHub.
 - The extension currently uses an explicit `x-user-id` header as a session placeholder. GitHub OAuth UI and session exchange still need production wiring.
 - Live Webflow inspection and mutation are abstracted behind `window.__WEBFLOW_SECTION_BUILDER_BRIDGE__`. If that bridge is absent, the extension falls back to a local mock.
+- The extension is configured to call the Webflow Cloud host with `VITE_API_RUNTIME=cloud`.
 
 ## Environment
 
@@ -35,6 +36,8 @@ DATABASE_URL=postgresql://...
 DATABASE_URL_UNPOOLED=postgresql://...
 LOCAL_MIS_REPO_PATH=/absolute/path/to/mis-repo
 CANONICAL_WEBFLOW_SITE_ID=6a10876cde32438bc9f52304
+VITE_API_BASE_URL=https://misinc-site-builder.webflow.io/api
+VITE_API_RUNTIME=cloud
 ```
 
 ## Commands

@@ -124,20 +124,19 @@ const healthUrl = "/api/health";
   <body>
     <main>
       <p class="eyebrow">Webflow Cloud API</p>
-      <h1>Repo Section Builder backend migration target.</h1>
+      <h1>Repo Section Builder backend.</h1>
       <p class="lede">
-        This Astro app is the new Webflow Cloud surface for the backend routes that previously ran
-        on Netlify Functions. The existing Webflow Designer extension stays in the repo root and
-        will be repointed here as the API migration completes.
+        This Astro app serves the backend routes used by the Webflow Designer extension in the repo
+        root. It runs on Webflow Cloud and stores application state in Webflow Cloud SQLite.
       </p>
 
       <div class="grid">
         <section class="card">
           <h2>Current state</h2>
           <p>
-            The Cloud app scaffold is in place. The next migration step is replacing the current
-            Postgres and Node-specific function runtime with Webflow Cloud-compatible API routes and
-            SQLite-backed persistence.
+            The Cloud API surface is wired to the shared backend services and a SQLite-backed data
+            layer. Use the health endpoint to confirm the deployment is reachable before testing the
+            extension.
           </p>
           <a class="button" href={healthUrl}>Check API health</a>
         </section>
@@ -145,9 +144,9 @@ const healthUrl = "/api/health";
         <aside class="card">
           <h2>Migration notes</h2>
           <ul>
-            <li>The extension bundle remains separate and unchanged in the repo root.</li>
-            <li>SQLite is the preferred Webflow Cloud storage target for this app.</li>
-            <li>The existing Netlify handler contracts will be preserved where possible.</li>
+            <li>The extension bundle remains separate in the repo root.</li>
+            <li>SQLite migrations are applied from the <code>drizzle</code> directory.</li>
+            <li>Neon-to-SQLite migration helpers live in <code>cloud/scripts</code>.</li>
           </ul>
         </aside>
       </div>

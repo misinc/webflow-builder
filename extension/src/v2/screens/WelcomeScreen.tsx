@@ -139,7 +139,7 @@ export function WelcomeScreen() {
               <div className="text-[11.5px] text-wb-text-secondary leading-relaxed mb-3">
                 {session?.source === 'github-app'
                   ? 'This deployment is configured to use your installed GitHub App. Retry the installation repo lookup first; use manual connect only as a fallback.'
-                  : 'This deployment can still continue by connecting and syncing a GitHub repository directly through the Netlify backend.'}
+                  : 'This deployment can still continue by connecting and syncing a GitHub repository directly through the Webflow Cloud backend.'}
               </div>
               {session?.source === 'github-app' ? (
                 <div className="mb-4 rounded-md border border-white/[0.09] bg-black/[0.16] px-3 py-3">

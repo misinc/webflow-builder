@@ -9,17 +9,22 @@
     "preview": "astro build && wrangler dev",
     "cf-typegen": "wrangler types",
     "db:generate": "drizzle-kit generate",
-    "db:apply:local": "wrangler d1 migrations apply DB --local"
+    "db:apply:local": "wrangler d1 migrations apply DB --local",
+    "db:export:neon": "tsx scripts/export-neon-to-d1.ts",
+    "db:verify:sqlite": "tsx scripts/verify-neon-to-sqlite.ts"
   },
   "dependencies": {
     "@astrojs/cloudflare": "^12.6.0",
     "astro": "^5.13.5",
-    "drizzle-orm": "^0.44.2"
+    "drizzle-orm": "^0.44.2",
+    "zod": "^4.1.5"
   },
   "devDependencies": {
     "@types/node": "^24.3.0",
+    "@types/pg": "^8.15.4",
     "better-sqlite3": "^11.10.0",
     "drizzle-kit": "^0.31.4",
+    "pg": "^8.16.3",
     "tsx": "^4.20.3",
     "typescript": "^5.9.2",
     "wrangler": "^4.22.0"
