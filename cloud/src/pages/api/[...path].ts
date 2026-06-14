@@ -135,7 +135,11 @@ async function handleGet(request: Request, locals: App.Locals, pathname: string)
       githubAccessToken: Boolean(env.githubAccessToken),
       localMisRepoPath: Boolean(env.localMisRepoPath),
       githubCredentialPresent: Boolean(
-        env.githubAppInstallationToken || env.githubAccessToken
+        (env.githubAppInstallationId &&
+          env.githubAppPrivateKey &&
+          (env.githubAppClientId || env.githubAppId)) ||
+          env.githubAppInstallationToken ||
+          env.githubAccessToken
       ),
       openAiApiKey: Boolean(env.openAiApiKey),
       canonicalWebflowSiteId: env.canonicalWebflowSiteId

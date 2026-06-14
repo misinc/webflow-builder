@@ -27,7 +27,11 @@ export const GET: APIRoute = async ({ locals }) => {
     canonicalWebflowSiteIdMatches:
       (env.CANONICAL_WEBFLOW_SITE_ID ?? EXPECTED_SITE_ID) === EXPECTED_SITE_ID,
     githubCredentialPresent: Boolean(
-      env.GITHUB_APP_INSTALLATION_TOKEN || env.GITHUB_ACCESS_TOKEN
+      (env.GITHUB_APP_INSTALLATION_ID &&
+        env.GITHUB_APP_PRIVATE_KEY &&
+        (env.GITHUB_APP_CLIENT_ID || env.GITHUB_APP_ID)) ||
+        env.GITHUB_APP_INSTALLATION_TOKEN ||
+        env.GITHUB_ACCESS_TOKEN
     ),
     openAiApiKeyPresent: Boolean(env.OPENAI_API_KEY)
   };

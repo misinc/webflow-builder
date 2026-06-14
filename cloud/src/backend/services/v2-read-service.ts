@@ -30,10 +30,11 @@ function sortIsoDesc(left: string | null, right: string | null) {
 }
 
 function repoSourceForAvailable(env: AppEnv): V2AvailableRepo["source"] {
+  const mode = repoAccessMode(env);
   if (env.localMisRepoPath) {
     return "local-fixture";
   }
-  if (env.githubAppInstallationId || env.githubAppInstallationToken || env.githubAccessToken) {
+  if (mode === "github-app" || mode === "github-token") {
     return "installation";
   }
   return "fallback";
@@ -68,13 +69,15 @@ export class V2ReadService {
   ): V2SessionAccount[] {
     const map = new Map<string, V2SessionAccount>();
     const allRepos = [...availableRepos, ...storedRepos];
-    const defaultKind: V2SessionAccount["kind"] = this.env.localMisRepoPath
-      ? "local"
-      : this.env.githubAppInstallationId || this.env.githubAppInstallationToken
-        ? "installation"
-        : this.env.githubAccessToken
-          ? "user"
-          : "stored";
+    const accessMode = repoAccessMode(this.env);
+    const defaultKind: V2SessionAccount["kind"] =
+      accessMode === "local-repo"
+        ? "local"
+        : accessMode === "github-app"
+          ? "installation"
+          : accessMode === "github-token"
+            ? "user"
+            : "stored";
 
     for (const repo of allRepos) {
       if (map.has(repo.owner)) {
@@ -103,15 +106,17 @@ export class V2ReadService {
   }
 
   private buildSession(accounts: V2SessionAccount[]): V2Session {
-    const source: V2Session["source"] = this.env.localMisRepoPath
-      ? "local-repo"
-      : this.env.githubAppInstallationId || this.env.githubAppInstallationToken
-        ? "github-app"
-        : this.env.githubAccessToken
-          ? "github-token"
-          : accounts.length > 0
-            ? "stored-repo"
-            : "anonymous";
+    const accessMode = repoAccessMode(this.env);
+    const source: V2Session["source"] =
+      accessMode === "local-repo"
+        ? "local-repo"
+        : accessMode === "github-app"
+          ? "github-app"
+          : accessMode === "github-token"
+            ? "github-token"
+            : accounts.length > 0
+              ? "stored-repo"
+              : "anonymous";
     const fallbackLogin = accounts[0]?.login ?? "webflow-builder";
     const selectedAccountId = accounts[0]?.id ?? null;
 

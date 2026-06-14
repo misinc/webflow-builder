@@ -30,6 +30,13 @@ export interface GitHubRepositoryClient {
   listAvailableRepos(): Promise<AvailableRepository[]>;
 }
 
+interface GitHubAppCredentials {
+  appId?: string;
+  clientId?: string;
+  installationId: string;
+  privateKey: string;
+}
+
 class GitHubHttpRepositoryClient implements GitHubRepositoryClient {
   constructor(private readonly getAccessToken: () => Promise<string>) {}
 
@@ -193,6 +200,108 @@ class GitHubInstallationTokenRepositoryClient implements GitHubRepositoryClient 
   }
 }
 
+class GitHubAppRepositoryClient implements GitHubRepositoryClient {
+  private cachedToken:
+    | {
+        token: string;
+        expiresAtMs: number;
+      }
+    | undefined;
+  private readonly delegate: GitHubHttpRepositoryClient;
+
+  constructor(private readonly credentials: GitHubAppCredentials) {
+    this.delegate = new GitHubHttpRepositoryClient(async () => this.getInstallationToken());
+  }
+
+  private async getInstallationToken(): Promise<string> {
+    const now = Date.now();
+    if (this.cachedToken && this.cachedToken.expiresAtMs - now > 60_000) {
+      return this.cachedToken.token;
+    }
+
+    const jwt = await createGitHubAppJwt(this.credentials);
+    const response = await fetch(
+      `https://api.github.com/app/installations/${this.credentials.installationId}/access_tokens`,
+      {
+        method: "POST",
+        headers: {
+          Accept: "application/vnd.github+json",
+          Authorization: `Bearer ${jwt}`,
+          "User-Agent": "webflow-builder"
+        }
+      }
+    );
+
+    if (!response.ok) {
+      const message = await response.text();
+      throw new Error(
+        `GitHub App installation token request failed (${response.status} ${response.statusText}): ${message}`
+      );
+    }
+
+    const payload = (await response.json()) as {
+      token: string;
+      expires_at: string;
+    };
+    this.cachedToken = {
+      token: payload.token,
+      expiresAtMs: new Date(payload.expires_at).getTime()
+    };
+    return payload.token;
+  }
+
+  async connectRepo(
+    input: RepoConnectionInput
+  ): Promise<{ defaultBranch: string; remoteId: string }> {
+    return this.delegate.connectRepo(input);
+  }
+
+  async fetchSnapshot(owner: string, name: string): Promise<RepositorySnapshot> {
+    return this.delegate.fetchSnapshot(owner, name);
+  }
+
+  async listAvailableRepos(): Promise<AvailableRepository[]> {
+    const accessToken = await this.getInstallationToken();
+    const response = await fetch(
+      "https://api.github.com/installation/repositories?per_page=100",
+      {
+        headers: {
+          Accept: "application/vnd.github+json",
+          Authorization: `Bearer ${accessToken}`,
+          "User-Agent": "webflow-builder"
+        }
+      }
+    );
+
+    if (!response.ok) {
+      const message = await response.text();
+      throw new Error(
+        `GitHub installation repositories request failed (${response.status} ${response.statusText}): ${message}`
+      );
+    }
+
+    const payload = (await response.json()) as {
+      repositories: Array<{
+        owner?: { login?: string };
+        name: string;
+        full_name: string;
+        html_url: string;
+        default_branch: string;
+        updated_at?: string;
+      }>;
+    };
+
+    return payload.repositories.map((repo) => ({
+      owner: repo.owner?.login ?? repo.full_name.split("/")[0] ?? "unknown",
+      name: repo.name,
+      fullName: repo.full_name,
+      repoUrl: repo.html_url,
+      defaultBranch: repo.default_branch,
+      updatedAt: repo.updated_at ?? null
+    }));
+  }
+}
+
 class UnsupportedGitHubClient implements GitHubRepositoryClient {
   async connectRepo(): Promise<{ defaultBranch: string; remoteId: string }> {
     throw new Error(
@@ -207,7 +316,9 @@ class UnsupportedGitHubClient implements GitHubRepositoryClient {
   }
 
   async listAvailableRepos(): Promise<AvailableRepository[]> {
-    return [];
+    throw new Error(
+      "GitHub access is not configured for Webflow Cloud. Set GITHUB_APP_INSTALLATION_TOKEN or GITHUB_ACCESS_TOKEN."
+    );
   }
 }
 
@@ -228,6 +339,68 @@ function isRelevantRepoFile(filePath: string): boolean {
   );
 }
 
+function base64UrlEncodeBytes(bytes: Uint8Array): string {
+  let binary = "";
+  for (const value of bytes) {
+    binary += String.fromCharCode(value);
+  }
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function base64UrlEncodeText(value: string): string {
+  return base64UrlEncodeBytes(new TextEncoder().encode(value));
+}
+
+function normalizePrivateKey(privateKey: string): string {
+  return privateKey.includes("\\n") ? privateKey.replace(/\\n/g, "\n") : privateKey;
+}
+
+function pemToPkcs8Bytes(privateKey: string): Uint8Array {
+  const normalized = normalizePrivateKey(privateKey)
+    .replace(/-----BEGIN PRIVATE KEY-----/g, "")
+    .replace(/-----END PRIVATE KEY-----/g, "")
+    .replace(/\s+/g, "");
+  const binary = atob(normalized);
+  return Uint8Array.from(binary, (character) => character.charCodeAt(0));
+}
+
+async function createGitHubAppJwt(credentials: GitHubAppCredentials): Promise<string> {
+  const issuer = credentials.clientId ?? credentials.appId;
+  if (!issuer) {
+    throw new Error(
+      "GitHub App credentials are incomplete. Set GITHUB_APP_CLIENT_ID or GITHUB_APP_ID."
+    );
+  }
+
+  const header = { alg: "RS256", typ: "JWT" };
+  const now = Math.floor(Date.now() / 1000);
+  const payload = {
+    iat: now - 60,
+    exp: now + 9 * 60,
+    iss: issuer
+  };
+  const signingInput = `${base64UrlEncodeText(JSON.stringify(header))}.${base64UrlEncodeText(
+    JSON.stringify(payload)
+  )}`;
+  const key = await crypto.subtle.importKey(
+    "pkcs8",
+    pemToPkcs8Bytes(credentials.privateKey),
+    {
+      name: "RSASSA-PKCS1-v1_5",
+      hash: "SHA-256"
+    },
+    false,
+    ["sign"]
+  );
+  const signature = await crypto.subtle.sign(
+    "RSASSA-PKCS1-v1_5",
+    key,
+    new TextEncoder().encode(signingInput)
+  );
+
+  return `${signingInput}.${base64UrlEncodeBytes(new Uint8Array(signature))}`;
+}
+
 function decodeBase64(value: string): string {
   const normalized = value.replace(/\s+/g, "");
   const binary = atob(normalized);
@@ -244,6 +417,14 @@ export function createGitHubRepositoryClient(config: {
   githubAccessToken?: string;
   localMisRepoPath?: string;
 }): GitHubRepositoryClient {
+  if (config.githubAppInstallationId && config.githubAppPrivateKey) {
+    return new GitHubAppRepositoryClient({
+      appId: config.githubAppId,
+      clientId: config.githubAppClientId,
+      installationId: config.githubAppInstallationId,
+      privateKey: config.githubAppPrivateKey
+    });
+  }
   if (config.githubAppInstallationToken) {
     return new GitHubInstallationTokenRepositoryClient(
       async () => config.githubAppInstallationToken as string
