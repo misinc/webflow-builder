@@ -16,14 +16,49 @@ export const OPTIONS: APIRoute = async () =>
     headers: corsHeaders
   });
 
-export const GET: APIRoute = async () =>
-  Response.json(
+const EXPECTED_SITE_ID = "6a2db2a041dabacd48068930";
+
+export const GET: APIRoute = async ({ locals }) => {
+  const env = locals.runtime.env;
+  const checks = {
+    dbBindingPresent: Boolean(env.DB),
+    dbQuerySucceeded: false,
+    canonicalWebflowSiteIdPresent: Boolean(env.CANONICAL_WEBFLOW_SITE_ID),
+    canonicalWebflowSiteIdMatches:
+      (env.CANONICAL_WEBFLOW_SITE_ID ?? EXPECTED_SITE_ID) === EXPECTED_SITE_ID,
+    githubCredentialPresent: Boolean(
+      env.GITHUB_APP_INSTALLATION_TOKEN || env.GITHUB_ACCESS_TOKEN
+    ),
+    openAiApiKeyPresent: Boolean(env.OPENAI_API_KEY)
+  };
+
+  try {
+    if (env.DB) {
+      await env.DB.prepare("select 1 as ok").first();
+      checks.dbQuerySucceeded = true;
+    }
+  } catch {
+    checks.dbQuerySucceeded = false;
+  }
+
+  const ready =
+    checks.dbBindingPresent &&
+    checks.dbQuerySucceeded &&
+    checks.canonicalWebflowSiteIdMatches &&
+    checks.githubCredentialPresent &&
+    checks.openAiApiKeyPresent;
+
+  return Response.json(
     {
-      ok: true,
+      ok: ready,
       service: "webflow-builder-cloud",
-      runtime: "edge"
+      runtime: "edge",
+      siteId: env.CANONICAL_WEBFLOW_SITE_ID ?? EXPECTED_SITE_ID,
+      checks
     },
     {
+      status: ready ? 200 : 503,
       headers: corsHeaders
     }
   );
+};

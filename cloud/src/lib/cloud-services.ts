@@ -16,8 +16,6 @@ import { D1BlobStore } from "./d1-blob-store";
 function toAppEnv(locals: App.Locals): AppEnv {
   const env = locals.runtime.env;
   return {
-    databaseUrl: env.DATABASE_URL,
-    databaseUrlUnpooled: env.DATABASE_URL_UNPOOLED,
     githubAppId: env.GITHUB_APP_ID,
     githubAppClientId: env.GITHUB_APP_CLIENT_ID,
     githubAppClientSecret: env.GITHUB_APP_CLIENT_SECRET,

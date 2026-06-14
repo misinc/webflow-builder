@@ -1,6 +1,4 @@
 export interface AppEnv {
-  databaseUrl?: string;
-  databaseUrlUnpooled?: string;
   githubAppId?: string;
   githubAppClientId?: string;
   githubAppClientSecret?: string;

@@ -124,6 +124,7 @@ async function handleGet(request: Request, locals: App.Locals, pathname: string)
   if (pathname === "/api/debug-env-status") {
     const env = services.env;
     return json({
+      dbBinding: true,
       githubAppId: Boolean(env.githubAppId),
       githubAppClientId: Boolean(env.githubAppClientId),
       githubAppClientSecret: Boolean(env.githubAppClientSecret),
@@ -133,9 +134,10 @@ async function handleGet(request: Request, locals: App.Locals, pathname: string)
       githubAppPrivateKeyLength: env.githubAppPrivateKey?.length ?? 0,
       githubAccessToken: Boolean(env.githubAccessToken),
       localMisRepoPath: Boolean(env.localMisRepoPath),
-      databaseUrl: Boolean(env.databaseUrl),
-      databaseUrlUnpooled: Boolean(env.databaseUrlUnpooled),
-      sqliteBinding: true,
+      githubCredentialPresent: Boolean(
+        env.githubAppInstallationToken || env.githubAccessToken
+      ),
+      openAiApiKey: Boolean(env.openAiApiKey),
       canonicalWebflowSiteId: env.canonicalWebflowSiteId
     });
   }

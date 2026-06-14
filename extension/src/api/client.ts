@@ -143,8 +143,6 @@ function withQuery(urlString: string, params: Record<string, string | null | und
   return url.toString();
 }
 
-type ApiRuntime = "cloud" | "netlify";
-
 const cloudRouteMap: Record<string, string> = {
   "v2-bootstrap": "/v2/bootstrap",
   "v2-component-opportunities": "/v2/component-opportunities",
@@ -174,44 +172,16 @@ function stripTrailingSlash(value: string): string {
   return value.replace(/\/+$/, "");
 }
 
-function isAbsoluteHttpUrl(value: string): boolean {
-  return /^https?:\/\//.test(value);
-}
-
-function resolveApiRuntime(baseUrl: string): ApiRuntime {
-  const configured = import.meta.env.VITE_API_RUNTIME;
-  if (configured === "cloud" || configured === "netlify") {
-    return configured;
-  }
-  if (baseUrl.includes("/.netlify/functions")) {
-    return "netlify";
-  }
-  return isAbsoluteHttpUrl(baseUrl) ? "cloud" : "netlify";
-}
-
 export class BackendClient {
-  private readonly runtime: ApiRuntime;
-
   constructor(
     private readonly baseUrl =
-      (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "/api"
-  ) {
-    this.runtime = resolveApiRuntime(this.baseUrl);
-  }
-
-  private get functionBaseUrl() {
-    if (this.baseUrl.includes("/.netlify/functions")) {
-      return stripTrailingSlash(this.baseUrl);
-    }
-    return stripTrailingSlash(this.baseUrl).replace(/\/api\/?$/, "/.netlify/functions");
-  }
+      (import.meta.env.VITE_API_BASE_URL as string | undefined) ??
+      "https://misinc-ai-builder.webflow.io/api"
+  ) {}
 
   private functionUrl(functionName: string) {
-    if (this.runtime === "cloud") {
-      const mappedPath = cloudRouteMap[functionName] ?? `/${functionName}`;
-      return `${stripTrailingSlash(this.baseUrl)}${mappedPath}`;
-    }
-    return `${this.functionBaseUrl}/${functionName}`;
+    const mappedPath = cloudRouteMap[functionName] ?? `/${functionName}`;
+    return `${stripTrailingSlash(this.baseUrl)}${mappedPath}`;
   }
 
   async getV2Bootstrap(): Promise<V2BootstrapResponse> {

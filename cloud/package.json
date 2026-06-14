@@ -10,9 +10,12 @@
     "cf-typegen": "wrangler types",
     "db:generate": "drizzle-kit generate",
     "db:apply:local": "wrangler d1 migrations apply DB --local",
+    "db:apply:remote": "wrangler d1 migrations apply DB --remote",
     "db:export:neon": "tsx scripts/export-neon-to-d1.ts",
     "db:import:sqlite": "tsx scripts/import-neon-to-sqlite.ts",
-    "db:verify:sqlite": "tsx scripts/verify-neon-to-sqlite.ts"
+    "db:verify:sqlite": "tsx scripts/verify-neon-to-sqlite.ts",
+    "db:import:remote": "tsx scripts/import-neon-to-remote.ts",
+    "db:verify:remote": "tsx scripts/verify-neon-to-remote.ts"
   },
   "dependencies": {
     "@astrojs/cloudflare": "^12.6.0",

@@ -5,8 +5,6 @@ declare namespace App {
     runtime: {
       env: {
         DB: D1Database;
-        DATABASE_URL?: string;
-        DATABASE_URL_UNPOOLED?: string;
         GITHUB_APP_ID?: string;
         GITHUB_APP_CLIENT_ID?: string;
         GITHUB_APP_CLIENT_SECRET?: string;

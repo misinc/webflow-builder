@@ -2,7 +2,7 @@
 
 interface ImportMetaEnv {
   readonly VITE_API_BASE_URL?: string;
-  readonly VITE_API_RUNTIME?: "cloud" | "netlify";
+  readonly VITE_API_RUNTIME?: "cloud";
 }
 
 interface ImportMeta {
