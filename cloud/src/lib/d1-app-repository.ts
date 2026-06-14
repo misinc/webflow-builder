@@ -43,6 +43,14 @@ function parseJson<T>(value: string, fallback: T): T {
   }
 }
 
+function chunkValues<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+  return chunks;
+}
+
 function mapRepo(row: typeof reposTable.$inferSelect): RepoRecord {
   return {
     id: row.id,
@@ -307,34 +315,38 @@ export class D1AppRepository implements AppRepository {
     await this.db.delete(repoPagesTable).where(eq(repoPagesTable.repoId, repoId));
 
     if (pages.length > 0) {
-      await this.db.insert(repoPagesTable).values(
-        pages.map((page) => ({
-          id: page.id,
-          repoId: page.repoId,
-          name: page.name,
-          route: page.route,
-          sourceFile: page.sourceFile,
-          sortOrder: page.sortOrder,
-          metadataJson: JSON.stringify(page.metadata)
-        }))
-      );
+      for (const pageBatch of chunkValues(pages, 25)) {
+        await this.db.insert(repoPagesTable).values(
+          pageBatch.map((page) => ({
+            id: page.id,
+            repoId: page.repoId,
+            name: page.name,
+            route: page.route,
+            sourceFile: page.sourceFile,
+            sortOrder: page.sortOrder,
+            metadataJson: JSON.stringify(page.metadata)
+          }))
+        );
+      }
     }
 
     if (sections.length > 0) {
-      await this.db.insert(repoSectionsTable).values(
-        sections.map((section) => ({
-          id: section.id,
-          repoId: section.repoId,
-          pageId: section.pageId,
-          name: section.name,
-          sectionKey: section.sectionKey,
-          sourceFile: section.sourceFile,
-          importPath: section.importPath,
-          sortOrder: section.sortOrder,
-          componentName: section.componentName,
-          metadataJson: JSON.stringify(section.metadata)
-        }))
-      );
+      for (const sectionBatch of chunkValues(sections, 5)) {
+        await this.db.insert(repoSectionsTable).values(
+          sectionBatch.map((section) => ({
+            id: section.id,
+            repoId: section.repoId,
+            pageId: section.pageId,
+            name: section.name,
+            sectionKey: section.sectionKey,
+            sourceFile: section.sourceFile,
+            importPath: section.importPath,
+            sortOrder: section.sortOrder,
+            componentName: section.componentName,
+            metadataJson: JSON.stringify(section.metadata)
+          }))
+        );
+      }
     }
   }
 

@@ -24,30 +24,47 @@ export class RepoSyncService {
 
     await this.repository.updateRepoStatus(repoId, "syncing");
     const startedAt = nowIso();
-    const snapshot = await this.githubClient.fetchSnapshot(repo.owner, repo.name);
-    const sync: RepoSyncRecord = {
-      id: stableId(repoId, snapshot.commitSha),
-      repoId,
-      commitSha: snapshot.commitSha,
-      branch: snapshot.defaultBranch,
-      status: "completed",
-      startedAt,
-      completedAt: nowIso(),
-      errorMessage: null
-    };
 
-    const index = this.extractor.extractRepoIndex(repoId, snapshot);
-    await this.repository.replaceRepoIndex(repoId, index.pages, index.sections);
-    await this.repository.saveSync(sync);
-    await this.repository.updateRepoStatus(repoId, "ready");
-    await this.blobStore.putJson<RepositorySnapshot>(
-      `repos/${repoId}/snapshots/latest.json`,
-      snapshot
-    );
-    await this.blobStore.putJson(
-      `repos/${repoId}/syncs/${snapshot.commitSha}/tree.json`,
-      index
-    );
-    return sync;
+    try {
+      const snapshot = await this.githubClient.fetchSnapshot(repo.owner, repo.name);
+      const sync: RepoSyncRecord = {
+        id: stableId(repoId, snapshot.commitSha),
+        repoId,
+        commitSha: snapshot.commitSha,
+        branch: snapshot.defaultBranch,
+        status: "completed",
+        startedAt,
+        completedAt: nowIso(),
+        errorMessage: null
+      };
+
+      const index = this.extractor.extractRepoIndex(repoId, snapshot);
+      await this.repository.replaceRepoIndex(repoId, index.pages, index.sections);
+      await this.repository.saveSync(sync);
+      await this.repository.updateRepoStatus(repoId, "ready");
+      await this.blobStore.putJson<RepositorySnapshot>(
+        `repos/${repoId}/snapshots/latest.json`,
+        snapshot
+      );
+      await this.blobStore.putJson(
+        `repos/${repoId}/syncs/${snapshot.commitSha}/tree.json`,
+        index
+      );
+      return sync;
+    } catch (error) {
+      const failedSync: RepoSyncRecord = {
+        id: stableId(repoId, startedAt),
+        repoId,
+        commitSha: "",
+        branch: repo.defaultBranch,
+        status: "failed",
+        startedAt,
+        completedAt: nowIso(),
+        errorMessage: error instanceof Error ? error.message : "Repo sync failed."
+      };
+      await this.repository.saveSync(failedSync);
+      await this.repository.updateRepoStatus(repoId, "failed");
+      throw error;
+    }
   }
 }

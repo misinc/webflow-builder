@@ -27,6 +27,7 @@ function formatRepoMeta(updatedAt: string | null, branch: string, pageCount: num
 export function ChooseRepoScreen() {
   const { navigate } = useNavigation();
   const {
+    error,
     ensureSelectedRepoReady,
     isBootstrapping,
     isMutating,
@@ -140,6 +141,11 @@ export function ChooseRepoScreen() {
             />
           ))
         )}
+        {error ? (
+          <div className="px-3 pt-3 text-[11.5px] text-wb-danger">
+            {error}
+          </div>
+        ) : null}
       </div>
     </Panel>
   );
