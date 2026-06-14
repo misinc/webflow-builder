@@ -18,9 +18,12 @@
     "db:verify:remote": "tsx scripts/verify-neon-to-remote.ts"
   },
   "dependencies": {
+    "@astrojs/react": "^4.4.2",
     "@astrojs/cloudflare": "^12.6.0",
     "astro": "^5.13.5",
     "drizzle-orm": "^0.44.2",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
     "zod": "^4.1.5"
   },
   "devDependencies": {
