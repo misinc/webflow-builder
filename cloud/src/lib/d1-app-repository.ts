@@ -51,6 +51,15 @@ function chunkValues<T>(items: T[], size: number): T[][] {
   return chunks;
 }
 
+// D1 limits the number of bound parameters in a prepared statement. Keep a
+// small margin below that limit so multi-row inserts remain portable across
+// local and remote D1 runtimes.
+const D1_SAFE_BOUND_PARAMETER_LIMIT = 90;
+
+function insertBatchSize(columnCount: number): number {
+  return Math.max(1, Math.floor(D1_SAFE_BOUND_PARAMETER_LIMIT / columnCount));
+}
+
 function mapRepo(row: typeof reposTable.$inferSelect): RepoRecord {
   return {
     id: row.id,
@@ -315,7 +324,7 @@ export class D1AppRepository implements AppRepository {
     await this.db.delete(repoPagesTable).where(eq(repoPagesTable.repoId, repoId));
 
     if (pages.length > 0) {
-      for (const pageBatch of chunkValues(pages, 25)) {
+      for (const pageBatch of chunkValues(pages, insertBatchSize(7))) {
         await this.db.insert(repoPagesTable).values(
           pageBatch.map((page) => ({
             id: page.id,
@@ -331,7 +340,7 @@ export class D1AppRepository implements AppRepository {
     }
 
     if (sections.length > 0) {
-      for (const sectionBatch of chunkValues(sections, 5)) {
+      for (const sectionBatch of chunkValues(sections, insertBatchSize(10))) {
         await this.db.insert(repoSectionsTable).values(
           sectionBatch.map((section) => ({
             id: section.id,
