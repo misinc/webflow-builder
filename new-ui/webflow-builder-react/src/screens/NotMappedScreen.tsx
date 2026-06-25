@@ -15,7 +15,9 @@ export function NotMappedScreen() {
       footer={
         <>
           <div className="flex-1" />
-          <Button variant="ghost">Browse repo files</Button>
+          <Button variant="ghost" onClick={() => navigate('map-pages')}>
+            Browse repo files
+          </Button>
           <Button variant="ghost" onClick={() => navigate('site-progress')}>
             Skip this page
           </Button>
