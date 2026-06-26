@@ -57,6 +57,20 @@ const backend = new BackendClient();
 const bridge = getWebflowBridge();
 const SELECTED_REPO_STORAGE_KEY = "wb-v2-selected-repo-id";
 const EMPTY_REPO_PAGES: RepoTreeResponse["pages"] = [];
+const EXTENSION_BUILD_SHA = (import.meta.env.VITE_BUILD_SHA as string | undefined) ?? "unknown";
+
+export function buildVersionWarning(backendBuildSha: string | null): string | null {
+  const extensionBuildSha = EXTENSION_BUILD_SHA.trim() || "unknown";
+  const normalizedBackendSha = backendBuildSha?.trim() || "unknown";
+  if (
+    extensionBuildSha === "unknown" ||
+    normalizedBackendSha === "unknown" ||
+    extensionBuildSha === normalizedBackendSha
+  ) {
+    return null;
+  }
+  return `Extension and backend were built from different commits. Extension: ${extensionBuildSha}; backend: ${normalizedBackendSha}. Rebuild and upload both artifacts together.`;
+}
 
 function mergeMappingRows(params: {
   livePages: WebflowSitePage[];
@@ -228,6 +242,7 @@ interface AppStateContextValue {
   error: string | null;
   session: V2Session | null;
   bootstrapDiagnostics: V2BootstrapDiagnostics | null;
+  versionSkewWarning: string | null;
   repos: V2AvailableRepo[];
   selectedRepoId: string | null;
   selectedRepo: V2AvailableRepo | null;
@@ -306,6 +321,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [session, setSession] = useState<V2Session | null>(null);
   const [bootstrapDiagnostics, setBootstrapDiagnostics] = useState<V2BootstrapDiagnostics | null>(null);
+  const [versionSkewWarning, setVersionSkewWarning] = useState<string | null>(null);
   const [repos, setRepos] = useState<V2AvailableRepo[]>([]);
   const [selectedRepoId, setSelectedRepoId] = useState<string | null>(null);
   const [designerContext, setDesignerContext] = useState<DesignerContext | null>(null);
@@ -491,13 +507,15 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   ]);
 
   const bootstrapState = useCallback(async () => {
-    const [bootstrapPayload, context] = await Promise.all([
+    const [bootstrapPayload, context, debugEnvStatus] = await Promise.all([
       backend.getV2Bootstrap(),
-      bridge.getContext()
+      bridge.getContext(),
+      backend.getDebugEnvStatus().catch(() => ({ buildSha: "unknown" }))
     ]);
 
     setSession(bootstrapPayload.session);
     setBootstrapDiagnostics(bootstrapPayload.diagnostics);
+    setVersionSkewWarning(buildVersionWarning(debugEnvStatus.buildSha));
     setRepos(bootstrapPayload.repos);
     setDesignerContext((current) =>
       sameDesignerContext(current, context) ? current : context
@@ -1723,6 +1741,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       error,
       session,
       bootstrapDiagnostics,
+      versionSkewWarning,
       repos,
       selectedRepoId,
       selectedRepo,
@@ -1833,6 +1852,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       pageProgressRows,
       refreshComponentOpportunities,
       bootstrapDiagnostics,
+      versionSkewWarning,
       regenerateSkeleton,
       repoTree,
       repos,

@@ -20,6 +20,31 @@ interface OpenAIMessage {
 }
 
 const OPENAI_REQUEST_TIMEOUT_MS = 25000;
+const OPENAI_MAX_ATTEMPTS = 3;
+const OPENAI_MAX_COMPLETION_TOKENS = 2500;
+
+function retryDelayMs(attempt: number, res?: Response): number {
+  const retryAfterSeconds = Number(res?.headers.get("retry-after"));
+  if (Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0) {
+    return Math.min(retryAfterSeconds * 1000, 10000);
+  }
+  return Math.min(1000 * 2 ** (attempt - 1), 8000) + Math.floor(Math.random() * 250);
+}
+
+function isRetryableStatus(status: number): boolean {
+  return status === 408 || status === 409 || status === 429 || status >= 500;
+}
+
+function isRetryableFetchError(error: unknown): boolean {
+  return (
+    error instanceof TypeError ||
+    (error instanceof Error && error.name === "AbortError")
+  );
+}
+
+async function delay(ms: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 const WEBFLOW_SITE_BUILDER_RULES = [
   "Work on one section at a time.",
@@ -1506,41 +1531,61 @@ export class OpenAIPlanningProvider implements PlanningProvider {
   ): Promise<T> {
     this.ensureConfigured();
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-    let response: Response;
-    try {
-      response = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        signal: controller.signal,
-        headers: {
-          "content-type": "application/json",
-          authorization: `Bearer ${this.apiKey}`
-        },
-        body: JSON.stringify({
-          model: this.model,
-          temperature: 0.2,
-          response_format: { type: "json_object" },
-          messages: [
-            { role: "system", content: systemPrompt },
-            {
-              role: "user",
-              content: `Return only JSON for ${name}.\n${userContext(input)}`
-            }
-          ] satisfies OpenAIMessage[]
-        })
-      });
-    } catch (error) {
-      if (error instanceof Error && error.name === "AbortError") {
-        throw new Error(
-          `OpenAI ${name} timed out after ${Math.round(
-            timeoutMs / 1000
-          )} seconds.`
-        );
+    let response: Response | null = null;
+
+    for (let attempt = 1; attempt <= OPENAI_MAX_ATTEMPTS; attempt += 1) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        response = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          signal: controller.signal,
+          headers: {
+            "content-type": "application/json",
+            authorization: `Bearer ${this.apiKey}`
+          },
+          body: JSON.stringify({
+            model: this.model,
+            temperature: 0,
+            max_completion_tokens: OPENAI_MAX_COMPLETION_TOKENS,
+            response_format: { type: "json_object" },
+            messages: [
+              { role: "system", content: systemPrompt },
+              {
+                role: "user",
+                content: `Return only JSON for ${name}.\n${userContext(input)}`
+              }
+            ] satisfies OpenAIMessage[]
+          })
+        });
+      } catch (error) {
+        clearTimeout(timeoutId);
+        if (attempt < OPENAI_MAX_ATTEMPTS && isRetryableFetchError(error)) {
+          await delay(retryDelayMs(attempt));
+          continue;
+        }
+        if (error instanceof Error && error.name === "AbortError") {
+          throw new Error(
+            `OpenAI ${name} timed out after ${Math.round(
+              timeoutMs / 1000
+            )} seconds.`
+          );
+        }
+        throw error;
+      } finally {
+        clearTimeout(timeoutId);
       }
-      throw error;
-    } finally {
-      clearTimeout(timeoutId);
+
+      if (!response.ok && attempt < OPENAI_MAX_ATTEMPTS && isRetryableStatus(response.status)) {
+        await delay(retryDelayMs(attempt, response));
+        continue;
+      }
+
+      break;
+    }
+
+    if (!response) {
+      throw new Error("OpenAI planner did not return a response.");
     }
 
     if (!response.ok) {
@@ -1715,9 +1760,20 @@ export class OpenAIPlanningProvider implements PlanningProvider {
       );
       return normalizeStyling(raw, fallback);
     } catch (error) {
-      throw new Error(
-        error instanceof Error ? error.message : "OpenAI styling generation failed."
-      );
+      // Previously this threw, making styling the only stage with no fallback -
+      // a single transient OpenAI blip hard-failed the whole "style" step.
+      // Degrade to a review-only plan with a surfaced warning instead, matching
+      // the analyze/skeleton/verify stages.
+      return {
+        ...fallback,
+        warnings: [
+          ...fallback.warnings,
+          providerWarning(
+            "styling-error",
+            error instanceof Error ? error.message : "OpenAI styling generation failed."
+          )
+        ]
+      };
     }
   }
 

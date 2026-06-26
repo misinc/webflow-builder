@@ -59,6 +59,10 @@ export interface RepoTreeResponse {
   }>;
 }
 
+export interface DebugEnvStatus {
+  buildSha: string;
+}
+
 async function request<T>(
   url: string,
   options: RequestInit,
@@ -144,6 +148,7 @@ function withQuery(urlString: string, params: Record<string, string | null | und
 }
 
 const cloudRouteMap: Record<string, string> = {
+  "debug-env-status": "/debug-env-status",
   "v2-bootstrap": "/v2/bootstrap",
   "v2-component-opportunities": "/v2/component-opportunities",
   "repos-connect": "/repos/connect",
@@ -190,6 +195,16 @@ export class BackendClient {
       { method: "GET" }
     );
     return v2BootstrapResponseSchema.parse(response);
+  }
+
+  async getDebugEnvStatus(): Promise<DebugEnvStatus> {
+    const response = await request<Partial<DebugEnvStatus>>(
+      this.functionUrl("debug-env-status"),
+      { method: "GET" }
+    );
+    return {
+      buildSha: response.buildSha ?? "unknown"
+    };
   }
 
   async getComponentOpportunities(

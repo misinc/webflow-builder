@@ -13,10 +13,6 @@ import {
 } from "../../shared/contracts.js";
 import { getCloudServices } from "../../lib/cloud-services";
 
-export const config = {
-  runtime: "edge"
-};
-
 const corsHeaders = {
   "access-control-allow-origin": "*",
   "access-control-allow-methods": "GET,POST,OPTIONS",
@@ -43,6 +39,19 @@ function handleError(error: unknown) {
 
   const message = error instanceof Error ? error.message : "Unknown error";
   const status = /missing|invalid|unknown|not configured/i.test(message) ? 400 : 500;
+  if (status >= 500) {
+    // Log full detail to Workers observability, but never leak internals
+    // (raw SQL / DB driver messages) back to the extension UI.
+    const errorId =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}`;
+    console.error(`[api-error ${errorId}]`, error);
+    return json(
+      { error: "Something went wrong on the server. Please retry.", errorId },
+      500
+    );
+  }
   return json({ error: message }, status);
 }
 
@@ -124,6 +133,10 @@ async function handleGet(request: Request, locals: App.Locals, pathname: string)
   if (pathname === "/api/debug-env-status") {
     const env = services.env;
     return json({
+      // Surfaces the deployed build so the extension can detect version skew
+      // between the uploaded bundle and the running backend. Set BUILD_SHA at
+      // deploy time (e.g. BUILD_SHA=$(git rev-parse --short HEAD) astro build).
+      buildSha: import.meta.env.BUILD_SHA ?? "unknown",
       dbBinding: true,
       githubAppId: Boolean(env.githubAppId),
       githubAppClientId: Boolean(env.githubAppClientId),

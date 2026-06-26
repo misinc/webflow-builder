@@ -314,6 +314,81 @@ describe("OpenAIPlanningProvider footer skeleton normalization", () => {
     ).toBe(true);
   });
 
+  it("retries a transient OpenAI 429 and keeps requests deterministic and bounded", async () => {
+    const rawPlan = {
+      sectionMetadata: input.metadata,
+      treeText: [
+        "footer.section_footer",
+        "  div.footer_brand",
+        "    p.text-size-medium"
+      ].join("\n"),
+      elementTree: {
+        id: "root",
+        type: "box",
+        tag: "footer",
+        classNames: ["section_footer"],
+        children: [
+          {
+            id: "brand",
+            type: "box",
+            tag: "div",
+            classNames: ["footer_brand"],
+            children: [
+              {
+                id: "copy",
+                type: "text",
+                tag: "p",
+                classNames: ["text-size-medium"],
+                children: []
+              }
+            ]
+          }
+        ]
+      },
+      reusableClasses: ["text-size-medium"],
+      suggestedNewClasses: ["section_footer"],
+      warnings: []
+    };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response("rate limited", {
+          status: 429,
+          headers: { "retry-after": "0.001" }
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify(rawPlan)
+                }
+              }
+            ]
+          }),
+          {
+            status: 200,
+            headers: { "content-type": "application/json" }
+          }
+        )
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const provider = new OpenAIPlanningProvider("test-key", "test-model");
+    const plan = await provider.generateSkeleton(input);
+    const requestBody = JSON.parse(fetchMock.mock.calls[0][1].body as string) as {
+      temperature: number;
+      max_completion_tokens: number;
+    };
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(plan.elementTree.tag).toBe("footer");
+    expect(requestBody.temperature).toBe(0);
+    expect(requestBody.max_completion_tokens).toBeGreaterThan(0);
+  });
+
   it("builds a richer HTML-derived fallback for large pasted sections on timeout", async () => {
     const abortError = new Error("aborted");
     abortError.name = "AbortError";

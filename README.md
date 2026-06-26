@@ -48,6 +48,31 @@ npm run build
 webflow extension bundle
 ```
 
+## Paired release runbook
+
+The Webflow Cloud backend and Designer Extension are one release unit. Always
+build and upload them from the same commit so the extension does not talk to a
+stale backend contract.
+
+```bash
+export BUILD_SHA=$(git rev-parse --short HEAD)
+export VITE_BUILD_SHA=$BUILD_SHA
+
+cd cloud
+npm run build
+# Deploy through Webflow Cloud from this same commit.
+cd ..
+
+npm run build:extension
+webflow extension bundle
+# Upload the generated extension bundle from this same commit.
+```
+
+After deployment, open `/api/debug-env-status` on the Cloud backend and confirm
+`buildSha` matches `git rev-parse --short HEAD`. The extension checks this value
+on boot and shows a non-blocking warning if its `VITE_BUILD_SHA` differs from
+the backend `BUILD_SHA`.
+
 ## Cloud cutover
 
 The production runtime lives under [`cloud/`](./cloud). After the extension smoke test passes against the live Cloud host:

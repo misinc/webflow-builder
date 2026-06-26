@@ -26,7 +26,7 @@ function toAppEnv(locals: App.Locals): AppEnv {
     localMisRepoPath: undefined,
     canonicalWebflowSiteId: env.CANONICAL_WEBFLOW_SITE_ID ?? "6a2db2a041dabacd48068930",
     openAiApiKey: env.OPENAI_API_KEY,
-    openAiModel: env.OPENAI_MODEL ?? "gpt-5.4"
+    openAiModel: env.OPENAI_MODEL ?? "gpt-4o-mini"
   };
 }
 

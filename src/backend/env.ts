@@ -29,6 +29,6 @@ export function getEnv(): AppEnv {
     canonicalWebflowSiteId:
       process.env.CANONICAL_WEBFLOW_SITE_ID ?? "6a2db2a041dabacd48068930",
     openAiApiKey: process.env.OPENAI_API_KEY,
-    openAiModel: process.env.OPENAI_MODEL ?? "gpt-5.4"
+    openAiModel: process.env.OPENAI_MODEL ?? "gpt-4o-mini"
   };
 }

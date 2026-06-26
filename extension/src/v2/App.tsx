@@ -18,6 +18,7 @@ import { SettingsScreen } from './screens/SettingsScreen';
 import { NotMappedScreen } from './screens/NotMappedScreen';
 import { ErrorScreen } from './screens/ErrorScreen';
 import { ComponentOpportunitiesScreen } from './screens/ComponentOpportunitiesScreen';
+import { Callout } from './components/Callout';
 import type { ScreenName } from './types';
 
 const SCREEN_COMPONENTS: Record<ScreenName, ComponentType> = {
@@ -125,6 +126,18 @@ function InitialRouteResolver() {
 
 function ScreenRenderer() {
   const { current } = useNavigation();
+  const { versionSkewWarning } = useAppState();
   const Screen = SCREEN_COMPONENTS[current];
-  return <Screen />;
+  return (
+    <>
+      {versionSkewWarning ? (
+        <div className="px-4 pt-4">
+          <Callout tone="warning" title="Version mismatch">
+            {versionSkewWarning}
+          </Callout>
+        </div>
+      ) : null}
+      <Screen />
+    </>
+  );
 }

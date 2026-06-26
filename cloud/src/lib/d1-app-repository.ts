@@ -34,6 +34,10 @@ import type {
   AppRepository,
   WebflowSiteBinding
 } from "../backend/repositories/app-repository.js";
+import {
+  assertD1BatchWithinLimit,
+  insertBatchSize
+} from "./d1-limits";
 
 function parseJson<T>(value: string, fallback: T): T {
   try {
@@ -49,15 +53,6 @@ function chunkValues<T>(items: T[], size: number): T[][] {
     chunks.push(items.slice(index, index + size));
   }
   return chunks;
-}
-
-// D1 limits the number of bound parameters in a prepared statement. Keep a
-// small margin below that limit so multi-row inserts remain portable across
-// local and remote D1 runtimes.
-const D1_SAFE_BOUND_PARAMETER_LIMIT = 90;
-
-function insertBatchSize(columnCount: number): number {
-  return Math.max(1, Math.floor(D1_SAFE_BOUND_PARAMETER_LIMIT / columnCount));
 }
 
 function mapRepo(row: typeof reposTable.$inferSelect): RepoRecord {
@@ -320,43 +315,55 @@ export class D1AppRepository implements AppRepository {
     pages: RepoPageRecord[],
     sections: RepoSectionRecord[]
   ): Promise<void> {
-    await this.db.delete(repoSectionsTable).where(eq(repoSectionsTable.repoId, repoId));
-    await this.db.delete(repoPagesTable).where(eq(repoPagesTable.repoId, repoId));
+    // Build every write as a prepared statement and run them in a single
+    // atomic D1 batch. Previously these were separate awaited statements, so a
+    // failure on any insert (e.g. the old 175-param overflow) could leave the
+    // repo index half-written or fully deleted. db.batch() is all-or-nothing.
+    const statements = [
+      this.db.delete(repoSectionsTable).where(eq(repoSectionsTable.repoId, repoId)),
+      this.db.delete(repoPagesTable).where(eq(repoPagesTable.repoId, repoId)),
+      ...chunkValues(pages, insertBatchSize(7)).map((pageBatch) =>
+        {
+          assertD1BatchWithinLimit("repo_pages insert", pageBatch.length, 7);
+          return this.db.insert(repoPagesTable).values(
+            pageBatch.map((page) => ({
+              id: page.id,
+              repoId: page.repoId,
+              name: page.name,
+              route: page.route,
+              sourceFile: page.sourceFile,
+              sortOrder: page.sortOrder,
+              metadataJson: JSON.stringify(page.metadata)
+            }))
+          );
+        }
+      ),
+      ...chunkValues(sections, insertBatchSize(10)).map((sectionBatch) =>
+        {
+          assertD1BatchWithinLimit("repo_sections insert", sectionBatch.length, 10);
+          return this.db.insert(repoSectionsTable).values(
+            sectionBatch.map((section) => ({
+              id: section.id,
+              repoId: section.repoId,
+              pageId: section.pageId,
+              name: section.name,
+              sectionKey: section.sectionKey,
+              sourceFile: section.sourceFile,
+              importPath: section.importPath,
+              sortOrder: section.sortOrder,
+              componentName: section.componentName,
+              metadataJson: JSON.stringify(section.metadata)
+            }))
+          );
+        }
+      )
+    ];
 
-    if (pages.length > 0) {
-      for (const pageBatch of chunkValues(pages, insertBatchSize(7))) {
-        await this.db.insert(repoPagesTable).values(
-          pageBatch.map((page) => ({
-            id: page.id,
-            repoId: page.repoId,
-            name: page.name,
-            route: page.route,
-            sourceFile: page.sourceFile,
-            sortOrder: page.sortOrder,
-            metadataJson: JSON.stringify(page.metadata)
-          }))
-        );
-      }
-    }
-
-    if (sections.length > 0) {
-      for (const sectionBatch of chunkValues(sections, insertBatchSize(10))) {
-        await this.db.insert(repoSectionsTable).values(
-          sectionBatch.map((section) => ({
-            id: section.id,
-            repoId: section.repoId,
-            pageId: section.pageId,
-            name: section.name,
-            sectionKey: section.sectionKey,
-            sourceFile: section.sourceFile,
-            importPath: section.importPath,
-            sortOrder: section.sortOrder,
-            componentName: section.componentName,
-            metadataJson: JSON.stringify(section.metadata)
-          }))
-        );
-      }
-    }
+    // The two deletes guarantee a non-empty batch (drizzle's d1 batch() needs
+    // at least one statement).
+    await this.db.batch(
+      statements as [(typeof statements)[number], ...(typeof statements)[number][]]
+    );
   }
 
   async getPages(repoId: string): Promise<RepoPageRecord[]> {
