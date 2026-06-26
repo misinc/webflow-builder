@@ -435,4 +435,58 @@ describe("executeBuildPlan", () => {
     ]);
     expect(result.missingAssets).toEqual(["../../assets/Mark Windsor.jpg"]);
   });
+
+  it("retries transient idempotent node operations without retrying createNode", async () => {
+    class RetryBridge extends FailingBridge {
+      public createNodeCalls = 0;
+      public applyClassesCalls = 0;
+
+      override async createNode() {
+        this.createNodeCalls += 1;
+        return { id: "retry-node-1" };
+      }
+
+      override async applyClasses() {
+        this.applyClassesCalls += 1;
+        if (this.applyClassesCalls === 1) {
+          throw new Error("temporary Designer API timeout");
+        }
+      }
+    }
+
+    const bridge = new RetryBridge();
+    const context = await bridge.getContext();
+    const result = await executeSkeletonPlan({
+      bridge,
+      context,
+      placementMode: "append",
+      placementTarget: null,
+      plan: {
+        sectionMetadata: {
+          repoId: "repo-1",
+          pageId: "page-1",
+          sectionId: "section-1",
+          pageName: "Home",
+          sectionName: "Hero",
+          sourceFile: "Hero.tsx"
+        },
+        treeText: "section.hero",
+        elementTree: {
+          id: "root",
+          type: "section",
+          tag: "section",
+          classNames: ["hero"],
+          children: []
+        },
+        assetBindings: [],
+        reusableClasses: [],
+        suggestedNewClasses: [],
+        warnings: []
+      }
+    });
+
+    expect(result.success).toBe(true);
+    expect(bridge.createNodeCalls).toBe(1);
+    expect(bridge.applyClassesCalls).toBe(2);
+  });
 });

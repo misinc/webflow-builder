@@ -220,6 +220,48 @@ function countAssignedClasses(node: BuildNode): number {
   );
 }
 
+function deterministicSkeleton(input: {
+  metadata: SectionMetadata;
+  sectionContext: SectionContext;
+  projectContext: ReturnType<typeof createProjectContext>;
+  sharedStyleContext: SharedStyleContext;
+  inheritedWarnings?: PlannerWarning[];
+}): SkeletonPlan {
+  const planner = new HeuristicBuildPlanner();
+  const plan = planner.plan({
+    pageId: input.metadata.pageId,
+    sectionId: input.metadata.sectionId,
+    sectionContext: input.sectionContext,
+    projectContext: input.projectContext,
+    sharedStyleContext: input.sharedStyleContext
+  });
+
+  const reusableClasses = dedupe(
+    plan.classAssignments.flatMap((assignment) => assignment.reused)
+  );
+  const suggestedNewClasses = dedupe(
+    plan.classAssignments.flatMap((assignment) => assignment.created)
+  );
+
+  return skeletonPlanSchema.parse({
+    sectionMetadata: input.metadata,
+    treeText: describeNodeTree(plan.elementTree).join("\n"),
+    elementTree: plan.elementTree,
+    assetBindings: plan.assetBindings,
+    reusableClasses,
+    suggestedNewClasses,
+    warnings: [
+      providerWarning(
+        "deterministic-skeleton-primary",
+        "Skeleton structure and classes were generated deterministically from the repo index and shared site styles.",
+        "info"
+      ),
+      ...(input.inheritedWarnings ?? []),
+      ...plan.warnings
+    ]
+  });
+}
+
 function deterministicStyling(input: {
   metadata: SectionMetadata;
   mode: WorkflowMode;
@@ -753,24 +795,12 @@ export class WorkflowService {
 
   async generateSkeleton(request: WorkflowSectionRequest): Promise<SkeletonPlan> {
     const context = await this.getSectionStateContext(request);
-    const providerInput = {
+    const skeleton = deterministicSkeleton({
       metadata: context.metadata,
-      mode: request.mode,
       sectionContext: context.sectionContext,
-      serializedSection: context.serializedSection,
       projectContext: context.projectContext,
-      sharedStyleContext: context.sharedStyleContext,
-      selectedElementId: request.selectedElementId ?? null
-    };
-    const skeleton = skeletonPlanSchema.parse(
-      await this.planningProvider.generateSkeleton(providerInput)
-    );
-
-    if (countAssignedClasses(skeleton.elementTree) === 0) {
-      throw new Error(
-        "OpenAI skeleton output omitted class names. Use Regenerate to retry."
-      );
-    }
+      sharedStyleContext: context.sharedStyleContext
+    });
 
     const runId = await this.persistRun(
       request,
@@ -983,55 +1013,79 @@ export class WorkflowService {
       selectedElementId: request.selectedElementId ?? null
     };
 
-    let styling: StylingPlan;
+    const deterministicPrimary = latestSkeleton
+      ? buildFallbackStylingFromSkeleton({
+          metadata: context.metadata,
+          mode: request.mode,
+          sectionContext: context.sectionContext,
+          sharedStyleContext: context.sharedStyleContext,
+          skeleton: latestSkeleton,
+          inheritedWarnings: [
+            providerWarning(
+              "deterministic-styling-primary",
+              "Styling was derived deterministically from the latest skeleton and repo source before provider refinement.",
+              "info"
+            )
+          ]
+        })
+      : deterministicStyling({
+          metadata: context.metadata,
+          mode: request.mode,
+          sectionContext: context.sectionContext,
+          projectContext: context.projectContext,
+          sharedStyleContext: context.sharedStyleContext,
+          inheritedWarnings: [
+            providerWarning(
+              "deterministic-styling-primary",
+              "Styling was derived deterministically from the repo source before provider refinement.",
+              "info"
+            )
+          ]
+        });
+
+    let styling: StylingPlan = deterministicPrimary;
     try {
       const providerStyling = stylingPlanSchema.parse(
         await this.planningProvider.generateStylingPlan(providerInput)
       );
-      styling =
-        shouldFallbackStylingPlan(providerStyling)
-          ? latestSkeleton
-            ? buildFallbackStylingFromSkeleton({
-                metadata: context.metadata,
-                mode: request.mode,
-                sectionContext: context.sectionContext,
-                sharedStyleContext: context.sharedStyleContext,
-                skeleton: latestSkeleton,
-                inheritedWarnings: providerStyling.warnings
-              })
-            : deterministicStyling({
-                metadata: context.metadata,
-                mode: request.mode,
-                sectionContext: context.sectionContext,
-                projectContext: context.projectContext,
-                sharedStyleContext: context.sharedStyleContext,
-                inheritedWarnings: providerStyling.warnings
-              })
-          : providerStyling;
+      if (!shouldFallbackStylingPlan(providerStyling)) {
+        styling = {
+          ...providerStyling,
+          styleDefinitions:
+            providerStyling.styleDefinitions.length > 0
+              ? providerStyling.styleDefinitions
+              : deterministicPrimary.styleDefinitions,
+          variableBindings:
+            providerStyling.variableBindings.length > 0
+              ? providerStyling.variableBindings
+              : deterministicPrimary.variableBindings,
+          requiredClassNames: dedupe([
+            ...deterministicPrimary.requiredClassNames,
+            ...providerStyling.requiredClassNames
+          ]),
+          reusableClasses: dedupe([
+            ...deterministicPrimary.reusableClasses,
+            ...providerStyling.reusableClasses
+          ]),
+          suggestedNewClasses: dedupe([
+            ...deterministicPrimary.suggestedNewClasses,
+            ...providerStyling.suggestedNewClasses
+          ]),
+          warnings: [...deterministicPrimary.warnings, ...providerStyling.warnings],
+          notes: [...deterministicPrimary.notes, ...providerStyling.notes]
+        };
+      }
     } catch (error) {
-      const inheritedWarnings = [
-        providerWarning(
-          "styling-error",
-          error instanceof Error ? error.message : "OpenAI styling generation failed."
-        )
-      ];
-      styling = latestSkeleton
-        ? buildFallbackStylingFromSkeleton({
-            metadata: context.metadata,
-            mode: request.mode,
-            sectionContext: context.sectionContext,
-            sharedStyleContext: context.sharedStyleContext,
-            skeleton: latestSkeleton,
-            inheritedWarnings
-          })
-        : deterministicStyling({
-            metadata: context.metadata,
-            mode: request.mode,
-            sectionContext: context.sectionContext,
-            projectContext: context.projectContext,
-            sharedStyleContext: context.sharedStyleContext,
-            inheritedWarnings
-          });
+      styling = {
+        ...deterministicPrimary,
+        warnings: [
+          ...deterministicPrimary.warnings,
+          providerWarning(
+            "styling-error",
+            error instanceof Error ? error.message : "OpenAI styling generation failed."
+          )
+        ]
+      };
     }
     const runId = await this.persistRun(
       request,

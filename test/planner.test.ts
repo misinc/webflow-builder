@@ -69,4 +69,26 @@ describe("HeuristicBuildPlanner", () => {
       }
     ]);
   });
+
+  it("produces deterministic trees and class assignments for the same source", () => {
+    const planner = new HeuristicBuildPlanner();
+    const input = {
+      pageId: "page-1",
+      sectionId: "section-1",
+      sectionContext,
+      projectContext,
+      sharedStyleContext
+    };
+
+    const first = planner.plan(input);
+    const second = planner.plan(input);
+
+    expect(first.elementTree).toEqual(second.elementTree);
+    expect(first.classAssignments).toEqual(second.classAssignments);
+    expect(first.styleDefinitions).toEqual(second.styleDefinitions);
+    expect(first.elementTree.classNames).toContain("section_hero");
+    expect(
+      first.classAssignments.flatMap((assignment) => assignment.classNames)
+    ).toContain("padding-global");
+  });
 });

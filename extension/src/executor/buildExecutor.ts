@@ -33,6 +33,58 @@ function throwIfAborted(signal?: AbortSignal | null): void {
   throw error;
 }
 
+function isTransientDesignerError(error: unknown): boolean {
+  if (error instanceof DOMException && error.name === "AbortError") {
+    return false;
+  }
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
+  return (
+    error instanceof TypeError ||
+    /timeout|timed out|temporar|rate|429|network|busy|unavailable|try again/.test(message)
+  );
+}
+
+async function retryDelay(ms: number, signal?: AbortSignal | null): Promise<void> {
+  throwIfAborted(signal);
+  await new Promise<void>((resolve, reject) => {
+    const timeoutId = setTimeout(resolve, ms);
+    signal?.addEventListener(
+      "abort",
+      () => {
+        clearTimeout(timeoutId);
+        const error = new Error("The operation was aborted.");
+        error.name = "AbortError";
+        reject(error);
+      },
+      { once: true }
+    );
+  });
+}
+
+async function withDesignerRetry<T>(
+  label: string,
+  signal: AbortSignal | null | undefined,
+  operation: () => Promise<T>
+): Promise<T> {
+  const maxAttempts = 3;
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    throwIfAborted(signal);
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      if (attempt >= maxAttempts || !isTransientDesignerError(error)) {
+        break;
+      }
+      await retryDelay(100 * 2 ** (attempt - 1), signal);
+    }
+  }
+  throw lastError instanceof Error
+    ? lastError
+    : new Error(`${label} failed after ${maxAttempts} attempts.`);
+}
+
 async function buildNodeTree(params: {
   bridge: WebflowDesignerBridge;
   node: BuildNode;
@@ -51,10 +103,14 @@ async function buildNodeTree(params: {
   params.createdNodeIds.push(created.id);
   params.nodeIdMap.set(params.node.id, created.id);
   throwIfAborted(params.signal);
-  await params.bridge.applyClasses(created.id, params.node.classNames);
+  await withDesignerRetry("applyClasses", params.signal, () =>
+    params.bridge.applyClasses(created.id, params.node.classNames)
+  );
   if (typeof params.node.textContent === "string" && params.node.textContent.trim().length > 0) {
     throwIfAborted(params.signal);
-    await params.bridge.setNodeTextContent(created.id, params.node.textContent);
+    await withDesignerRetry("setNodeTextContent", params.signal, () =>
+      params.bridge.setNodeTextContent(created.id, params.node.textContent!)
+    );
   }
 
   let lastChildId: string | null = null;
@@ -86,7 +142,9 @@ async function applyTextContentTree(params: {
     typeof params.node.textContent === "string" &&
     params.node.textContent.trim().length > 0
   ) {
-    await params.bridge.setNodeTextContent(runtimeNodeId, params.node.textContent);
+    await withDesignerRetry("setNodeTextContent", params.signal, () =>
+      params.bridge.setNodeTextContent(runtimeNodeId, params.node.textContent!)
+    );
   }
 
   for (const child of params.node.children) {
@@ -266,9 +324,11 @@ export async function executeBuildPlan(params: {
 
     for (const styleDefinition of params.plan.styleDefinitions) {
       throwIfAborted(params.signal);
-      const style = await params.bridge.ensureStyle(
-        styleDefinition.className,
-        styleDefinition.properties
+      const style = await withDesignerRetry("ensureStyle", params.signal, () =>
+        params.bridge.ensureStyle(
+          styleDefinition.className,
+          styleDefinition.properties
+        )
       );
       createdStyleIds.push(style.styleId);
     }
@@ -278,10 +338,12 @@ export async function executeBuildPlan(params: {
       const runtimeNodeId = nodeIdMap.get(binding.nodeId);
       if (!runtimeNodeId) continue;
       try {
-        await params.bridge.bindVariable(
-          runtimeNodeId,
-          binding.property,
-          binding.variableName
+        await withDesignerRetry("bindVariable", params.signal, () =>
+          params.bridge.bindVariable(
+            runtimeNodeId,
+            binding.property,
+            binding.variableName
+          )
         );
       } catch (error) {
         executionWarnings.push({
@@ -417,32 +479,39 @@ export async function applyStylingPlan(params: {
 
   const createdStyleIds: string[] = [];
   const warnings: PlannerWarning[] = [...params.plan.warnings];
+  const targetNodeId = params.targetNodeId;
 
   try {
     for (const styleDefinition of params.plan.styleDefinitions) {
       throwIfAborted(params.signal);
-      const style = await params.bridge.ensureStyle(
-        styleDefinition.className,
-        styleDefinition.properties
+      const style = await withDesignerRetry("ensureStyle", params.signal, () =>
+        params.bridge.ensureStyle(
+          styleDefinition.className,
+          styleDefinition.properties
+        )
       );
       createdStyleIds.push(style.styleId);
     }
 
     if (params.plan.requiredClassNames.length > 0) {
       throwIfAborted(params.signal);
-      await params.bridge.applyClasses(
-        params.targetNodeId,
-        params.plan.requiredClassNames
+      await withDesignerRetry("applyClasses", params.signal, () =>
+        params.bridge.applyClasses(
+          targetNodeId,
+          params.plan.requiredClassNames
+        )
       );
     }
 
     for (const binding of params.plan.variableBindings) {
       throwIfAborted(params.signal);
       try {
-        await params.bridge.bindVariable(
-          params.targetNodeId,
-          binding.property,
-          binding.variableName
+        await withDesignerRetry("bindVariable", params.signal, () =>
+          params.bridge.bindVariable(
+            targetNodeId,
+            binding.property,
+            binding.variableName
+          )
         );
       } catch (error) {
         warnings.push({
