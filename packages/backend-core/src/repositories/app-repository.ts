@@ -12,7 +12,8 @@ import {
   RepoSyncRecord,
   SectionRunRecord,
   SectionWorkflowState,
-  SharedStyleContext
+  SharedStyleContext,
+  SiteStylePlan
 } from "@wfb/shared/contracts.js";
 
 export interface WebflowSiteBinding {
@@ -48,6 +49,8 @@ export interface AppRepository {
   getSiteBinding(repoId: string, userId: string): Promise<WebflowSiteBinding | null>;
   saveSharedStyleContext(siteId: string, sharedStyleContext: SharedStyleContext): Promise<void>;
   getSharedStyleContext(siteId: string): Promise<SharedStyleContext | null>;
+  saveSiteStylePlan(plan: SiteStylePlan): Promise<void>;
+  getSiteStylePlan(repoId: string, webflowSiteId: string): Promise<SiteStylePlan | null>;
   upsertPageMappings(input: PageMappingsUpsertInput): Promise<PageMapping[]>;
   getPageMappings(
     repoId: string,

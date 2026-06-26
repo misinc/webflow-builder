@@ -8,6 +8,7 @@ import {
   debugSkeletonRequestSchema,
   pageMappingsUpsertInputSchema,
   repoConnectionInputSchema,
+  siteStylePlanRequestSchema,
   workflowSectionDecisionInputSchema,
   workflowSectionRequestSchema
 } from "@wfb/shared/contracts.js";
@@ -206,6 +207,21 @@ async function handleGet(request: Request, locals: App.Locals, pathname: string)
     );
   }
 
+  if (pathname === "/api/workflow/site-style-plan") {
+    const repoId = url.searchParams.get("repoId");
+    const webflowSiteId = url.searchParams.get("webflowSiteId");
+    if (!repoId || !webflowSiteId) {
+      throw new Error("Missing site style plan query parameters.");
+    }
+    return json(
+      await services.siteStylePlanService.getOrCreatePlan({
+        repoId,
+        webflowSiteId,
+        requestedBy: getUserId(request)
+      })
+    );
+  }
+
   if (pathname === "/api/workflow/debug/generate-skeleton/status") {
     const jobId = url.searchParams.get("jobId");
     if (!jobId) {
@@ -281,6 +297,22 @@ async function handlePost(request: Request, locals: App.Locals, pathname: string
     return json({
       mappings: await services.workflowService.upsertPageMappings(input)
     });
+  }
+
+  if (pathname === "/api/workflow/site-style-plan/rebuild") {
+    return json(
+      await services.siteStylePlanService.rebuildPlan(
+        await parseBody(request, siteStylePlanRequestSchema)
+      )
+    );
+  }
+
+  if (pathname === "/api/workflow/site-style-plan/confirm") {
+    return json(
+      await services.siteStylePlanService.confirmPlan(
+        await parseBody(request, siteStylePlanRequestSchema)
+      )
+    );
   }
 
   if (pathname === "/api/workflow/section/analyze") {

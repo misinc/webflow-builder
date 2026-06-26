@@ -7,6 +7,7 @@ import { BuildJobService } from "@wfb/backend-core/services/build-job-service.js
 import { BuildPlanService } from "@wfb/backend-core/services/build-plan-service.js";
 import { RepoSyncService } from "@wfb/backend-core/services/repo-sync-service.js";
 import { SiteBindingService } from "@wfb/backend-core/services/site-binding-service.js";
+import { SiteStylePlanService } from "@wfb/backend-core/services/site-style-plan-service.js";
 import { V2ReadService } from "@wfb/backend-core/services/v2-read-service.js";
 import { WorkflowService } from "@wfb/backend-core/services/workflow-service.js";
 import { BuildPlanValidator } from "@wfb/backend-core/validation/build-plan-validator.js";
@@ -57,6 +58,7 @@ export function getCloudServices(locals: App.Locals) {
       validator
     ),
     siteBindingService: new SiteBindingService(repository),
+    siteStylePlanService: new SiteStylePlanService(repository),
     buildJobService: new BuildJobService(repository),
     v2ReadService: new V2ReadService(repository, githubClient, env),
     workflowService: new WorkflowService(repository, blobStore, extractor, planningProvider)

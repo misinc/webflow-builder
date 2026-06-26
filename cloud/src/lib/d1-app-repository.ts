@@ -12,7 +12,8 @@ import type {
   RepoSyncRecord,
   SectionRunRecord,
   SectionWorkflowState,
-  SharedStyleContext
+  SharedStyleContext,
+  SiteStylePlan
 } from "@wfb/shared/contracts.js";
 import { getDb } from "../db/getDb";
 import {
@@ -25,6 +26,7 @@ import {
   repoSyncsTable,
   sectionRunsTable,
   sectionWorkflowStatesTable,
+  siteStylePlansTable,
   sharedStyleContextsTable,
   webflowPageMappingsTable,
   webflowSiteBindingsTable
@@ -480,6 +482,43 @@ export class D1AppRepository implements AppRepository {
           styleIds: []
         })
       : null;
+  }
+
+  async saveSiteStylePlan(plan: SiteStylePlan): Promise<void> {
+    await this.db
+      .insert(siteStylePlansTable)
+      .values({
+        id: plan.id,
+        repoId: plan.repoId,
+        webflowSiteId: plan.webflowSiteId,
+        planJson: JSON.stringify(plan),
+        status: plan.status,
+        createdAt: plan.createdAt,
+        updatedAt: plan.updatedAt,
+        confirmedAt: plan.confirmedAt
+      })
+      .onConflictDoUpdate({
+        target: [siteStylePlansTable.repoId, siteStylePlansTable.webflowSiteId],
+        set: {
+          planJson: JSON.stringify(plan),
+          status: plan.status,
+          updatedAt: plan.updatedAt,
+          confirmedAt: plan.confirmedAt
+        }
+      });
+  }
+
+  async getSiteStylePlan(
+    repoId: string,
+    webflowSiteId: string
+  ): Promise<SiteStylePlan | null> {
+    const row = await this.db.query.siteStylePlansTable.findFirst({
+      where: and(
+        eq(siteStylePlansTable.repoId, repoId),
+        eq(siteStylePlansTable.webflowSiteId, webflowSiteId)
+      )
+    });
+    return row ? parseJson<SiteStylePlan | null>(row.planJson, null) : null;
   }
 
   async upsertPageMappings(input: PageMappingsUpsertInput): Promise<PageMapping[]> {

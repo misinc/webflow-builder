@@ -159,6 +159,26 @@ export const sharedStyleContextsTable = sqliteTable("shared_style_contexts", {
   updatedAt: text("updated_at").notNull()
 });
 
+export const siteStylePlansTable = sqliteTable(
+  "site_style_plans",
+  {
+    id: text("id").primaryKey(),
+    repoId: text("repo_id").notNull(),
+    webflowSiteId: text("webflow_site_id").notNull(),
+    planJson: text("plan_json").notNull(),
+    status: text("status").notNull(),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+    confirmedAt: text("confirmed_at")
+  },
+  (table) => ({
+    repoSiteIdx: uniqueIndex("site_style_plans_repo_site_idx").on(
+      table.repoId,
+      table.webflowSiteId
+    )
+  })
+);
+
 export const sectionWorkflowStatesTable = sqliteTable(
   "section_workflow_states",
   {

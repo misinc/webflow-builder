@@ -321,6 +321,38 @@ function deterministicVerification(input: {
   });
 }
 
+function warnOnOutOfPlanClasses(
+  styling: StylingPlan,
+  allowedClassNames: Set<string>
+): StylingPlan {
+  const plannedWarnings = styling.warnings.filter(
+    (warning) => warning.code !== "style-plan-unplanned-class"
+  );
+  const plannedClasses = dedupe([
+    ...styling.styleDefinitions.map((definition) => definition.className),
+    ...styling.requiredClassNames,
+    ...styling.suggestedNewClasses
+  ]);
+  const unplanned = plannedClasses.filter((className) => !allowedClassNames.has(className));
+  if (unplanned.length === 0) {
+    return {
+      ...styling,
+      warnings: plannedWarnings
+    };
+  }
+  return {
+    ...styling,
+    warnings: [
+      ...plannedWarnings,
+      providerWarning(
+        "style-plan-unplanned-class",
+        `Styling references classes outside the confirmed site style plan: ${unplanned.slice(0, 12).join(", ")}. Confirm the global plan before creating these classes.`,
+        "warning"
+      )
+    ]
+  };
+}
+
 export class WorkflowService {
   constructor(
     private readonly repository: AppRepository,
@@ -1086,6 +1118,18 @@ export class WorkflowService {
           )
         ]
       };
+    }
+    const siteStylePlan = await this.repository.getSiteStylePlan(
+      request.repoId,
+      request.webflowSiteId
+    );
+    if (siteStylePlan?.status === "confirmed") {
+      styling = warnOnOutOfPlanClasses(
+        styling,
+        new Set(
+          siteStylePlan.classDecisions.map((decision) => decision.targetClassName)
+        )
+      );
     }
     const runId = await this.persistRun(
       request,

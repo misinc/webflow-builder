@@ -11,7 +11,8 @@ import {
   RepoSyncRecord,
   SectionRunRecord,
   SectionWorkflowState,
-  SharedStyleContext
+  SharedStyleContext,
+  SiteStylePlan
 } from "@wfb/shared/contracts.js";
 import { nowIso, stableId } from "../utils.js";
 import {
@@ -29,6 +30,7 @@ export class MemoryAppRepository implements AppRepository {
   private readonly sectionsByRepo = new Map<string, string[]>();
   private readonly siteBindings = new Map<string, WebflowSiteBinding>();
   private readonly sharedStyleContexts = new Map<string, SharedStyleContext>();
+  private readonly siteStylePlans = new Map<string, SiteStylePlan>();
   private readonly pageMappings = new Map<string, PageMapping>();
   private readonly pageMappingsBySite = new Map<string, string[]>();
   private readonly workflowStates = new Map<string, SectionWorkflowState>();
@@ -166,6 +168,17 @@ export class MemoryAppRepository implements AppRepository {
 
   async getSharedStyleContext(siteId: string): Promise<SharedStyleContext | null> {
     return this.sharedStyleContexts.get(siteId) ?? null;
+  }
+
+  async saveSiteStylePlan(plan: SiteStylePlan): Promise<void> {
+    this.siteStylePlans.set(`${plan.repoId}:${plan.webflowSiteId}`, plan);
+  }
+
+  async getSiteStylePlan(
+    repoId: string,
+    webflowSiteId: string
+  ): Promise<SiteStylePlan | null> {
+    return this.siteStylePlans.get(`${repoId}:${webflowSiteId}`) ?? null;
   }
 
   async upsertPageMappings(input: PageMappingsUpsertInput): Promise<PageMapping[]> {

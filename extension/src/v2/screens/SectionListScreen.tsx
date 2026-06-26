@@ -7,7 +7,8 @@ import {
   Clock,
   Sparkles,
   X,
-  FileText
+  FileText,
+  CheckCircle2
 } from "lucide-react";
 import { Panel, PanelContent } from "../components/Panel";
 import { Button } from "../components/Button";
@@ -28,6 +29,7 @@ export function SectionListScreen() {
   const {
     activeMapping,
     activeQueue,
+    confirmSiteStylePlan,
     completeCurrentPage,
     componentBannerDismissed,
     componentOpportunities,
@@ -37,9 +39,11 @@ export function SectionListScreen() {
     isMutating,
     loadingLabel,
     refreshComponentOpportunities,
+    refreshSiteStylePlan,
     rescanSelectedRepo,
     selectedSection,
-    selectSection
+    selectSection,
+    siteStylePlan
   } = useAppState();
   const builtCount =
     activeQueue?.items.filter((item) => item.status === "approved").length ?? 0;
@@ -145,6 +149,58 @@ export function SectionListScreen() {
           >
             <X size={13} />
           </button>
+        </div>
+      ) : null}
+
+      {isMapped && siteStylePlan ? (
+        <div
+          className="px-5 py-3 flex items-center gap-3 flex-shrink-0 border-b"
+          style={{
+            background: siteStylePlan.status === "confirmed" ? "rgba(0,208,156,0.06)" : "rgba(255,184,0,0.07)",
+            borderColor: siteStylePlan.status === "confirmed" ? "rgba(0,208,156,0.18)" : "rgba(255,184,0,0.18)"
+          }}
+        >
+          <div
+            className="w-7 h-7 rounded-md inline-flex items-center justify-center flex-shrink-0"
+            style={{
+              background: siteStylePlan.status === "confirmed" ? "rgba(0,208,156,0.14)" : "rgba(255,184,0,0.14)",
+              border: siteStylePlan.status === "confirmed" ? "1px solid rgba(0,208,156,0.28)" : "1px solid rgba(255,184,0,0.28)",
+              color: siteStylePlan.status === "confirmed" ? "#00d09c" : "#ffcf4a"
+            }}
+          >
+            {siteStylePlan.status === "confirmed" ? <CheckCircle2 size={14} /> : <Sparkles size={14} />}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-[12.5px] text-wb-text-primary font-medium">
+              Site style plan {siteStylePlan.status === "confirmed" ? "confirmed" : "needs confirmation"}
+            </div>
+            <div className="text-[11px] text-wb-text-tertiary mt-px">
+              {siteStylePlan.classCounts.reuse} reused · {siteStylePlan.classCounts.create} new · {siteStylePlan.variableNames.length} variables
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={isMutating}
+            onClick={() => {
+              void refreshSiteStylePlan();
+            }}
+          >
+            <RefreshCw size={12} />
+            Refresh
+          </Button>
+          {siteStylePlan.status !== "confirmed" ? (
+            <Button
+              variant="primary"
+              size="sm"
+              disabled={isMutating}
+              onClick={() => {
+                void confirmSiteStylePlan();
+              }}
+            >
+              Confirm
+            </Button>
+          ) : null}
         </div>
       ) : null}
 

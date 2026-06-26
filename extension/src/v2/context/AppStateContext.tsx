@@ -15,6 +15,7 @@ import {
   type SectionAnalysis,
   type SectionVerification,
   type SharedStyleContext,
+  type SiteStylePlan,
   SitePageMappingRow,
   type SkeletonPlan,
   type StylingPlan,
@@ -265,6 +266,9 @@ interface AppStateContextValue {
   ) => Promise<WebflowSitePage | null>;
   activeMapping: SitePageMappingRow | null;
   activeQueue: WorkflowQueueResponse | null;
+  siteStylePlan: SiteStylePlan | null;
+  refreshSiteStylePlan: () => Promise<void>;
+  confirmSiteStylePlan: () => Promise<boolean>;
   currentSections: CurrentSectionRow[];
   selectedSectionId: string | null;
   selectedSection: CurrentSectionRow | null;
@@ -337,6 +341,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   >({});
   const [seededComponentIds, setSeededComponentIds] = useState<Record<string, boolean>>({});
   const [sharedStyleContext, setSharedStyleContext] = useState<SharedStyleContext | null>(null);
+  const [siteStylePlan, setSiteStylePlan] = useState<SiteStylePlan | null>(null);
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<SectionAnalysis | null>(null);
   const [skeleton, setSkeleton] = useState<SkeletonPlan | null>(null);
@@ -425,6 +430,30 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       sharedStyleContext: styles
     });
     return styles;
+  }, [
+    captureSharedStyles,
+    designerContext?.siteId,
+    selectedRepoId,
+    session?.userId,
+    sharedStyleContext
+  ]);
+
+  const refreshSiteStylePlan = useCallback(async () => {
+    if (!selectedRepoId || !session?.userId || !designerContext?.siteId) {
+      setSiteStylePlan(null);
+      return;
+    }
+    const styles =
+      sharedStyleContext?.siteId === designerContext.siteId
+        ? sharedStyleContext
+        : await captureSharedStyles(designerContext.siteId);
+    const plan = await backend.rebuildSiteStylePlan({
+      repoId: selectedRepoId,
+      webflowSiteId: designerContext.siteId,
+      requestedBy: session.userId,
+      sharedStyleContext: styles
+    });
+    setSiteStylePlan(plan);
   }, [
     captureSharedStyles,
     designerContext?.siteId,
@@ -672,6 +701,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     selectedRepo?.status
   ]);
 
+  useEffect(() => {
+    void refreshSiteStylePlan().catch(() => undefined);
+  }, [refreshSiteStylePlan, selectedRepo?.lastSyncedAt]);
+
   const currentSections = useMemo(() => {
     if (!activeQueue?.repoPage) {
       return [];
@@ -750,68 +783,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       .slice(0, 3);
   }, [designerContext?.pageId, livePages, repoTree]);
 
-  const createdComponentForSection = useMemo(() => null, []);
-
-  const resolveOpportunitySeedTarget = useCallback(
-    (opportunity: ComponentOpportunity) => {
-      if (!repoTree) {
-        throw new Error("Load the repo tree before creating components.");
-      }
-
-      const mappedRepoPageIds = new Set(
-        mappingRows
-          .filter((row) => row.mappingStatus === "mapped" && row.repoPageId)
-          .map((row) => row.repoPageId!)
-      );
-
-      const preferredEntry =
-        repoTree.pages.find(
-          (entry) =>
-            mappedRepoPageIds.has(entry.page.id) &&
-            opportunity.sourceFiles.includes(entry.page.sourceFile) &&
-            entry.sections.some(
-              (section) => section.componentName === opportunity.componentName
-            )
-        ) ??
-        repoTree.pages.find(
-          (entry) =>
-            mappedRepoPageIds.has(entry.page.id) &&
-            entry.sections.some(
-              (section) => section.componentName === opportunity.componentName
-            )
-        );
-
-      if (!preferredEntry) {
-        throw new Error(
-          `Map at least one Webflow page that uses ${opportunity.name} before creating that component.`
-        );
-      }
-
-      const representativeSection = preferredEntry.sections.find(
-        (section) => section.componentName === opportunity.componentName
-      );
-      if (!representativeSection) {
-        throw new Error(`Unable to find a representative section for ${opportunity.name}.`);
-      }
-
-      const mapping = mappingRows.find(
-        (row) => row.mappingStatus === "mapped" && row.repoPageId === preferredEntry.page.id
-      );
-      if (!mapping) {
-        throw new Error(
-          `Unable to find a mapped Webflow page for ${opportunity.name}.`
-        );
-      }
-
-      return {
-        mapping,
-        repoPage: preferredEntry.page,
-        section: representativeSection
-      };
-    },
-    [mappingRows, repoTree]
-  );
-
   const updateMapping = useCallback((webflowPageId: string, repoPageId: string | null) => {
     setMappingRows((rows) =>
       rows.map((row) =>
@@ -845,6 +816,35 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       }
     }
   }, []);
+
+  const confirmSiteStylePlan = useCallback(async () => {
+    if (!selectedRepoId || !session?.userId || !designerContext?.siteId) {
+      setError("Open a Webflow site and choose a repo first.");
+      return false;
+    }
+    try {
+      return await withMutation("Confirming style plan", async () => {
+        const styles = await ensureSiteBound();
+        const plan = await backend.confirmSiteStylePlan({
+          repoId: selectedRepoId,
+          webflowSiteId: designerContext.siteId!,
+          requestedBy: session.userId,
+          sharedStyleContext: styles
+        });
+        setSiteStylePlan(plan);
+        return true;
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to confirm the style plan.");
+      return false;
+    }
+  }, [
+    designerContext?.siteId,
+    ensureSiteBound,
+    selectedRepoId,
+    session?.userId,
+    withMutation
+  ]);
 
   const savePageMappings = useCallback(async () => {
     if (!selectedRepoId || !session?.userId || !designerContext?.siteId) {
@@ -1008,12 +1008,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           return next;
         });
         await ensureSiteBound();
-        let stylesForFallback =
-          sharedStyleContext && (!designerContext?.siteId || sharedStyleContext.siteId === designerContext.siteId)
-            ? sharedStyleContext
-            : null;
-        if (designerContext?.siteId && sharedStyleContext?.siteId !== designerContext.siteId) {
-          stylesForFallback = await captureSharedStyles(designerContext.siteId);
+        if (siteStylePlan?.status !== "confirmed") {
+          await refreshSiteStylePlan();
+          throw new Error("Confirm the site style plan before building sections.");
         }
         const request = currentWorkflowRequest(nextSectionId);
         const nextAnalysis = await backend.analyzeSection(request, controller.signal);
@@ -1042,13 +1039,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
   }, [
     activeQueue,
-    captureSharedStyles,
     currentWorkflowRequest,
-    designerContext?.siteId,
     ensureSiteBound,
+    refreshSiteStylePlan,
     resetSectionRunState,
     selectedSectionId,
-    sharedStyleContext?.siteId,
+    siteStylePlan?.status,
     withMutation
   ]);
 
@@ -1494,118 +1490,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   ]);
 
   const createComponentsFromOpportunities = useCallback(async (opportunityIds: string[]) => {
-    const pendingIds = opportunityIds.filter((id) => !createdComponentsByOpportunityId[id]);
-    if (pendingIds.length === 0) {
-      return 0;
+    if (opportunityIds.length > 0) {
+      setError("Automated Webflow Component creation is disabled. Review opportunities after the build and componentize manually.");
     }
-    if (!selectedRepoId || !session?.userId) {
-      setError("Choose a repo before creating components.");
-      return 0;
-    }
-    try {
-      return await withMutation("Creating components", async () => {
-        const context = await bridge.getContext();
-        if (!context.siteId || !context.pageId) {
-          throw new Error("Open a Webflow page before creating components.");
-        }
-        const styles =
-          sharedStyleContext?.siteId === context.siteId
-            ? sharedStyleContext
-            : await captureSharedStyles(context.siteId);
-        let createdCount = 0;
-        const createdEntries: Array<readonly [string, RegisteredComponent]> = [];
-        for (const id of pendingIds) {
-          const opportunity = componentOpportunities.find((entry) => entry.id === id);
-          if (!opportunity) {
-            continue;
-          }
-          const seedTarget = resolveOpportunitySeedTarget(opportunity);
-          const request: WorkflowSectionRequest = {
-            repoId: selectedRepoId,
-            webflowSiteId: context.siteId,
-            webflowPageId: seedTarget.mapping.webflowPageId,
-            sectionId: seedTarget.section.id,
-            requestedBy: session.userId,
-            mode: "fullAssist",
-            sharedStyleContext: styles,
-            selectedElementId: null
-          };
-          let componentCanvasOpened = false;
-          const component = await bridge.registerBlankComponent({
-            name: opportunity.name,
-            group: "Webflow Builder",
-            description: `Promoted from ${opportunity.componentName}`
-          });
-          try {
-            await bridge.openComponentCanvas(component.id);
-            componentCanvasOpened = true;
-            const root = await bridge.getComponentRootElement(component.id);
-            if (!root) {
-              throw new Error(`Unable to access the root element for ${opportunity.name}.`);
-            }
-
-            const nextSkeleton = await backend.generateSkeleton(request);
-            const skeletonExecution = await executeSkeletonPlanIntoRoot({
-              bridge,
-              rootNodeId: root.id,
-              plan: nextSkeleton
-            });
-            if (!skeletonExecution.success) {
-              throw new Error(
-                skeletonExecution.warnings.find((warning) => warning.level === "error")
-                  ?.message ?? `Failed to seed ${opportunity.name}.`
-              );
-            }
-
-            const nextStyling = await backend.styleSection({
-              ...request,
-              selectedElementId: root.id
-            });
-            const stylingExecution = await applyStylingPlan({
-              bridge,
-              context,
-              plan: nextStyling,
-              targetNodeId: root.id
-            });
-            if (!stylingExecution.success) {
-              throw new Error(
-                stylingExecution.warnings.find((warning) => warning.level === "error")
-                  ?.message ?? `Failed to style ${opportunity.name}.`
-              );
-            }
-
-            setSeededComponentIds((current) => ({
-              ...current,
-              [component.id]: true
-            }));
-            createdCount += 1;
-            createdEntries.push([id, component] as const);
-          } finally {
-            if (componentCanvasOpened) {
-              await bridge.exitComponentCanvas().catch(() => undefined);
-            }
-          }
-        }
-        setCreatedComponentsByOpportunityId((current) => ({
-          ...current,
-          ...Object.fromEntries(createdEntries)
-        }));
-        return createdCount;
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create components.");
-      return 0;
-    }
-  }, [
-    captureSharedStyles,
-    componentOpportunities,
-    createdComponentsByOpportunityId,
-    resolveOpportunitySeedTarget,
-    selectedRepoId,
-    session?.userId,
-    sharedStyleContext,
-    withMutation
-  ]);
+    return 0;
+  }, []);
 
   const connectAndSyncRepo = useCallback(
     async (input: Pick<RepoConnectionInput, "owner" | "name" | "repoUrl">) => {
@@ -1767,6 +1656,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       createPage,
       activeMapping,
       activeQueue,
+      siteStylePlan,
+      refreshSiteStylePlan,
+      confirmSiteStylePlan,
       currentSections,
       selectedSectionId,
       selectedSection,
@@ -1825,6 +1717,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       completeCurrentPage,
       bootstrapDiagnostics,
       connectAndSyncRepo,
+      confirmSiteStylePlan,
       ensureSelectedRepoReady,
       rescanSelectedRepo,
       componentBannerDismissed,
@@ -1850,6 +1743,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       loadingLabel,
       mappingRows,
       pageProgressRows,
+      refreshSiteStylePlan,
       refreshComponentOpportunities,
       bootstrapDiagnostics,
       versionSkewWarning,
@@ -1865,6 +1759,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       selectedSection,
       selectedSectionId,
       session,
+      siteStylePlan,
       skeleton,
       skeletonDraft,
       skipCurrentSection,

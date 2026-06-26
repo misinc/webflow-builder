@@ -18,6 +18,9 @@ import {
   SectionVerification,
   sectionVerificationSchema,
   SharedStyleContext,
+  SiteStylePlan,
+  siteStylePlanSchema,
+  SiteStylePlanRequest,
   sitePageMappingRowSchema,
   SitePageMappingRow,
   SkeletonPlan,
@@ -158,6 +161,9 @@ const cloudRouteMap: Record<string, string> = {
   "workflow-site-pages": "/workflow/site-pages",
   "workflow-page-mappings-get": "/workflow/page-mappings",
   "workflow-page-mappings-post": "/workflow/page-mappings",
+  "workflow-site-style-plan": "/workflow/site-style-plan",
+  "workflow-site-style-plan-rebuild": "/workflow/site-style-plan/rebuild",
+  "workflow-site-style-plan-confirm": "/workflow/site-style-plan/confirm",
   "workflow-queue": "/workflow/queue",
   "workflow-section-analyze": "/workflow/section/analyze",
   "workflow-section-generate-skeleton": "/workflow/section/generate-skeleton",
@@ -313,6 +319,46 @@ export class BackendClient {
       userId
     );
     return workflowQueueResponseSchema.parse(response);
+  }
+
+  async getSiteStylePlan(
+    repoId: string,
+    webflowSiteId: string,
+    userId: string
+  ): Promise<SiteStylePlan> {
+    const response = await request<SiteStylePlan>(
+      withQuery(this.functionUrl("workflow-site-style-plan"), {
+        repoId,
+        webflowSiteId
+      }),
+      { method: "GET" },
+      userId
+    );
+    return siteStylePlanSchema.parse(response);
+  }
+
+  async rebuildSiteStylePlan(input: SiteStylePlanRequest): Promise<SiteStylePlan> {
+    const response = await request<SiteStylePlan>(
+      this.functionUrl("workflow-site-style-plan-rebuild"),
+      {
+        method: "POST",
+        body: JSON.stringify(input)
+      },
+      input.requestedBy
+    );
+    return siteStylePlanSchema.parse(response);
+  }
+
+  async confirmSiteStylePlan(input: SiteStylePlanRequest): Promise<SiteStylePlan> {
+    const response = await request<SiteStylePlan>(
+      this.functionUrl("workflow-site-style-plan-confirm"),
+      {
+        method: "POST",
+        body: JSON.stringify(input)
+      },
+      input.requestedBy
+    );
+    return siteStylePlanSchema.parse(response);
   }
 
   async analyzeSection(

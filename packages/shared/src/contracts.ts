@@ -30,6 +30,38 @@ export const sharedStyleContextSchema = z.object({
   styleIds: z.array(z.string()).default([])
 });
 
+export const siteStylePlanClassDecisionSchema = z.object({
+  sourceClassName: z.string().min(1),
+  action: z.enum(["reuse", "create"]),
+  targetClassName: z.string().min(1),
+  source: z.enum(["repo", "webflow", "inferred"]).default("repo")
+});
+
+export const siteStylePlanSchema = z.object({
+  id: z.string().min(1),
+  repoId: z.string().min(1),
+  webflowSiteId: z.string().min(1),
+  status: z.enum(["draft", "confirmed"]),
+  classDecisions: z.array(siteStylePlanClassDecisionSchema),
+  variableNames: z.array(z.string()),
+  classCounts: z.object({
+    repo: z.number().int().nonnegative(),
+    webflow: z.number().int().nonnegative(),
+    reuse: z.number().int().nonnegative(),
+    create: z.number().int().nonnegative()
+  }),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+  confirmedAt: z.string().datetime().nullable()
+});
+
+export const siteStylePlanRequestSchema = z.object({
+  repoId: z.string().min(1),
+  webflowSiteId: z.string().min(1),
+  requestedBy: z.string().min(1),
+  sharedStyleContext: sharedStyleContextSchema.optional()
+});
+
 export const repoConnectionInputSchema = z.object({
   owner: z.string().min(1),
   name: z.string().min(1),
@@ -572,6 +604,11 @@ export const componentOpportunitiesResponseSchema = z.object({
 export type SharedClass = z.infer<typeof sharedClassSchema>;
 export type SharedVariable = z.infer<typeof sharedVariableSchema>;
 export type SharedStyleContext = z.infer<typeof sharedStyleContextSchema>;
+export type SiteStylePlanClassDecision = z.infer<
+  typeof siteStylePlanClassDecisionSchema
+>;
+export type SiteStylePlan = z.infer<typeof siteStylePlanSchema>;
+export type SiteStylePlanRequest = z.infer<typeof siteStylePlanRequestSchema>;
 export type RepoConnectionInput = z.infer<typeof repoConnectionInputSchema>;
 export type RepoRecord = z.infer<typeof repoSchema>;
 export type RepoSyncRecord = z.infer<typeof repoSyncSchema>;
