@@ -561,6 +561,47 @@ describe("MisRepoExtractor", () => {
     );
   });
 
+  it("generates unique component names for repeated inline collection sections", () => {
+    const extractor = new MisRepoExtractor();
+    const snapshot: RepositorySnapshot = {
+      owner: "misinc",
+      name: "misinc-2026",
+      defaultBranch: "main",
+      commitSha: "fixture-repeated-inline-sections-commit",
+      files: [
+        {
+          path: "src/app/pages/services.tsx",
+          content: `
+            export function ServicesPage() {
+              return (
+                <main>
+                  {services.map((service) => (
+                    <section key={service.title}>
+                      <h2>{service.title}</h2>
+                      <p>{service.description}</p>
+                    </section>
+                  ))}
+                  {featuredServices.map((service) => (
+                    <section key={service.slug}>
+                      <h2>{service.title}</h2>
+                      <p>{service.summary}</p>
+                    </section>
+                  ))}
+                </main>
+              );
+            }
+          `
+        }
+      ]
+    };
+
+    const index = extractor.extractRepoIndex("repo-1", snapshot);
+    const componentNames = index.sections.map((section) => section.componentName);
+
+    expect(componentNames).toEqual(["ServiceTitleSection1", "ServiceTitleSection2"]);
+    expect(new Set(componentNames).size).toBe(componentNames.length);
+  });
+
   it("resolves imported JSX image assets for inline sections", () => {
     const extractor = new MisRepoExtractor();
     const snapshot: RepositorySnapshot = {

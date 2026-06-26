@@ -483,6 +483,31 @@ function derivePageFallbackSectionKey(page: RepoPageRecord): string {
   return slugify(page.name) ?? slugify(page.route.replace(/\//g, " ")) ?? "page";
 }
 
+function pascalCaseIdentifier(input: string, fallback: string): string {
+  const normalized = slugify(input) ?? slugify(fallback) ?? "section";
+  return normalized
+    .split("-")
+    .filter(Boolean)
+    .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+    .join("");
+}
+
+function inlineSectionComponentName(
+  inlineSections: Array<{ name: string; sectionKey: string }>,
+  inlineSection: { name: string; sectionKey: string },
+  inlineIndex: number
+): string {
+  const base = `${pascalCaseIdentifier(
+    inlineSection.name,
+    inlineSection.sectionKey
+  )}Section`;
+  const duplicateCount = inlineSections.filter(
+    (section) =>
+      `${pascalCaseIdentifier(section.name, section.sectionKey)}Section` === base
+  ).length;
+  return duplicateCount > 1 ? `${base}${inlineIndex + 1}` : base;
+}
+
 export interface ExtractedRepoIndex {
   pages: RepoPageRecord[];
   sections: RepoSectionRecord[];
@@ -525,7 +550,11 @@ export class MisRepoExtractor {
             sourceFile: pageFile.path,
             importPath: pageFile.path,
             sortOrder: inlineIndex,
-            componentName: `${inlineSection.name.replace(/\s+/g, "")}Section`,
+            componentName: inlineSectionComponentName(
+              inlineSections,
+              inlineSection,
+              inlineIndex
+            ),
             metadata: {
               parseStatus: "parsed",
               confidence: 0.88,
