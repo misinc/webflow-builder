@@ -32,6 +32,7 @@ import {
   workflowQueueResponseSchema,
   WorkflowQueueResponse,
   WorkflowSectionDecisionInput,
+  WorkflowSectionPlacementInput,
   WorkflowSectionRequest,
   workflowSectionRequestSchema
 } from "@wfb/shared/contracts.js";
@@ -167,6 +168,8 @@ const cloudRouteMap: Record<string, string> = {
   "workflow-queue": "/workflow/queue",
   "workflow-section-analyze": "/workflow/section/analyze",
   "workflow-section-generate-skeleton": "/workflow/section/generate-skeleton",
+  "workflow-section-place-skeleton": "/workflow/section/place-skeleton",
+  "workflow-section-approve-skeleton": "/workflow/section/approve-skeleton",
   "workflow-debug-generate-skeleton": "/workflow/debug/generate-skeleton",
   "workflow-debug-generate-skeleton-start": "/workflow/debug/generate-skeleton/start",
   "workflow-debug-generate-skeleton-background":
@@ -506,6 +509,30 @@ export class BackendClient {
       signal
     );
     return stylingPlanSchema.parse(response);
+  }
+
+  async placeSkeleton(input: WorkflowSectionPlacementInput): Promise<WorkflowQueueResponse> {
+    const response = await request<WorkflowQueueResponse>(
+      this.functionUrl("workflow-section-place-skeleton"),
+      {
+        method: "POST",
+        body: JSON.stringify(input)
+      },
+      input.requestedBy
+    );
+    return workflowQueueResponseSchema.parse(response);
+  }
+
+  async approveSkeleton(input: WorkflowSectionDecisionInput): Promise<WorkflowQueueResponse> {
+    const response = await request<WorkflowQueueResponse>(
+      this.functionUrl("workflow-section-approve-skeleton"),
+      {
+        method: "POST",
+        body: JSON.stringify(input)
+      },
+      input.requestedBy
+    );
+    return workflowQueueResponseSchema.parse(response);
   }
 
   async verifySection(

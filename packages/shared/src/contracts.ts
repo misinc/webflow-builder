@@ -305,6 +305,8 @@ export const sectionWorkflowStatusSchema = z.enum([
   "not_started",
   "in_progress",
   "skeleton_ready",
+  "skeleton_placed",
+  "skeleton_approved",
   "styled",
   "approved",
   "skipped"
@@ -406,10 +408,15 @@ export const sectionWorkflowStateSchema = z.object({
   status: sectionWorkflowStatusSchema,
   sortOrder: z.number().int().nonnegative(),
   lastRunId: z.string().nullable(),
+  placedRootNodeId: z.string().nullable().default(null),
+  nodeIdMap: z.record(z.string(), z.string()).default({}),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
   completedAt: z.string().datetime().nullable(),
-  skippedAt: z.string().datetime().nullable()
+  skippedAt: z.string().datetime().nullable(),
+  skeletonPlacedAt: z.string().datetime().nullable().default(null),
+  skeletonApprovedAt: z.string().datetime().nullable().default(null),
+  styledAt: z.string().datetime().nullable().default(null)
 });
 
 export const sectionRunSchema = z.object({
@@ -433,7 +440,9 @@ export const workflowQueueItemSchema = z.object({
   sortOrder: z.number().int().nonnegative(),
   status: sectionWorkflowStatusSchema,
   recommendedMode: workflowModeSchema,
-  lastRunId: z.string().nullable()
+  lastRunId: z.string().nullable(),
+  placedRootNodeId: z.string().nullable().default(null),
+  skeletonApprovedAt: z.string().datetime().nullable().default(null)
 });
 
 export const workflowQueueResponseSchema = z.object({
@@ -524,6 +533,11 @@ export const workflowSectionDecisionInputSchema = z.object({
   webflowPageId: z.string().min(1),
   sectionId: z.string().min(1),
   requestedBy: z.string().min(1)
+});
+
+export const workflowSectionPlacementInputSchema = workflowSectionDecisionInputSchema.extend({
+  rootNodeId: z.string().min(1),
+  nodeIdMap: z.record(z.string(), z.string()).default({})
 });
 
 export const workflowPageCompleteInputSchema = z.object({
@@ -647,6 +661,9 @@ export type DebugSkeletonJobTrigger = z.infer<typeof debugSkeletonJobTriggerSche
 export type DebugSkeletonJobResponse = z.infer<typeof debugSkeletonJobResponseSchema>;
 export type WorkflowSectionDecisionInput = z.infer<
   typeof workflowSectionDecisionInputSchema
+>;
+export type WorkflowSectionPlacementInput = z.infer<
+  typeof workflowSectionPlacementInputSchema
 >;
 export type WorkflowPageCompleteInput = z.infer<
   typeof workflowPageCompleteInputSchema

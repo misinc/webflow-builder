@@ -204,6 +204,44 @@ describe("site style plans", () => {
       new MisRepoExtractor(),
       providerWithUnplannedClass(repoId)
     );
+    await expect(
+      workflow.styleSection({
+        repoId,
+        webflowSiteId: "site-1",
+        webflowPageId: "webflow-page-1",
+        sectionId: "section-1",
+        requestedBy: "user-1",
+        mode: "fullAssist",
+        sharedStyleContext
+      })
+    ).rejects.toThrow("Approve the placed skeleton");
+    const placedQueue = await workflow.recordSkeletonPlacement({
+      repoId,
+      webflowSiteId: "site-1",
+      webflowPageId: "webflow-page-1",
+      sectionId: "section-1",
+      requestedBy: "user-1",
+      rootNodeId: "runtime-root-1",
+      nodeIdMap: {
+        "hero-root": "runtime-root-1"
+      }
+    });
+    expect(placedQueue.items[0]).toMatchObject({
+      status: "skeleton_placed",
+      placedRootNodeId: "runtime-root-1"
+    });
+    const approvedQueue = await workflow.approveSkeleton({
+      repoId,
+      webflowSiteId: "site-1",
+      webflowPageId: "webflow-page-1",
+      sectionId: "section-1",
+      requestedBy: "user-1"
+    });
+    expect(approvedQueue.items[0]).toMatchObject({
+      status: "skeleton_approved",
+      placedRootNodeId: "runtime-root-1"
+    });
+
     const styling = await workflow.styleSection({
       repoId,
       webflowSiteId: "site-1",

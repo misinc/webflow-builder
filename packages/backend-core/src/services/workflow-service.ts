@@ -29,6 +29,8 @@ import {
   WorkflowQueueResponse,
   workflowSectionDecisionInputSchema,
   WorkflowSectionDecisionInput,
+  workflowSectionPlacementInputSchema,
+  WorkflowSectionPlacementInput,
   workflowSectionRequestSchema,
   WorkflowSectionRequest
 } from "@wfb/shared/contracts.js";
@@ -515,7 +517,9 @@ export class WorkflowService {
         status: state?.status ?? "not_started",
         recommendedMode:
           section.sectionKey === "hero" ? "fullAssist" : "styleExisting",
-        lastRunId: state?.lastRunId ?? null
+        lastRunId: state?.lastRunId ?? null,
+        placedRootNodeId: state?.placedRootNodeId ?? null,
+        skeletonApprovedAt: state?.skeletonApprovedAt ?? null
       };
     });
     const nextItem =
@@ -788,13 +792,21 @@ export class WorkflowService {
     }
     const completedAt = status === "approved" ? nowIso() : existing.completedAt;
     const skippedAt = status === "skipped" ? nowIso() : existing.skippedAt;
+    const skeletonPlacedAt =
+      status === "skeleton_placed" ? nowIso() : existing.skeletonPlacedAt;
+    const skeletonApprovedAt =
+      status === "skeleton_approved" ? nowIso() : existing.skeletonApprovedAt;
+    const styledAt = status === "styled" ? nowIso() : existing.styledAt;
     await this.repository.updateSectionWorkflowState({
       ...existing,
       status,
       lastRunId,
       updatedAt: nowIso(),
       completedAt,
-      skippedAt
+      skippedAt,
+      skeletonPlacedAt,
+      skeletonApprovedAt,
+      styledAt
     });
   }
 
@@ -1023,6 +1035,9 @@ export class WorkflowService {
 
   async styleSection(request: WorkflowSectionRequest): Promise<StylingPlan> {
     const context = await this.getSectionStateContext(request);
+    if (context.state?.status !== "skeleton_approved") {
+      throw new Error("Approve the placed skeleton before applying styles.");
+    }
     const latestSkeletonRun = await this.repository.getLatestSectionRun(
       request.requestedBy,
       request.webflowSiteId,
@@ -1172,6 +1187,87 @@ export class WorkflowService {
       verification
     );
     return verification;
+  }
+
+  async recordSkeletonPlacement(
+    input: WorkflowSectionPlacementInput
+  ): Promise<WorkflowQueueResponse> {
+    const placement = workflowSectionPlacementInputSchema.parse(input);
+    const queue = await this.getQueue(
+      placement.repoId,
+      placement.webflowSiteId,
+      placement.webflowPageId,
+      placement.requestedBy
+    );
+    if (!queue.mapping?.repoPageId) {
+      throw new Error("Current Webflow page is not mapped to a repo page.");
+    }
+    const states = await this.repository.getSectionWorkflowStates(
+      placement.requestedBy,
+      placement.webflowSiteId,
+      placement.webflowPageId,
+      queue.mapping.repoPageId
+    );
+    const state = states.find((item) => item.repoSectionId === placement.sectionId);
+    if (!state) {
+      throw new Error("Section workflow state was not found.");
+    }
+    const timestamp = nowIso();
+    await this.repository.updateSectionWorkflowState({
+      ...state,
+      status: "skeleton_placed",
+      placedRootNodeId: placement.rootNodeId,
+      nodeIdMap: placement.nodeIdMap,
+      updatedAt: timestamp,
+      skeletonPlacedAt: timestamp
+    });
+    return this.getQueue(
+      placement.repoId,
+      placement.webflowSiteId,
+      placement.webflowPageId,
+      placement.requestedBy
+    );
+  }
+
+  async approveSkeleton(
+    input: WorkflowSectionDecisionInput
+  ): Promise<WorkflowQueueResponse> {
+    workflowSectionDecisionInputSchema.parse(input);
+    const queue = await this.getQueue(
+      input.repoId,
+      input.webflowSiteId,
+      input.webflowPageId,
+      input.requestedBy
+    );
+    if (!queue.mapping?.repoPageId) {
+      throw new Error("Current Webflow page is not mapped to a repo page.");
+    }
+    const states = await this.repository.getSectionWorkflowStates(
+      input.requestedBy,
+      input.webflowSiteId,
+      input.webflowPageId,
+      queue.mapping.repoPageId
+    );
+    const state = states.find((item) => item.repoSectionId === input.sectionId);
+    if (!state) {
+      throw new Error("Section workflow state was not found.");
+    }
+    if (!state.placedRootNodeId) {
+      throw new Error("Place the skeleton on the canvas before approval.");
+    }
+    const timestamp = nowIso();
+    await this.repository.updateSectionWorkflowState({
+      ...state,
+      status: "skeleton_approved",
+      updatedAt: timestamp,
+      skeletonApprovedAt: timestamp
+    });
+    return this.getQueue(
+      input.repoId,
+      input.webflowSiteId,
+      input.webflowPageId,
+      input.requestedBy
+    );
   }
 
   private async markDecision(

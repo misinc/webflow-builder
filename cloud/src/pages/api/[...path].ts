@@ -10,6 +10,7 @@ import {
   repoConnectionInputSchema,
   siteStylePlanRequestSchema,
   workflowSectionDecisionInputSchema,
+  workflowSectionPlacementInputSchema,
   workflowSectionRequestSchema
 } from "@wfb/shared/contracts.js";
 import { getCloudServices } from "../../lib/cloud-services";
@@ -358,6 +359,22 @@ async function handlePost(request: Request, locals: App.Locals, pathname: string
     return json(
       await services.workflowService.styleSection(
         await parseBody(request, workflowSectionRequestSchema)
+      )
+    );
+  }
+
+  if (pathname === "/api/workflow/section/place-skeleton") {
+    return json(
+      await services.workflowService.recordSkeletonPlacement(
+        await parseBody(request, workflowSectionPlacementInputSchema)
+      )
+    );
+  }
+
+  if (pathname === "/api/workflow/section/approve-skeleton") {
+    return json(
+      await services.workflowService.approveSkeleton(
+        await parseBody(request, workflowSectionDecisionInputSchema)
       )
     );
   }

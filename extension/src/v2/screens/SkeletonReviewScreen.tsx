@@ -14,6 +14,7 @@ export function SkeletonReviewScreen() {
   const { navigate } = useNavigation();
   const {
     analysis,
+    approveCurrentSkeleton,
     beginSkeletonEdit,
     currentTargetNodeId,
     error,
@@ -38,6 +39,7 @@ export function SkeletonReviewScreen() {
     ? new Set(collectClassNames(displaySkeleton.elementTree)).size
     : 0;
   const hasInsertedSkeleton = Boolean(currentTargetNodeId);
+  const isApprovingSkeleton = isMutating && loadingLabel === "Approving skeleton";
   const isInsertingSkeleton = isMutating && loadingLabel === "Inserting skeleton";
   const isRefreshingSkeleton =
     Boolean(displaySkeleton) && isMutating && loadingLabel === "Generating skeleton";
@@ -70,9 +72,11 @@ export function SkeletonReviewScreen() {
           <div className="flex-1" />
           <span className="text-[11px] text-wb-text-tertiary mr-2">
             {hasInsertedSkeleton
-              ? "Skeleton inserted into Webflow"
+              ? "Skeleton placed on canvas"
               : isInsertingSkeleton
               ? "Inserting skeleton…"
+              : isApprovingSkeleton
+              ? "Approving skeleton…"
               : isRefreshingSkeleton
               ? "Regenerating skeleton…"
               : isGeneratingSkeleton
@@ -82,9 +86,15 @@ export function SkeletonReviewScreen() {
           <Button
             variant="ghost"
             disabled={!hasInsertedSkeleton || isMutating}
-            onClick={() => navigate("applying-styles")}
+            onClick={() => {
+              void approveCurrentSkeleton().then((approved) => {
+                if (approved) {
+                  navigate("applying-styles");
+                }
+              });
+            }}
           >
-            Move to styling
+            Approve skeleton
           </Button>
           <Button
             variant="primary"

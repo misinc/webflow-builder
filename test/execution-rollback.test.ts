@@ -142,7 +142,8 @@ describe("execution rollback helpers", () => {
       warnings: second.warnings,
       missingAssets: ["asset.png"],
       rollbackOutcome: null,
-      rootNodeId: "component-instance-1"
+      rootNodeId: "component-instance-1",
+      nodeIdMap: {}
     });
   });
 

@@ -239,10 +239,15 @@ export class MemoryAppRepository implements AppRepository {
         status: existing?.status ?? "not_started",
         sortOrder: state.sortOrder,
         lastRunId: existing?.lastRunId ?? null,
+        placedRootNodeId: existing?.placedRootNodeId ?? null,
+        nodeIdMap: existing?.nodeIdMap ?? {},
         createdAt: existing?.createdAt ?? nowIso(),
         updatedAt: nowIso(),
         completedAt: existing?.completedAt ?? null,
-        skippedAt: existing?.skippedAt ?? null
+        skippedAt: existing?.skippedAt ?? null,
+        skeletonPlacedAt: existing?.skeletonPlacedAt ?? null,
+        skeletonApprovedAt: existing?.skeletonApprovedAt ?? null,
+        styledAt: existing?.styledAt ?? null
       };
       this.workflowStates.set(id, record);
       return record;

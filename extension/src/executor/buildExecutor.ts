@@ -22,6 +22,7 @@ export interface ExecutionSummary {
     details: string;
   } | null;
   rootNodeId?: string | null;
+  nodeIdMap?: Record<string, string>;
 }
 
 function throwIfAborted(signal?: AbortSignal | null): void {
@@ -196,6 +197,7 @@ export async function executeSkeletonPlanIntoRoot(params: {
       classNames: params.plan.elementTree.classNames,
       textContent: params.plan.elementTree.textContent
     });
+    nodeIdMap.set(params.plan.elementTree.id, params.rootNodeId);
 
     for (const child of params.plan.elementTree.children) {
       throwIfAborted(params.signal);
@@ -229,7 +231,8 @@ export async function executeSkeletonPlanIntoRoot(params: {
       warnings: params.plan.warnings,
       missingAssets,
       rollbackOutcome: null,
-      rootNodeId: params.rootNodeId
+      rootNodeId: params.rootNodeId,
+      nodeIdMap: Object.fromEntries(nodeIdMap)
     };
   } catch (error) {
     let rollbackOutcome: ExecutionSummary["rollbackOutcome"] = null;
@@ -270,7 +273,8 @@ export async function executeSkeletonPlanIntoRoot(params: {
       ],
       missingAssets: [],
       rollbackOutcome,
-      rootNodeId: params.rootNodeId
+      rootNodeId: params.rootNodeId,
+      nodeIdMap: Object.fromEntries(nodeIdMap)
     };
   }
 }
@@ -374,7 +378,8 @@ export async function executeBuildPlan(params: {
       warnings: [...params.plan.warnings, ...executionWarnings],
       missingAssets,
       rollbackOutcome: null,
-      rootNodeId: createdNodeIds[0] ?? null
+      rootNodeId: createdNodeIds[0] ?? null,
+      nodeIdMap: Object.fromEntries(nodeIdMap)
     };
   } catch (error) {
     let rollbackOutcome: ExecutionSummary["rollbackOutcome"] = null;
@@ -414,7 +419,8 @@ export async function executeBuildPlan(params: {
       ],
       missingAssets,
       rollbackOutcome,
-      rootNodeId: createdNodeIds[0] ?? null
+      rootNodeId: createdNodeIds[0] ?? null,
+      nodeIdMap: Object.fromEntries(nodeIdMap)
     };
   }
 }

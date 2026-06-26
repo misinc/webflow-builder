@@ -151,10 +151,15 @@ function mapWorkflowState(
     status: row.status as SectionWorkflowState["status"],
     sortOrder: row.sortOrder,
     lastRunId: row.lastRunId ?? null,
+    placedRootNodeId: row.placedRootNodeId ?? null,
+    nodeIdMap: parseJson<Record<string, string>>(row.nodeIdMapJson ?? "{}", {}),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     completedAt: row.completedAt ?? null,
-    skippedAt: row.skippedAt ?? null
+    skippedAt: row.skippedAt ?? null,
+    skeletonPlacedAt: row.skeletonPlacedAt ?? null,
+    skeletonApprovedAt: row.skeletonApprovedAt ?? null,
+    styledAt: row.styledAt ?? null
   };
 }
 
@@ -593,10 +598,15 @@ export class D1AppRepository implements AppRepository {
           status: "not_started",
           sortOrder: state.sortOrder,
           lastRunId: null,
+          placedRootNodeId: null,
+          nodeIdMapJson: "{}",
           createdAt: timestamp,
           updatedAt: timestamp,
           completedAt: null,
-          skippedAt: null
+          skippedAt: null,
+          skeletonPlacedAt: null,
+          skeletonApprovedAt: null,
+          styledAt: null
         })
         .onConflictDoUpdate({
           target: [
@@ -640,9 +650,14 @@ export class D1AppRepository implements AppRepository {
         status: state.status,
         sortOrder: state.sortOrder,
         lastRunId: state.lastRunId,
+        placedRootNodeId: state.placedRootNodeId,
+        nodeIdMapJson: JSON.stringify(state.nodeIdMap),
         updatedAt: state.updatedAt,
         completedAt: state.completedAt,
-        skippedAt: state.skippedAt
+        skippedAt: state.skippedAt,
+        skeletonPlacedAt: state.skeletonPlacedAt,
+        skeletonApprovedAt: state.skeletonApprovedAt,
+        styledAt: state.styledAt
       })
       .where(eq(sectionWorkflowStatesTable.id, state.id));
   }

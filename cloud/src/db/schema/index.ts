@@ -191,10 +191,15 @@ export const sectionWorkflowStatesTable = sqliteTable(
     status: text("status").notNull(),
     sortOrder: int("sort_order").notNull(),
     lastRunId: text("last_run_id"),
+    placedRootNodeId: text("placed_root_node_id"),
+    nodeIdMapJson: text("node_id_map_json").notNull().default("{}"),
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at").notNull(),
     completedAt: text("completed_at"),
-    skippedAt: text("skipped_at")
+    skippedAt: text("skipped_at"),
+    skeletonPlacedAt: text("skeleton_placed_at"),
+    skeletonApprovedAt: text("skeleton_approved_at"),
+    styledAt: text("styled_at")
   },
   (table) => ({
     uniqueStateIdx: uniqueIndex("section_workflow_states_unique_idx").on(

@@ -5,6 +5,16 @@ function dedupe(values: string[]) {
   return [...new Set(values)];
 }
 
+function mergeNodeMaps(parts: ExecutionSummary[]) {
+  return parts.reduce<Record<string, string>>(
+    (merged, summary) => ({
+      ...merged,
+      ...(summary.nodeIdMap ?? {})
+    }),
+    {}
+  );
+}
+
 export function mergeExecutionSummaries(
   summaries: Array<ExecutionSummary | null | undefined>
 ): ExecutionSummary | null {
@@ -30,7 +40,8 @@ export function mergeExecutionSummaries(
     rootNodeId:
       [...parts]
         .reverse()
-        .find((summary) => summary.rootNodeId)?.rootNodeId ?? null
+        .find((summary) => summary.rootNodeId)?.rootNodeId ?? null,
+    nodeIdMap: mergeNodeMaps(parts)
   };
 }
 

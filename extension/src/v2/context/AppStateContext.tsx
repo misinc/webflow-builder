@@ -134,6 +134,8 @@ function statusToScreenStatus(
       return "skipped";
     case "in_progress":
     case "skeleton_ready":
+    case "skeleton_placed":
+    case "skeleton_approved":
     case "styled":
       return "in-progress";
     default:
@@ -292,6 +294,7 @@ interface AppStateContextValue {
   analysis: SectionAnalysis | null;
   skeleton: SkeletonPlan | null;
   insertCurrentSkeleton: () => Promise<boolean>;
+  approveCurrentSkeleton: () => Promise<boolean>;
   styling: StylingPlan | null;
   verification: SectionVerification | null;
   lastExecution: ExecutionSummary | null;
@@ -729,9 +732,17 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   const selectedSection =
     currentSections.find((section) => section.id === selectedSectionId) ?? null;
+  const selectedWorkflowItem =
+    activeQueue?.items.find((item) => item.repoSectionId === selectedSectionId) ?? null;
   const selectedSectionRecord = selectedSectionId
     ? repoSectionById.get(selectedSectionId) ?? null
     : null;
+
+  useEffect(() => {
+    if (selectedWorkflowItem?.placedRootNodeId) {
+      setCurrentTargetNodeId(selectedWorkflowItem.placedRootNodeId);
+    }
+  }, [selectedWorkflowItem?.placedRootNodeId]);
 
   const pageProgressRows = useMemo(() => {
     return mappingRows.map((row) => {
@@ -1167,6 +1178,22 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           activeExecutionRecordRef.current = null;
           setLastExecution(summary);
         }
+        if (!selectedRepoId || !session?.userId || !context.pageId || !nodeExecution.rootNodeId || !selectedSectionId) {
+          throw new Error("Unable to persist skeleton placement state.");
+        }
+        const nextQueue = await backend.placeSkeleton({
+          repoId: selectedRepoId,
+          webflowSiteId: context.siteId,
+          webflowPageId: context.pageId,
+          sectionId: selectedSectionId,
+          requestedBy: session.userId,
+          rootNodeId: nodeExecution.rootNodeId,
+          nodeIdMap: nodeExecution.nodeIdMap ?? {}
+        });
+        setQueueByPageId((current) => ({
+          ...current,
+          [context.pageId!]: nextQueue
+        }));
         return true;
       });
     } catch (err) {
@@ -1183,8 +1210,51 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     ensureSiteBound,
     isEditingSkeleton,
     rollbackCurrentExecution,
+    selectedRepoId,
+    selectedSectionId,
+    session?.userId,
     skeleton,
     skeletonDraft,
+    withMutation
+  ]);
+
+  const approveCurrentSkeleton = useCallback(async () => {
+    if (!selectedSectionId || !selectedRepoId || !session?.userId || !designerContext?.siteId || !designerContext.pageId) {
+      setError("Place a skeleton on the current Webflow page before approval.");
+      return false;
+    }
+    if (!(currentTargetNodeId ?? selectedWorkflowItem?.placedRootNodeId)) {
+      setError("Place the skeleton on the canvas before approval.");
+      return false;
+    }
+    try {
+      return await withMutation("Approving skeleton", async () => {
+        const pageId = designerContext.pageId!;
+        const nextQueue = await backend.approveSkeleton({
+          repoId: selectedRepoId,
+          webflowSiteId: designerContext.siteId!,
+          webflowPageId: pageId,
+          sectionId: selectedSectionId,
+          requestedBy: session.userId
+        });
+        setQueueByPageId((current) => ({
+          ...current,
+          [pageId]: nextQueue
+        }));
+        return true;
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to approve skeleton.");
+      return false;
+    }
+  }, [
+    currentTargetNodeId,
+    designerContext?.pageId,
+    designerContext?.siteId,
+    selectedRepoId,
+    selectedSectionId,
+    selectedWorkflowItem?.placedRootNodeId,
+    session?.userId,
     withMutation
   ]);
 
@@ -1211,42 +1281,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           sharedStyleContext: styles
         };
 
-        const editableSkeleton =
-          isEditingSkeleton && skeletonDraft.trim()
-            ? normalizeSkeletonPlan(parseSkeletonTreeText(skeleton, skeletonDraft))
-            : normalizeSkeletonPlan(skeleton);
-        let targetNodeId = currentTargetNodeId;
+        const targetNodeId = currentTargetNodeId ?? selectedWorkflowItem?.placedRootNodeId ?? null;
         const executionParts: ExecutionSummary[] = [];
 
         if (!targetNodeId) {
-          const nodeExecution = await executeSkeletonPlan({
-            bridge,
-            context,
-            plan: editableSkeleton,
-            placementMode: "append",
-            placementTarget: null,
-            signal: controller.signal
-          });
-          if (!nodeExecution.success) {
-            throw new Error(
-              nodeExecution.warnings.find((warning) => warning.level === "error")?.message ??
-                "Failed to insert the generated skeleton."
-            );
-          }
-          setSkeleton(normalizeSkeletonPlan(editableSkeleton));
-          targetNodeId = nodeExecution.rootNodeId ?? null;
-          setCurrentTargetNodeId(targetNodeId);
-          executionParts.push(nodeExecution);
-          const insertedSummary = mergeExecutionSummaries(executionParts);
-          if (insertedSummary) {
-            const record = {
-              summary: insertedSummary,
-              seededComponentId: null
-            } satisfies ExecutionRunRecord;
-            lastExecutionRecordRef.current = record;
-            activeExecutionRecordRef.current = null;
-            setLastExecution(insertedSummary);
-          }
+          throw new Error("Place and approve the skeleton before applying styles.");
         }
 
         const stylingRequest = {
@@ -1339,11 +1378,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     captureSharedStyles,
     currentTargetNodeId,
     currentWorkflowRequest,
-    isEditingSkeleton,
     selectedSectionId,
+    selectedWorkflowItem?.placedRootNodeId,
     sharedStyleContext,
     skeleton,
-    skeletonDraft,
     rollbackCurrentExecution,
     withMutation
   ]);
@@ -1681,6 +1719,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       analysis,
       skeleton,
       insertCurrentSkeleton,
+      approveCurrentSkeleton,
       styling,
       verification,
       lastExecution,
@@ -1712,6 +1751,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       analysis,
       applyCurrentSection,
       applySuggestionToCurrentPage,
+      approveCurrentSkeleton,
       beginSkeletonEdit,
       cancelActiveWorkflow,
       completeCurrentPage,
