@@ -13,7 +13,7 @@ import { SectionDetailHeader } from "../components/Headers";
 import { AiBadge, Badge } from "../components/Badge";
 import { useNavigation } from "../context/NavigationContext";
 import { useAppState } from "../context/AppStateContext";
-import type { ComponentOpportunity } from "../../../../src/shared/contracts.js";
+import type { ComponentOpportunity } from "@wfb/shared/contracts.js";
 
 type SuggestedPropType = "image" | "text" | "link";
 

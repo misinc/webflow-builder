@@ -14,7 +14,7 @@ import {
   serializeSkeletonTree
 } from "../../skeleton/tree.js";
 import { getWebflowBridge } from "../../webflow/bridge.js";
-import type { BuildNode, DebugSkeletonRequest, SharedStyleContext, SkeletonPlan } from "../../../../src/shared/contracts.js";
+import type { BuildNode, DebugSkeletonRequest, SharedStyleContext, SkeletonPlan } from "@wfb/shared/contracts.js";
 
 const backend = new BackendClient();
 const bridge = getWebflowBridge();

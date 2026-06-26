@@ -3,7 +3,7 @@ import {
   executeBuildPlan,
   executeSkeletonPlan
 } from "../extension/src/executor/buildExecutor.js";
-import { BuildPlan } from "../src/shared/contracts.js";
+import { BuildPlan } from "@wfb/shared/contracts.js";
 import {
   DesignerContext,
   getWebflowBridge,

@@ -4,5 +4,5 @@
     "types": ["node"],
     "noEmit": true
   },
-  "include": ["extension/**/*.ts", "extension/**/*.tsx", "src/shared/**/*.ts"]
+  "include": ["extension/**/*.ts", "extension/**/*.tsx", "packages/shared/**/*.ts"]
 }

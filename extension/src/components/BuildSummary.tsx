@@ -1,4 +1,4 @@
-import { BuildResultRecord } from "../../../src/shared/contracts.js";
+import { BuildResultRecord } from "@wfb/shared/contracts.js";
 
 interface BuildSummaryProps {
   result: BuildResultRecord | null;

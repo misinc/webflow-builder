@@ -13,7 +13,7 @@ import type {
   SectionRunRecord,
   SectionWorkflowState,
   SharedStyleContext
-} from "../shared/contracts.js";
+} from "@wfb/shared/contracts.js";
 import { getDb } from "../db/getDb";
 import {
   appBlobsTable,
@@ -29,11 +29,11 @@ import {
   webflowPageMappingsTable,
   webflowSiteBindingsTable
 } from "../db/schema";
-import { stableId } from "../backend/utils.js";
+import { stableId } from "@wfb/backend-core/utils.js";
 import type {
   AppRepository,
   WebflowSiteBinding
-} from "../backend/repositories/app-repository.js";
+} from "@wfb/backend-core/repositories/app-repository.js";
 import {
   assertD1BatchWithinLimit,
   insertBatchSize

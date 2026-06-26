@@ -26,7 +26,7 @@ import {
   WorkflowQueueResponse,
   type WorkflowSectionDecisionInput,
   type WorkflowSectionRequest
-} from "../../../../src/shared/contracts.js";
+} from "@wfb/shared/contracts.js";
 import {
   BackendClient,
   RepoTreeResponse

@@ -31,8 +31,8 @@ import {
   WorkflowSectionDecisionInput,
   WorkflowSectionRequest,
   workflowSectionRequestSchema
-} from "../../../src/shared/contracts.js";
-import { decideDebugSkeletonRouting } from "../../../src/shared/debug-skeleton.js";
+} from "@wfb/shared/contracts.js";
+import { decideDebugSkeletonRouting } from "@wfb/shared/debug-skeleton.js";
 
 export interface RepoTreeResponse {
   repo: RepoRecord;

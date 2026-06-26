@@ -4,7 +4,7 @@ import {
   parseSkeletonTreeText,
   serializeSkeletonTree
 } from "../extension/src/skeleton/tree.js";
-import { SkeletonPlan } from "../src/shared/contracts.js";
+import { SkeletonPlan } from "@wfb/shared/contracts.js";
 
 function basePlan(): SkeletonPlan {
   return {

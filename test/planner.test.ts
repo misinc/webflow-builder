@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { HeuristicBuildPlanner } from "../src/backend/planner/heuristic-planner.js";
+import { HeuristicBuildPlanner } from "@wfb/backend-core/planner/heuristic-planner.js";
 import {
   ProjectContext,
   SectionContext,
   SharedStyleContext
-} from "../src/shared/contracts.js";
+} from "@wfb/shared/contracts.js";
 
 const projectContext: ProjectContext = {
   namingRules: [],

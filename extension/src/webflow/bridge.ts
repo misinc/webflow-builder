@@ -1,12 +1,12 @@
 import {
   dedupe,
   inferSharedCategory
-} from "../../../src/shared/client-first.js";
+} from "@wfb/shared/client-first.js";
 import {
   BuildNode,
   SharedStyleContext,
   WebflowSitePage
-} from "../../../src/shared/contracts.js";
+} from "@wfb/shared/contracts.js";
 
 export interface DesignerContext {
   siteId: string | null;

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { OpenAIPlanningProvider } from "../src/backend/planner/openai-planning-provider.js";
-import { PlanningProviderInput } from "../src/backend/planner/planning-provider.js";
+import { OpenAIPlanningProvider } from "@wfb/backend-core/planner/openai-planning-provider.js";
+import { PlanningProviderInput } from "@wfb/backend-core/planner/planning-provider.js";
 
 const input: PlanningProviderInput = {
   metadata: {

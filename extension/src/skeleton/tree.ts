@@ -1,5 +1,5 @@
-import { isClientFirstName } from "../../../src/shared/client-first.js";
-import { BuildNode, SkeletonPlan } from "../../../src/shared/contracts.js";
+import { isClientFirstName } from "@wfb/shared/client-first.js";
+import { BuildNode, SkeletonPlan } from "@wfb/shared/contracts.js";
 
 const LEAF_TAGS = new Set(["img", "source", "br", "hr", "input", "meta", "link"]);
 const REMOVED_TAGS = new Set([

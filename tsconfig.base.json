@@ -10,6 +10,11 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@wfb/shared/*": ["packages/shared/src/*"],
+      "@wfb/backend-core/*": ["packages/backend-core/src/*"]
+    }
   }
 }

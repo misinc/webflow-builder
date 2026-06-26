@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { appBlobsTable } from "../db/schema";
 import { getDb } from "../db/getDb";
-import type { BlobStore } from "../backend/blob/blob-store.js";
+import type { BlobStore } from "@wfb/backend-core/blob/blob-store.js";
 
 export class D1BlobStore implements BlobStore {
   constructor(private readonly locals: App.Locals) {}

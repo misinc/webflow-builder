@@ -7,6 +7,12 @@ export default defineConfig({
   envDir: process.cwd(),
   plugins: [react()],
   root: path.resolve(process.cwd(), "extension"),
+  resolve: {
+    alias: {
+      "@wfb/shared": path.resolve(process.cwd(), "packages/shared/src"),
+      "@wfb/backend-core": path.resolve(process.cwd(), "packages/backend-core/src")
+    }
+  },
   build: {
     outDir: "dist",
     emptyOutDir: true

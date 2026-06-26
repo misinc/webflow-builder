@@ -1,8 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { MisRepoExtractor } from "../src/backend/extractor/mis-extractor.js";
-import { RepositorySnapshot } from "../src/backend/github/client.js";
+import { MisRepoExtractor } from "@wfb/backend-core/extractor/mis-extractor.js";
+import { RepositorySnapshot } from "@wfb/backend-core/github/client.js";
 
 async function loadFixtureSnapshot(): Promise<RepositorySnapshot> {
   const root = path.resolve(process.cwd(), "test/fixtures/mis-repo");

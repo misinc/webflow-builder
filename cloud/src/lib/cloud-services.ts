@@ -1,15 +1,15 @@
-import type { AppEnv } from "../backend/env.js";
-import { MisRepoExtractor } from "../backend/extractor/mis-extractor.js";
-import { createGitHubRepositoryClient } from "../backend/github/client.js";
-import { HeuristicBuildPlanner } from "../backend/planner/heuristic-planner.js";
-import { OpenAIPlanningProvider } from "../backend/planner/openai-planning-provider.js";
-import { BuildJobService } from "../backend/services/build-job-service.js";
-import { BuildPlanService } from "../backend/services/build-plan-service.js";
-import { RepoSyncService } from "../backend/services/repo-sync-service.js";
-import { SiteBindingService } from "../backend/services/site-binding-service.js";
-import { V2ReadService } from "../backend/services/v2-read-service.js";
-import { WorkflowService } from "../backend/services/workflow-service.js";
-import { BuildPlanValidator } from "../backend/validation/build-plan-validator.js";
+import type { AppEnv } from "@wfb/backend-core/env.js";
+import { MisRepoExtractor } from "@wfb/backend-core/extractor/mis-extractor.js";
+import { createGitHubRepositoryClient } from "@wfb/backend-core/github/client.js";
+import { HeuristicBuildPlanner } from "@wfb/backend-core/planner/heuristic-planner.js";
+import { OpenAIPlanningProvider } from "@wfb/backend-core/planner/openai-planning-provider.js";
+import { BuildJobService } from "@wfb/backend-core/services/build-job-service.js";
+import { BuildPlanService } from "@wfb/backend-core/services/build-plan-service.js";
+import { RepoSyncService } from "@wfb/backend-core/services/repo-sync-service.js";
+import { SiteBindingService } from "@wfb/backend-core/services/site-binding-service.js";
+import { V2ReadService } from "@wfb/backend-core/services/v2-read-service.js";
+import { WorkflowService } from "@wfb/backend-core/services/workflow-service.js";
+import { BuildPlanValidator } from "@wfb/backend-core/validation/build-plan-validator.js";
 import { D1AppRepository } from "./d1-app-repository";
 import { D1BlobStore } from "./d1-blob-store";
 

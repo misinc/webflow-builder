@@ -3,6 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "workspaces": [
+    "packages/shared",
+    "packages/backend-core"
+  ],
   "scripts": {
     "build": "npm run build:backend && npm run build:extension",
     "build:backend": "tsc -p tsconfig.node.json",

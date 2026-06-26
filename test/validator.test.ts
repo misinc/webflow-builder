@@ -3,8 +3,8 @@ import {
   BuildPlan,
   ProjectContext,
   SharedStyleContext
-} from "../src/shared/contracts.js";
-import { BuildPlanValidator } from "../src/backend/validation/build-plan-validator.js";
+} from "@wfb/shared/contracts.js";
+import { BuildPlanValidator } from "@wfb/backend-core/validation/build-plan-validator.js";
 
 const projectContext: ProjectContext = {
   namingRules: [],

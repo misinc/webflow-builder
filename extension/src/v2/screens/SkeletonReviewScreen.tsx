@@ -7,7 +7,7 @@ import { SectionDetailHeader } from "../components/Headers";
 import { Spinner } from "../components/Spinner";
 import { useNavigation } from "../context/NavigationContext";
 import { useAppState } from "../context/AppStateContext";
-import type { BuildNode } from "../../../../src/shared/contracts.js";
+import type { BuildNode } from "@wfb/shared/contracts.js";
 import { getSkeletonDisplayTag, normalizeSkeletonPlan } from "../../skeleton/tree.js";
 
 export function SkeletonReviewScreen() {

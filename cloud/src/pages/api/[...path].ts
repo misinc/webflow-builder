@@ -10,7 +10,7 @@ import {
   repoConnectionInputSchema,
   workflowSectionDecisionInputSchema,
   workflowSectionRequestSchema
-} from "../../shared/contracts.js";
+} from "@wfb/shared/contracts.js";
 import { getCloudServices } from "../../lib/cloud-services";
 
 const corsHeaders = {

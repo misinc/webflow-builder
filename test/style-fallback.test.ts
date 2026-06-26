@@ -2,13 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
   buildFallbackStylingFromSkeleton,
   shouldFallbackStylingPlan
-} from "../src/backend/planner/style-fallback.js";
+} from "@wfb/backend-core/planner/style-fallback.js";
 import {
   SectionContext,
   SharedStyleContext,
   SkeletonPlan,
   StylingPlan
-} from "../src/shared/contracts.js";
+} from "@wfb/shared/contracts.js";
 
 const sharedStyleContext: SharedStyleContext = {
   siteId: "site-1",

@@ -10,7 +10,7 @@ import {
   WorkflowMode,
   WorkflowQueueResponse,
   WebflowSitePage
-} from "../../src/shared/contracts.js";
+} from "@wfb/shared/contracts.js";
 import { BackendClient, summarizeSharedStyles } from "./api/client.js";
 import {
   applyStylingPlan,

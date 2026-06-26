@@ -2,6 +2,10 @@
   "extends": "astro/tsconfigs/strict",
   "compilerOptions": {
     "baseUrl": ".",
-    "verbatimModuleSyntax": false
+    "verbatimModuleSyntax": false,
+    "paths": {
+      "@wfb/shared/*": ["../packages/shared/src/*"],
+      "@wfb/backend-core/*": ["../packages/backend-core/src/*"]
+    }
   }
 }

@@ -5,7 +5,7 @@ import {
   PlannerWarning,
   SkeletonPlan,
   StylingPlan
-} from "../../../src/shared/contracts.js";
+} from "@wfb/shared/contracts.js";
 import { DesignerContext, WebflowDesignerBridge } from "../webflow/bridge.js";
 
 export interface ExecutionSummary {

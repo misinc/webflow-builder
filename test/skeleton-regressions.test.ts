@@ -4,7 +4,7 @@ import {
   normalizeSkeletonPlan,
   parseSkeletonTreeText
 } from "../extension/src/skeleton/tree.js";
-import { BuildNode, SkeletonPlan } from "../src/shared/contracts.js";
+import { BuildNode, SkeletonPlan } from "@wfb/shared/contracts.js";
 
 interface RegressionFixture {
   name: string;
