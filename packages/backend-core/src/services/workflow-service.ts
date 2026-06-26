@@ -25,6 +25,10 @@ import {
   stylingPlanSchema,
   StylingPlan,
   WorkflowMode,
+  workflowSectionPlanJobResponseSchema,
+  WorkflowSectionPlanJobResponse,
+  workflowSectionPlanJobStartSchema,
+  WorkflowSectionPlanJobStart,
   workflowQueueResponseSchema,
   WorkflowQueueResponse,
   workflowSectionDecisionInputSchema,
@@ -58,6 +62,19 @@ interface DebugSkeletonJobRecord {
   error?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+interface SectionPlanJobRecord {
+  jobId: string;
+  phase: "skeleton" | "style";
+  status: "pending" | "running" | "completed" | "failed";
+  request: WorkflowSectionRequest;
+  skeleton?: SkeletonPlan;
+  styling?: StylingPlan;
+  error?: string;
+  createdAt: string;
+  updatedAt: string;
+  attempts: number;
 }
 
 function emptySharedStyleContext(siteId: string): SharedStyleContext {
@@ -1027,6 +1044,133 @@ export class WorkflowService {
       });
     }
     return debugSkeletonJobResponseSchema.parse({
+      jobId,
+      status: job.status,
+      pollAfterMs: 1500
+    });
+  }
+
+  private sectionPlanJobKey(jobId: string): string {
+    return `section-plan-job:${jobId}`;
+  }
+
+  private async saveSectionPlanJob(job: SectionPlanJobRecord): Promise<void> {
+    await this.blobStore.putJson(this.sectionPlanJobKey(job.jobId), job);
+  }
+
+  private async getSectionPlanJobRecord(
+    jobId: string
+  ): Promise<SectionPlanJobRecord | null> {
+    return this.blobStore.getJson<SectionPlanJobRecord>(this.sectionPlanJobKey(jobId));
+  }
+
+  private async startSectionPlanJob(
+    phase: SectionPlanJobRecord["phase"],
+    input: WorkflowSectionRequest
+  ): Promise<WorkflowSectionPlanJobStart> {
+    const request = workflowSectionRequestSchema.parse(input);
+    const now = nowIso();
+    const jobId = stableId(
+      `section-${phase}`,
+      request.requestedBy,
+      request.webflowPageId,
+      request.sectionId,
+      now
+    );
+    await this.saveSectionPlanJob({
+      jobId,
+      phase,
+      status: "pending",
+      request,
+      createdAt: now,
+      updatedAt: now,
+      attempts: 0
+    });
+    return workflowSectionPlanJobStartSchema.parse({
+      jobId,
+      status: "pending",
+      pollAfterMs: 1500
+    });
+  }
+
+  async startSkeletonJob(
+    input: WorkflowSectionRequest
+  ): Promise<WorkflowSectionPlanJobStart> {
+    return this.startSectionPlanJob("skeleton", input);
+  }
+
+  async startStyleJob(
+    input: WorkflowSectionRequest
+  ): Promise<WorkflowSectionPlanJobStart> {
+    return this.startSectionPlanJob("style", input);
+  }
+
+  async runSectionPlanJob(input: { jobId: string }): Promise<void> {
+    const existing = await this.getSectionPlanJobRecord(input.jobId);
+    if (!existing) {
+      throw new Error("Unknown section planning job.");
+    }
+    const running = {
+      ...existing,
+      status: "running" as const,
+      attempts: existing.attempts + 1,
+      error: undefined,
+      updatedAt: nowIso()
+    };
+    await this.saveSectionPlanJob(running);
+    try {
+      if (running.phase === "skeleton") {
+        const skeleton = await this.generateSkeleton(running.request);
+        await this.saveSectionPlanJob({
+          ...running,
+          status: "completed",
+          skeleton,
+          updatedAt: nowIso()
+        });
+        return;
+      }
+      const styling = await this.styleSection(running.request);
+      await this.saveSectionPlanJob({
+        ...running,
+        status: "completed",
+        styling,
+        updatedAt: nowIso()
+      });
+    } catch (error) {
+      await this.saveSectionPlanJob({
+        ...running,
+        status: "failed",
+        error: error instanceof Error ? error.message : "Section planning job failed.",
+        updatedAt: nowIso()
+      });
+    }
+  }
+
+  async getSectionPlanJob(jobId: string): Promise<WorkflowSectionPlanJobResponse> {
+    const job = await this.getSectionPlanJobRecord(jobId);
+    if (!job) {
+      return workflowSectionPlanJobResponseSchema.parse({
+        jobId,
+        status: "pending",
+        pollAfterMs: 1500
+      });
+    }
+    if (job.status === "completed") {
+      return workflowSectionPlanJobResponseSchema.parse({
+        jobId,
+        status: "completed",
+        skeleton: job.skeleton,
+        styling: job.styling
+      });
+    }
+    if (job.status === "failed") {
+      return workflowSectionPlanJobResponseSchema.parse({
+        jobId,
+        status: "failed",
+        error: job.error ?? "Section planning job failed."
+      });
+    }
+    return workflowSectionPlanJobResponseSchema.parse({
       jobId,
       status: job.status,
       pollAfterMs: 1500

@@ -203,6 +203,7 @@ interface V2PageProgressRow {
   mapped: boolean;
   active: boolean;
   doneCount: number;
+  inProgressCount: number;
   skippedCount: number;
   remainingCount: number;
   totalCount: number;
@@ -751,6 +752,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         queue?.items.filter((item) => item.status === "approved").length ?? 0;
       const skippedCount =
         queue?.items.filter((item) => item.status === "skipped").length ?? 0;
+      const inProgressCount =
+        queue?.items.filter((item) =>
+          ["in_progress", "skeleton_ready", "skeleton_placed", "skeleton_approved", "styled"].includes(item.status)
+        ).length ?? 0;
       const totalCount = queue?.items.length ?? 0;
       const remainingCount = Math.max(totalCount - doneCount - skippedCount, 0);
       const percent =
@@ -767,6 +772,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         mapped: row.mappingStatus === "mapped",
         active: row.webflowPageId === designerContext?.pageId,
         doneCount,
+        inProgressCount,
         skippedCount,
         remainingCount,
         totalCount,

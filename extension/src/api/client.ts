@@ -33,6 +33,10 @@ import {
   WorkflowQueueResponse,
   WorkflowSectionDecisionInput,
   WorkflowSectionPlacementInput,
+  WorkflowSectionPlanJobResponse,
+  workflowSectionPlanJobResponseSchema,
+  WorkflowSectionPlanJobStart,
+  workflowSectionPlanJobStartSchema,
   WorkflowSectionRequest,
   workflowSectionRequestSchema
 } from "@wfb/shared/contracts.js";
@@ -168,14 +172,18 @@ const cloudRouteMap: Record<string, string> = {
   "workflow-queue": "/workflow/queue",
   "workflow-section-analyze": "/workflow/section/analyze",
   "workflow-section-generate-skeleton": "/workflow/section/generate-skeleton",
+  "workflow-section-generate-skeleton-start": "/workflow/section/generate-skeleton/start",
   "workflow-section-place-skeleton": "/workflow/section/place-skeleton",
   "workflow-section-approve-skeleton": "/workflow/section/approve-skeleton",
+  "workflow-section-job-background": "/workflow/section/job/background",
+  "workflow-section-job-status": "/workflow/section/job/status",
   "workflow-debug-generate-skeleton": "/workflow/debug/generate-skeleton",
   "workflow-debug-generate-skeleton-start": "/workflow/debug/generate-skeleton/start",
   "workflow-debug-generate-skeleton-background":
     "/workflow/debug/generate-skeleton/background",
   "workflow-debug-generate-skeleton-status": "/workflow/debug/generate-skeleton/status",
   "workflow-section-style": "/workflow/section/style",
+  "workflow-section-style-start": "/workflow/section/style/start",
   "workflow-section-verify": "/workflow/section/verify",
   "workflow-section-approve": "/workflow/section/approve",
   "workflow-section-skip": "/workflow/section/skip",
@@ -396,6 +404,50 @@ export class BackendClient {
       signal
     );
     return skeletonPlanSchema.parse(response);
+  }
+
+  async startSkeletonJob(input: WorkflowSectionRequest): Promise<WorkflowSectionPlanJobStart> {
+    const validated = workflowSectionRequestSchema.parse(input);
+    const response = await request<WorkflowSectionPlanJobStart>(
+      this.functionUrl("workflow-section-generate-skeleton-start"),
+      {
+        method: "POST",
+        body: JSON.stringify(validated)
+      },
+      input.requestedBy
+    );
+    return workflowSectionPlanJobStartSchema.parse(response);
+  }
+
+  async startStyleJob(input: WorkflowSectionRequest): Promise<WorkflowSectionPlanJobStart> {
+    const validated = workflowSectionRequestSchema.parse(input);
+    const response = await request<WorkflowSectionPlanJobStart>(
+      this.functionUrl("workflow-section-style-start"),
+      {
+        method: "POST",
+        body: JSON.stringify(validated)
+      },
+      input.requestedBy
+    );
+    return workflowSectionPlanJobStartSchema.parse(response);
+  }
+
+  async runSectionPlanJob(jobId: string): Promise<void> {
+    await request(
+      this.functionUrl("workflow-section-job-background"),
+      {
+        method: "POST",
+        body: JSON.stringify({ jobId })
+      }
+    );
+  }
+
+  async getSectionPlanJob(jobId: string): Promise<WorkflowSectionPlanJobResponse> {
+    const response = await request<WorkflowSectionPlanJobResponse>(
+      withQuery(this.functionUrl("workflow-section-job-status"), { jobId }),
+      { method: "GET" }
+    );
+    return workflowSectionPlanJobResponseSchema.parse(response);
   }
 
   async generateDebugSkeleton(

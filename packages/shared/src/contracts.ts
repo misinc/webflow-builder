@@ -527,6 +527,31 @@ export const debugSkeletonJobResponseSchema = z.discriminatedUnion("status", [
   debugSkeletonJobFailedSchema
 ]);
 
+export const workflowSectionPlanJobStartSchema = z.object({
+  jobId: z.string().min(1),
+  status: z.enum(["pending", "running"]),
+  pollAfterMs: z.number().int().positive()
+});
+
+export const workflowSectionPlanJobResponseSchema = z.discriminatedUnion("status", [
+  z.object({
+    jobId: z.string().min(1),
+    status: z.enum(["pending", "running"]),
+    pollAfterMs: z.number().int().positive()
+  }),
+  z.object({
+    jobId: z.string().min(1),
+    status: z.literal("completed"),
+    skeleton: skeletonPlanSchema.optional(),
+    styling: stylingPlanSchema.optional()
+  }),
+  z.object({
+    jobId: z.string().min(1),
+    status: z.literal("failed"),
+    error: z.string().min(1)
+  })
+]);
+
 export const workflowSectionDecisionInputSchema = z.object({
   repoId: z.string().min(1),
   webflowSiteId: z.string().min(1),
@@ -659,6 +684,12 @@ export type DebugSkeletonRequest = z.infer<typeof debugSkeletonRequestSchema>;
 export type DebugSkeletonJobStart = z.infer<typeof debugSkeletonJobStartSchema>;
 export type DebugSkeletonJobTrigger = z.infer<typeof debugSkeletonJobTriggerSchema>;
 export type DebugSkeletonJobResponse = z.infer<typeof debugSkeletonJobResponseSchema>;
+export type WorkflowSectionPlanJobStart = z.infer<
+  typeof workflowSectionPlanJobStartSchema
+>;
+export type WorkflowSectionPlanJobResponse = z.infer<
+  typeof workflowSectionPlanJobResponseSchema
+>;
 export type WorkflowSectionDecisionInput = z.infer<
   typeof workflowSectionDecisionInputSchema
 >;

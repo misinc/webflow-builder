@@ -231,6 +231,14 @@ async function handleGet(request: Request, locals: App.Locals, pathname: string)
     return json(await services.workflowService.getDebugSkeletonJob(jobId));
   }
 
+  if (pathname === "/api/workflow/section/job/status") {
+    const jobId = url.searchParams.get("jobId");
+    if (!jobId) {
+      throw new Error("Missing jobId query parameter.");
+    }
+    return json(await services.workflowService.getSectionPlanJob(jobId));
+  }
+
   {
     const match = routeMatch(pathname, /^\/api\/build\/jobs\/([^/]+)$/);
     if (match) {
@@ -332,6 +340,14 @@ async function handlePost(request: Request, locals: App.Locals, pathname: string
     );
   }
 
+  if (pathname === "/api/workflow/section/generate-skeleton/start") {
+    return json(
+      await services.workflowService.startSkeletonJob(
+        await parseBody(request, workflowSectionRequestSchema)
+      )
+    );
+  }
+
   if (pathname === "/api/workflow/debug/generate-skeleton") {
     return json(
       await services.workflowService.generateDebugSkeleton(
@@ -361,6 +377,23 @@ async function handlePost(request: Request, locals: App.Locals, pathname: string
         await parseBody(request, workflowSectionRequestSchema)
       )
     );
+  }
+
+  if (pathname === "/api/workflow/section/style/start") {
+    return json(
+      await services.workflowService.startStyleJob(
+        await parseBody(request, workflowSectionRequestSchema)
+      )
+    );
+  }
+
+  if (pathname === "/api/workflow/section/job/background") {
+    const body = (await request.json()) as { jobId?: unknown };
+    if (typeof body.jobId !== "string" || !body.jobId) {
+      throw new Error("Missing jobId.");
+    }
+    await services.workflowService.runSectionPlanJob({ jobId: body.jobId });
+    return json({ status: "accepted" }, 202);
   }
 
   if (pathname === "/api/workflow/section/place-skeleton") {

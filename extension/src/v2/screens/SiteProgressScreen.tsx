@@ -9,6 +9,8 @@ export function SiteProgressScreen() {
   const { navigate } = useNavigation();
   const { pageProgressRows } = useAppState();
   const totalBuilt = pageProgressRows.reduce((sum, page) => sum + page.doneCount, 0);
+  const totalInProgress = pageProgressRows.reduce((sum, page) => sum + page.inProgressCount, 0);
+  const totalSkipped = pageProgressRows.reduce((sum, page) => sum + page.skippedCount, 0);
   const totalSections = pageProgressRows.reduce((sum, page) => sum + page.totalCount, 0);
   const overallPercent =
     totalSections > 0 ? Math.round((totalBuilt / totalSections) * 100) : 0;
@@ -46,6 +48,12 @@ export function SiteProgressScreen() {
             </div>
           </div>
 
+          <div className="grid grid-cols-3 gap-2 mb-5">
+            <ReportStat label="In progress" value={totalInProgress} />
+            <ReportStat label="Skipped" value={totalSkipped} />
+            <ReportStat label="Remaining" value={Math.max(totalSections - totalBuilt - totalSkipped, 0)} />
+          </div>
+
           {pageProgressRows.map((page) => (
             <PageRowItem key={page.webflowPageId} page={page} />
           ))}
@@ -64,6 +72,7 @@ function PageRowItem({
     mapped: boolean;
     active: boolean;
     doneCount: number;
+    inProgressCount: number;
     skippedCount: number;
     remainingCount: number;
     totalCount: number;
@@ -144,7 +153,7 @@ function PageRowItem({
           ) : null}
         </div>
         <div className="text-[11px] text-wb-text-tertiary font-mono mt-0.5">
-          {page.doneCount} done · {page.skippedCount} skipped · {page.remainingCount} remaining
+          {page.doneCount} done · {page.inProgressCount} in progress · {page.skippedCount} skipped · {page.remainingCount} remaining
         </div>
       </div>
       <div className="w-[120px] h-1 bg-white/[0.06] rounded-full overflow-hidden">
@@ -165,6 +174,19 @@ function PageRowItem({
         <ChevronRight size={14} />
       </IconButton>
     </button>
+  );
+}
+
+function ReportStat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="bg-wb-surface-1 border border-white/[0.09] rounded-md px-3 py-2">
+      <div className="text-[10.5px] text-wb-text-tertiary uppercase tracking-wider font-semibold">
+        {label}
+      </div>
+      <div className="text-[18px] text-wb-text-primary font-semibold tabular-nums">
+        {value}
+      </div>
+    </div>
   );
 }
 
