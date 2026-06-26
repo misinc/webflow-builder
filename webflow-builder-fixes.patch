@@ -1,0 +1,126 @@
+diff --git a/cloud/src/backend/planner/openai-planning-provider.ts b/cloud/src/backend/planner/openai-planning-provider.ts
+index 8859b8b..97d297e 100644
+--- a/cloud/src/backend/planner/openai-planning-provider.ts
++++ b/cloud/src/backend/planner/openai-planning-provider.ts
+@@ -1715,9 +1715,20 @@ export class OpenAIPlanningProvider implements PlanningProvider {
+       );
+       return normalizeStyling(raw, fallback);
+     } catch (error) {
+-      throw new Error(
+-        error instanceof Error ? error.message : "OpenAI styling generation failed."
+-      );
++      // Previously this threw, making styling the only stage with no fallback —
++      // a single transient OpenAI blip hard-failed the whole "style" step.
++      // Degrade to a review-only plan with a surfaced warning instead, matching
++      // the analyze/skeleton/verify stages.
++      return {
++        ...fallback,
++        warnings: [
++          ...fallback.warnings,
++          providerWarning(
++            "styling-error",
++            error instanceof Error ? error.message : "OpenAI styling generation failed."
++          )
++        ]
++      };
+     }
+   }
+ 
+diff --git a/cloud/src/lib/d1-app-repository.ts b/cloud/src/lib/d1-app-repository.ts
+index bc9d0f9..1c33985 100644
+--- a/cloud/src/lib/d1-app-repository.ts
++++ b/cloud/src/lib/d1-app-repository.ts
+@@ -320,12 +320,15 @@ export class D1AppRepository implements AppRepository {
+     pages: RepoPageRecord[],
+     sections: RepoSectionRecord[]
+   ): Promise<void> {
+-    await this.db.delete(repoSectionsTable).where(eq(repoSectionsTable.repoId, repoId));
+-    await this.db.delete(repoPagesTable).where(eq(repoPagesTable.repoId, repoId));
+-
+-    if (pages.length > 0) {
+-      for (const pageBatch of chunkValues(pages, insertBatchSize(7))) {
+-        await this.db.insert(repoPagesTable).values(
++    // Build every write as a prepared statement and run them in a single
++    // atomic D1 batch. Previously these were separate awaited statements, so a
++    // failure on any insert (e.g. the old 175-param overflow) could leave the
++    // repo index half-written or fully deleted. db.batch() is all-or-nothing.
++    const statements = [
++      this.db.delete(repoSectionsTable).where(eq(repoSectionsTable.repoId, repoId)),
++      this.db.delete(repoPagesTable).where(eq(repoPagesTable.repoId, repoId)),
++      ...chunkValues(pages, insertBatchSize(7)).map((pageBatch) =>
++        this.db.insert(repoPagesTable).values(
+           pageBatch.map((page) => ({
+             id: page.id,
+             repoId: page.repoId,
+@@ -335,13 +338,10 @@ export class D1AppRepository implements AppRepository {
+             sortOrder: page.sortOrder,
+             metadataJson: JSON.stringify(page.metadata)
+           }))
+-        );
+-      }
+-    }
+-
+-    if (sections.length > 0) {
+-      for (const sectionBatch of chunkValues(sections, insertBatchSize(10))) {
+-        await this.db.insert(repoSectionsTable).values(
++        )
++      ),
++      ...chunkValues(sections, insertBatchSize(10)).map((sectionBatch) =>
++        this.db.insert(repoSectionsTable).values(
+           sectionBatch.map((section) => ({
+             id: section.id,
+             repoId: section.repoId,
+@@ -354,9 +354,15 @@ export class D1AppRepository implements AppRepository {
+             componentName: section.componentName,
+             metadataJson: JSON.stringify(section.metadata)
+           }))
+-        );
+-      }
+-    }
++        )
++      )
++    ];
++
++    // The two deletes guarantee a non-empty batch (drizzle's d1 batch() needs
++    // at least one statement).
++    await this.db.batch(
++      statements as [(typeof statements)[number], ...(typeof statements)[number][]]
++    );
+   }
+ 
+   async getPages(repoId: string): Promise<RepoPageRecord[]> {
+diff --git a/cloud/src/pages/api/[...path].ts b/cloud/src/pages/api/[...path].ts
+index 3447a1e..8f9a457 100644
+--- a/cloud/src/pages/api/[...path].ts
++++ b/cloud/src/pages/api/[...path].ts
+@@ -43,6 +43,19 @@ function handleError(error: unknown) {
+ 
+   const message = error instanceof Error ? error.message : "Unknown error";
+   const status = /missing|invalid|unknown|not configured/i.test(message) ? 400 : 500;
++  if (status >= 500) {
++    // Log full detail to Workers observability, but never leak internals
++    // (raw SQL / DB driver messages) back to the extension UI.
++    const errorId =
++      typeof crypto !== "undefined" && "randomUUID" in crypto
++        ? crypto.randomUUID()
++        : `${Date.now()}`;
++    console.error(`[api-error ${errorId}]`, error);
++    return json(
++      { error: "Something went wrong on the server. Please retry.", errorId },
++      500
++    );
++  }
+   return json({ error: message }, status);
+ }
+ 
+@@ -124,6 +137,10 @@ async function handleGet(request: Request, locals: App.Locals, pathname: string)
+   if (pathname === "/api/debug-env-status") {
+     const env = services.env;
+     return json({
++      // Surfaces the deployed build so the extension can detect version skew
++      // between the uploaded bundle and the running backend. Set BUILD_SHA at
++      // deploy time (e.g. BUILD_SHA=$(git rev-parse --short HEAD) astro build).
++      buildSha: import.meta.env.BUILD_SHA ?? "unknown",
+       dbBinding: true,
+       githubAppId: Boolean(env.githubAppId),
+       githubAppClientId: Boolean(env.githubAppClientId),
