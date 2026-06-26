@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "dependencies": {
+    "@wfb/shared": "file:../shared"
+  },
   "exports": {
     "./*.js": "./src/*.ts",
     "./*": "./src/*.ts"

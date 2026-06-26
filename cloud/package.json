@@ -4,7 +4,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "postinstall": "node scripts/link-workspace-deps.mjs",
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro build && wrangler dev",
