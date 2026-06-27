@@ -8,6 +8,7 @@ import {
 } from "@wfb/shared/contracts.js";
 import { dedupe } from "@wfb/shared/client-first.js";
 import { slugify } from "@wfb/shared/text.js";
+import { serializeSectionContext } from "./section-serializer.js";
 
 function sharedOrFallback(
   sharedStyleContext: SharedStyleContext,
@@ -73,7 +74,7 @@ function createBaseTree(
     `${sectionKey}-root`,
     "section",
     "section",
-    ["section", `section_${sectionKey}`],
+    [`section_${sectionKey}`],
     []
   );
   const padding = buildNode(
@@ -146,11 +147,17 @@ function chooseCopy(
   sectionContext: SectionContext,
   fallback: { eyebrow: string; title: string; body: string }
 ): { eyebrow: string; title: string; body: string } {
-  const [firstHint, secondHint, thirdHint] = sectionContext.contentHints;
+  const serializedContent = serializeSectionContext(sectionContext).content
+    .map((item) => item.value.trim())
+    .filter(Boolean);
+  const [firstHint, secondHint, thirdHint] =
+    sectionContext.contentHints.length > 0
+      ? sectionContext.contentHints
+      : serializedContent;
   return {
     eyebrow: firstHint ?? fallback.eyebrow,
-    title: secondHint ?? fallback.title,
-    body: thirdHint ?? fallback.body
+    title: secondHint ?? firstHint ?? fallback.title,
+    body: thirdHint ?? secondHint ?? "Body copy"
   };
 }
 
@@ -309,8 +316,8 @@ function solutionsPlan(
   const tree = createBaseTree("solutions", sharedStyleContext);
   const copy = chooseCopy(sectionContext, {
     eyebrow: "Solutions",
-    title: "Validate first, mutate second",
-    body: "Unsupported patterns become warnings so the build stays explicit and reviewable."
+    title: `${sectionContext.sectionName} section`,
+    body: "Body copy"
   });
 
   tree.contentNode.children.push(

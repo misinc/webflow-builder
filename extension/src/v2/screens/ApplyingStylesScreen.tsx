@@ -57,11 +57,20 @@ export function ApplyingStylesScreen() {
       };
     }) ?? [];
 
-  if (isMutating && appliedLines.length === 0) {
+  const requiredClassLines: StyleLine[] =
+    styling?.requiredClassNames.slice(0, Math.max(0, 18 - appliedLines.length)).map((className) => ({
+      selector: `.${className}`,
+      prop: "applied",
+      value: "section root"
+    })) ?? [];
+  const visibleLines = [...appliedLines, ...requiredClassLines];
+  const hasBlockedVerification = Boolean(verification && !verification.readyForApproval);
+
+  if (isMutating && visibleLines.length === 0) {
     const pendingClassName =
       skeleton?.elementTree.classNames.find((className) => className !== "section") ??
       skeleton?.elementTree.classNames[0];
-    appliedLines.push({
+    visibleLines.push({
       selector: pendingClassName ? `.${pendingClassName}` : undefined,
       pending: true,
       message: styling ? "Applying styles" : "Preparing styling plan"
@@ -86,7 +95,7 @@ export function ApplyingStylesScreen() {
             Reject & redo
           </Button>
           <div className="flex-1" />
-          {error && !isMutating && !verification ? (
+          {(error && !isMutating && !verification) || (!isMutating && hasBlockedVerification) ? (
             <Button
               variant="ghost"
               size="sm"
@@ -98,7 +107,7 @@ export function ApplyingStylesScreen() {
             </Button>
           ) : null}
           <span className="text-[11px] text-wb-text-tertiary mr-2">
-            {loadingLabel ?? (verification ? "Ready for approval" : "Applying styles…")}
+            {loadingLabel ?? (verification ? (verification.readyForApproval ? "Ready for approval" : "Needs retry or redo") : "Applying styles…")}
           </span>
           <Button
             variant="primary"
@@ -122,7 +131,11 @@ export function ApplyingStylesScreen() {
         onBack={() => {
           void cancelActiveWorkflow().then(() => navigate("section-list"));
         }}
-        badge={<AiBadge>{verification ? "Ready" : "Styling"}</AiBadge>}
+        badge={
+          <AiBadge>
+            {verification ? (verification.readyForApproval ? "Ready" : "Review") : "Styling"}
+          </AiBadge>
+        }
       />
 
       <Stepper steps={buildStepper("style")} />
@@ -133,7 +146,11 @@ export function ApplyingStylesScreen() {
             {isMutating ? <Spinner size={28} thickness={2.5} /> : null}
           </div>
           <div className="text-[15px] font-medium text-wb-text-primary mb-1.5">
-            {verification ? "Section styled and verified" : `Applying styles to ${selectedSection?.title ?? "current section"}`}
+            {verification
+              ? verification.readyForApproval
+                ? "Section styled and verified"
+                : "Section needs another styling pass"
+              : `Applying styles to ${selectedSection?.title ?? "current section"}`}
           </div>
           <div className="text-[12.5px] text-wb-text-secondary leading-relaxed max-w-[480px] mx-auto">
             Watch the section take shape on the canvas behind you. Approval unlocks when verification passes.
@@ -145,7 +162,7 @@ export function ApplyingStylesScreen() {
           title="Styles applied"
           count={
             styling
-              ? `${styling.styleDefinitions.length} classes · ${styling.variableBindings.length} variables`
+              ? `${styling.styleDefinitions.length + styling.requiredClassNames.length} classes · ${styling.variableBindings.length} variables`
               : isMutating
                 ? "Generating styling plan"
                 : "Waiting on styling plan"
@@ -153,7 +170,7 @@ export function ApplyingStylesScreen() {
         />
 
         <div className="px-4 py-2 font-mono text-[11px] leading-loose">
-          {appliedLines.map((line, index) => (
+          {visibleLines.map((line, index) => (
             <StyleLineRow key={`${line.selector}-${index}`} line={line} />
           ))}
         </div>

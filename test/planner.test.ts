@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { HeuristicBuildPlanner } from "@wfb/backend-core/planner/heuristic-planner.js";
 import {
+  BuildNode,
   ProjectContext,
   SectionContext,
   SharedStyleContext
@@ -50,6 +51,19 @@ const sectionContext: SectionContext = {
   relatedSharedClasses: []
 };
 
+function findNodeById(node: BuildNode, id: string): BuildNode | null {
+  if (node.id === id) {
+    return node;
+  }
+  for (const child of node.children) {
+    const match = findNodeById(child, id);
+    if (match) {
+      return match;
+    }
+  }
+  return null;
+}
+
 describe("HeuristicBuildPlanner", () => {
   it("binds image assets to the image node when one exists", () => {
     const planner = new HeuristicBuildPlanner();
@@ -87,8 +101,35 @@ describe("HeuristicBuildPlanner", () => {
     expect(first.classAssignments).toEqual(second.classAssignments);
     expect(first.styleDefinitions).toEqual(second.styleDefinitions);
     expect(first.elementTree.classNames).toContain("section_hero");
+    expect(first.elementTree.classNames).not.toContain("section");
     expect(
       first.classAssignments.flatMap((assignment) => assignment.classNames)
     ).toContain("padding-global");
+  });
+
+  it("uses source content instead of generic internal fallback copy", () => {
+    const planner = new HeuristicBuildPlanner();
+    const plan = planner.plan({
+      pageId: "page-1",
+      sectionId: "section-1",
+      sectionContext: {
+        ...sectionContext,
+        sectionName: "Solutions",
+        componentName: "Solutions",
+        sourceCode: [
+          "export function Solutions() {",
+          "  return <section><p>Designed for teams</p><h2>Practical Webflow builds</h2><p>Reusable sections that match your repo source.</p></section>;",
+          "}"
+        ].join("\n"),
+        contentHints: []
+      },
+      projectContext,
+      sharedStyleContext
+    });
+
+    const bodyNode = findNodeById(plan.elementTree, "solutions-body");
+
+    expect(bodyNode?.textContent).toBe("Reusable sections that match your repo source.");
+    expect(bodyNode?.textContent).not.toContain("Unsupported patterns become warnings");
   });
 });

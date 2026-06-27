@@ -185,6 +185,14 @@ function isAbortError(error: unknown) {
   return error instanceof DOMException && error.name === "AbortError";
 }
 
+function stylingHasMaterialChanges(plan: StylingPlan): boolean {
+  return (
+    plan.styleDefinitions.some((definition) => Object.keys(definition.properties).length > 0) ||
+    plan.variableBindings.length > 0 ||
+    plan.requiredClassNames.length > 0
+  );
+}
+
 function serializeMappings(rows: SitePageMappingRow[]) {
   return JSON.stringify(
     rows.map((row) => ({
@@ -1300,6 +1308,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         };
         const nextStyling = await backend.styleSection(stylingRequest, controller.signal);
         setStyling(nextStyling);
+        if (!stylingHasMaterialChanges(nextStyling)) {
+          throw new Error(
+            "Styling produced no class changes, variable bindings, or class applications. Retry styling or reject and redo the skeleton."
+          );
+        }
 
         const stylingExecution = await applyStylingPlan({
           bridge,
