@@ -579,6 +579,177 @@ describe("OpenAIPlanningProvider footer skeleton normalization", () => {
     expect(plan.treeText).not.toContain("--accent");
   });
 
+  it("replaces an underfit mapped-data skeleton with repeated content cards", async () => {
+    const rawPlan = {
+      sectionMetadata: {
+        ...input.metadata,
+        sectionName: "Solutions"
+      },
+      treeText: [
+        "section.section_solutions",
+        "  div.padding-global",
+        "    div.container-large",
+        "      div.padding-section-medium",
+        "        div.solutions_component",
+        "          div.solutions_content",
+        "            p.is-text-small",
+        "            h2.heading-style-h2",
+        "            p.text-size-medium",
+        "          div.solutions_visual",
+        "            ul.solutions_list",
+        "              li.solutions_item",
+        "                p"
+      ].join("\n"),
+      elementTree: {
+        id: "root",
+        type: "box",
+        tag: "section",
+        classNames: ["section_solutions"],
+        children: [
+          {
+            id: "content",
+            type: "box",
+            tag: "div",
+            classNames: ["solutions_content"],
+            children: [
+              { id: "eyebrow", type: "text", tag: "p", classNames: ["is-text-small"], children: [] },
+              { id: "heading", type: "heading", tag: "h2", classNames: ["heading-style-h2"], children: [] },
+              { id: "body", type: "text", tag: "p", classNames: ["text-size-medium"], children: [] }
+            ]
+          },
+          {
+            id: "visual",
+            type: "box",
+            tag: "div",
+            classNames: ["solutions_visual"],
+            children: [
+              {
+                id: "list",
+                type: "list",
+                tag: "ul",
+                classNames: ["solutions_list"],
+                children: [
+                  {
+                    id: "item",
+                    type: "listItem",
+                    tag: "li",
+                    classNames: ["solutions_item"],
+                    children: [{ id: "item-copy", type: "text", tag: "p", classNames: [], children: [] }]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      reusableClasses: ["padding-global", "container-large", "padding-section-medium"],
+      suggestedNewClasses: ["section_solutions", "solutions_component"],
+      warnings: []
+    };
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(
+          JSON.stringify({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify(rawPlan)
+                }
+              }
+            ]
+          }),
+          { status: 200, headers: { "content-type": "application/json" } }
+        )
+      )
+    );
+
+    const provider = new OpenAIPlanningProvider("test-key", "test-model");
+    const plan = await provider.generateSkeleton({
+      ...input,
+      metadata: {
+        ...input.metadata,
+        sectionName: "Solutions"
+      },
+      sectionContext: {
+        ...input.sectionContext,
+        sectionName: "Solutions",
+        sourceCode: [
+          "import { solutionIndustries } from '@/app/data/solutionIndustries';",
+          "export function SolutionsSection() {",
+          "  return <section><div>{solutionIndustries.map((industry) => <article key={industry.title}><h3>{industry.title}</h3><p>{industry.description}</p></article>)}</div></section>;",
+          "}",
+          "/* Imported data from src/app/data/solutionIndustries.ts */",
+          "export const solutionIndustries = [",
+          "  { title: 'Small Businesses', description: 'Practical website and growth systems for owner-led teams that need results without operational overhead.' },",
+          "  { title: 'Real Estate', description: 'Listing-ready digital experiences, lead funnels, and CRM-connected workflows for brokers and teams.' },",
+          "  { title: 'Nonprofits', description: 'Mission-first websites focused on fundraising, volunteer recruitment, and measurable community impact.' },",
+          "  { title: 'Professional Services', description: 'Credibility-driven websites that support complex buying cycles for legal, financial, and consulting firms.' },",
+          "  { title: 'Startups & SaaS', description: 'Conversion-focused experiences that support product positioning, activation, and scalable go-to-market growth.' },",
+          "  { title: 'Retail / Ecommerce', description: 'Online storefronts, product-focused journeys, and conversion systems designed to increase revenue and repeat purchases.' }",
+          "];"
+        ].join("\n")
+      },
+      serializedSection: {
+        ...input.serializedSection,
+        summary: "Solutions section with imported repeated industry cards.",
+        sourceExcerpt: "<section>",
+        content: [
+          { kind: "p", label: "p", value: "Solutions Tailored to Your Industry" },
+          {
+            kind: "p",
+            label: "p",
+            value: "Solutions designed around how each industry actually operates."
+          },
+          {
+            kind: "p",
+            label: "p",
+            value:
+              "Instead of presenting every audience at the same weight, this version creates a stronger entry point and a more editorial scan path."
+          },
+          { kind: "title", label: "title", value: "Small Businesses" },
+          {
+            kind: "description",
+            label: "description",
+            value:
+              "Practical website and growth systems for owner-led teams that need results without operational overhead."
+          },
+          { kind: "title", label: "title", value: "Real Estate" },
+          {
+            kind: "description",
+            label: "description",
+            value:
+              "Listing-ready digital experiences, lead funnels, and CRM-connected workflows for brokers and teams."
+          },
+          { kind: "title", label: "title", value: "Nonprofits" },
+          {
+            kind: "description",
+            label: "description",
+            value:
+              "Mission-first websites focused on fundraising, volunteer recruitment, and measurable community impact."
+          },
+          { kind: "title", label: "title", value: "Professional Services" },
+          {
+            kind: "description",
+            label: "description",
+            value:
+              "Credibility-driven websites that support complex buying cycles for legal, financial, and consulting firms."
+          }
+        ]
+      }
+    });
+
+    expect(plan.treeText).toContain("div.solutions_grid");
+    expect(plan.treeText).toContain('h3.heading-style-h3 "Small Businesses"');
+    expect(plan.treeText).toContain('p.text-size-medium "Practical website and growth systems');
+    expect(plan.treeText).toContain('h3.heading-style-h3 "Real Estate"');
+    expect(plan.treeText).toContain('h3.heading-style-h3 "Professional Services"');
+    expect(
+      plan.warnings.some((warning) => warning.code === "skeleton-content-fallback")
+    ).toBe(true);
+  });
+
   it("filters unsafe content returned by analysis normalization", async () => {
     vi.stubGlobal(
       "fetch",

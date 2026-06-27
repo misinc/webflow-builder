@@ -662,4 +662,81 @@ describe("MisRepoExtractor", () => {
       "../../assets/Katy Kimball Windsor.jpg"
     ]);
   });
+
+  it("appends local imported data modules to section context for mapped content extraction", () => {
+    const extractor = new MisRepoExtractor();
+    const snapshot: RepositorySnapshot = {
+      owner: "misinc",
+      name: "misinc-2026",
+      defaultBranch: "main",
+      commitSha: "fixture-imported-data-commit",
+      files: [
+        {
+          path: "src/app/pages/HomePage.tsx",
+          content: `
+            import { SolutionsSection } from "@/app/components/sections/SolutionsSection";
+            export default function HomePage() {
+              return <SolutionsSection />;
+            }
+          `
+        },
+        {
+          path: "src/app/components/sections/SolutionsSection.tsx",
+          content: `
+            import { solutionIndustries } from "@/app/data/solutionIndustries";
+
+            export function SolutionsSection() {
+              return (
+                <section>
+                  <p>Solutions Tailored to Your Industry</p>
+                  <div>{solutionIndustries.map((industry) => (
+                    <article key={industry.title}>
+                      <h3>{industry.title}</h3>
+                      <p>{industry.description}</p>
+                    </article>
+                  ))}</div>
+                </section>
+              );
+            }
+          `
+        },
+        {
+          path: "src/app/data/solutionIndustries.ts",
+          content: `
+            export const solutionIndustries = [
+              {
+                title: "Small Businesses",
+                description: "Practical website and growth systems for owner-led teams."
+              },
+              {
+                title: "Real Estate",
+                description: "Listing-ready digital experiences for brokers and teams."
+              }
+            ];
+          `
+        }
+      ]
+    };
+
+    const index = extractor.extractRepoIndex("repo-1", snapshot);
+    const section = index.sections[0];
+    const page = index.pages[0];
+    const sectionContext = extractor.buildSectionContext({
+      repoId: "repo-1",
+      page,
+      section,
+      snapshot,
+      sharedStyleContext: {
+        siteId: "site-1",
+        capturedAt: new Date().toISOString(),
+        classes: [],
+        variables: [],
+        styleIds: []
+      }
+    });
+
+    expect(sectionContext.sourceCode).toContain("Imported data from src/app/data/solutionIndustries.ts");
+    expect(sectionContext.sourceCode).toContain("Small Businesses");
+    expect(sectionContext.sourceCode).toContain("Real Estate");
+  });
 });

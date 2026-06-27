@@ -53,6 +53,8 @@ function isRelevantRepoFile(filePath: string): boolean {
     /^(?:src\/)?pages\/(?!_app\.|_document\.|_error\.).+\.(tsx|jsx|ts|js)$/.test(filePath) ||
     /^(?:src\/)?app\/components\/.+\.(tsx|jsx|ts|js)$/.test(filePath) ||
     /^(?:src\/)?components\/.+\.(tsx|jsx|ts|js)$/.test(filePath) ||
+    /^(?:src\/)?app\/(?:data|content)\/.+\.(ts|js|json)$/.test(filePath) ||
+    /^(?:src\/)?(?:data|content)\/.+\.(ts|js|json)$/.test(filePath) ||
     /^src\/styles\/.+\.(css|scss|ts)$/.test(filePath) ||
     /^(?:src\/)?styles\/.+\.(css|scss|ts)$/.test(filePath) ||
     /^(?:src\/)?app\/.+\.(css|scss)$/.test(filePath)

@@ -1175,6 +1175,10 @@ function skeletonLooksUnderfit(
   const sourceCode = input.sectionContext.sourceCode;
   const sourceHasList = /<(ul|ol|li)\b/i.test(sourceCode);
   const sourceHasGrid = /\bgrid\b|grid-cols-|gap-\d/.test(sourceCode);
+  const sourceHasMappedData = /\.\s*map\s*\(/.test(sourceCode);
+  const safeContentCount = input.serializedSection.content.filter((item) =>
+    looksLikeExtractableContent(item.value)
+  ).length;
   const headingCount = countBuildNodes(plan.elementTree, (node) => /^h[1-6]$/i.test(node.tag));
   const listCount = countBuildNodes(plan.elementTree, (node) =>
     node.tag === "ul" || node.tag === "ol" || node.tag === "li"
@@ -1195,8 +1199,245 @@ function skeletonLooksUnderfit(
   if (sourceHasGrid && headingCount <= 1 && textBearingCount <= 3) {
     return true;
   }
+  if (sourceHasMappedData && safeContentCount >= 6 && textBearingCount < safeContentCount - 2) {
+    return true;
+  }
 
   return false;
+}
+
+function sourceHasMappedData(input: PlanningProviderInput): boolean {
+  return /\.\s*map\s*\(/.test(input.sectionContext.sourceCode);
+}
+
+function contentFallbackSkeleton(input: PlanningProviderInput): SkeletonPlan | null {
+  const values = input.serializedSection.content
+    .map((item) => item.value.trim())
+    .filter(looksLikeExtractableContent)
+    .filter((value, index, array) => array.indexOf(value) === index);
+  if (values.length < 6) {
+    return null;
+  }
+
+  const sectionKey = slugify(input.metadata.sectionName) || "section";
+  const title = values[0] ?? `${input.metadata.sectionName} section`;
+  const body = values.find((value, index) => index > 0 && value.length > 45) ?? "";
+  const intro = values.find((value, index) => index > 1 && value !== body && value.length > 70) ?? "";
+  const excluded = new Set([title, body, intro].filter(Boolean));
+  const cardValues = values.filter((value) => !excluded.has(value));
+  const cardPairs: Array<{ title: string; body: string }> = [];
+  for (let index = 0; index < cardValues.length; index += 1) {
+    const current = cardValues[index];
+    const next = cardValues[index + 1] ?? "";
+    if (!current) {
+      continue;
+    }
+    if (next && current.length <= 48 && next.length > current.length) {
+      cardPairs.push({ title: current, body: next });
+      index += 1;
+      continue;
+    }
+    cardPairs.push({ title: current, body: "" });
+  }
+  if (cardPairs.length < 2) {
+    return null;
+  }
+
+  const root = buildNode(
+    `${input.metadata.sectionId}-root`,
+    "box",
+    "section",
+    [`section_${sectionKey}`]
+  );
+  const padding = buildNode(
+    `${input.metadata.sectionId}-padding`,
+    "box",
+    "div",
+    [preferredSharedClass(input, ["padding-global"], "padding-global")]
+  );
+  const container = buildNode(
+    `${input.metadata.sectionId}-container`,
+    "box",
+    "div",
+    [preferredSharedClass(input, ["container-large"], "container-large")]
+  );
+  const sectionPadding = buildNode(
+    `${input.metadata.sectionId}-section-padding`,
+    "box",
+    "div",
+    [preferredSharedClass(input, ["padding-section-medium"], "padding-section-medium")]
+  );
+  const content = buildNode(
+    `${input.metadata.sectionId}-content`,
+    "box",
+    "div",
+    [`${sectionKey}_content`],
+    [
+      buildNode(
+        `${input.metadata.sectionId}-eyebrow`,
+        "text",
+        "p",
+        [preferredSharedClass(input, ["is-text-small", "text-size-small"], "text-size-small")],
+        [],
+        title
+      ),
+      buildNode(
+        `${input.metadata.sectionId}-heading`,
+        "heading",
+        "h2",
+        [preferredSharedClass(input, ["heading-style-h2"], "heading-style-h2")],
+        [],
+        title
+      ),
+      ...(body
+        ? [
+            buildNode(
+              `${input.metadata.sectionId}-body`,
+              "text",
+              "p",
+              [preferredSharedClass(input, ["text-size-medium"], "text-size-medium")],
+              [],
+              body
+            )
+          ]
+        : [])
+    ]
+  );
+  const featured = buildNode(
+    `${input.metadata.sectionId}-featured`,
+    "box",
+    "div",
+    [`${sectionKey}_featured`],
+    [
+      ...(body
+        ? [
+            buildNode(
+              `${input.metadata.sectionId}-featured-heading`,
+              "heading",
+              "h3",
+              [preferredSharedClass(input, ["heading-style-h3"], "heading-style-h3")],
+              [],
+              body
+            )
+          ]
+        : []),
+      ...(intro
+        ? [
+            buildNode(
+              `${input.metadata.sectionId}-featured-copy`,
+              "text",
+              "p",
+              [preferredSharedClass(input, ["text-size-medium"], "text-size-medium")],
+              [],
+              intro
+            )
+          ]
+        : []),
+      buildNode(
+        `${input.metadata.sectionId}-chips`,
+        "list",
+        "ul",
+        [`${sectionKey}_chips`],
+        cardPairs.slice(0, 6).map((card, index) =>
+          buildNode(
+            `${input.metadata.sectionId}-chip-${index}`,
+            "listItem",
+            "li",
+            [`${sectionKey}_chip`],
+            [],
+            card.title
+          )
+        )
+      )
+    ]
+  );
+  const grid = buildNode(
+    `${input.metadata.sectionId}-grid`,
+    "box",
+    "div",
+    [`${sectionKey}_grid`],
+    cardPairs.slice(0, 8).map((card, index) =>
+      buildNode(
+        `${input.metadata.sectionId}-card-${index}`,
+        "box",
+        "div",
+        [`${sectionKey}_card`],
+        [
+          buildNode(
+            `${input.metadata.sectionId}-card-title-${index}`,
+            "heading",
+            "h3",
+            [preferredSharedClass(input, ["heading-style-h3"], "heading-style-h3")],
+            [],
+            card.title
+          ),
+          ...(card.body
+            ? [
+                buildNode(
+                  `${input.metadata.sectionId}-card-copy-${index}`,
+                  "text",
+                  "p",
+                  [preferredSharedClass(input, ["text-size-medium"], "text-size-medium")],
+                  [],
+                  card.body
+                )
+              ]
+            : [])
+        ]
+      )
+    )
+  );
+  const visual = buildNode(
+    `${input.metadata.sectionId}-visual`,
+    "box",
+    "div",
+    [`${sectionKey}_visual`],
+    [featured, grid]
+  );
+  const component = buildNode(
+    `${input.metadata.sectionId}-component`,
+    "box",
+    "div",
+    [`${sectionKey}_component`],
+    [content, visual]
+  );
+
+  sectionPadding.children.push(component);
+  container.children.push(sectionPadding);
+  padding.children.push(container);
+  root.children.push(padding);
+
+  return {
+    sectionMetadata: input.metadata,
+    treeText: serializeSkeletonTree(root),
+    elementTree: root,
+    assetBindings: [],
+    reusableClasses: [
+      preferredSharedClass(input, ["padding-global"], "padding-global"),
+      preferredSharedClass(input, ["container-large"], "container-large"),
+      preferredSharedClass(input, ["padding-section-medium"], "padding-section-medium"),
+      preferredSharedClass(input, ["heading-style-h2"], "heading-style-h2"),
+      preferredSharedClass(input, ["heading-style-h3"], "heading-style-h3"),
+      preferredSharedClass(input, ["text-size-medium"], "text-size-medium")
+    ],
+    suggestedNewClasses: [
+      `section_${sectionKey}`,
+      `${sectionKey}_component`,
+      `${sectionKey}_content`,
+      `${sectionKey}_visual`,
+      `${sectionKey}_featured`,
+      `${sectionKey}_chips`,
+      `${sectionKey}_chip`,
+      `${sectionKey}_grid`,
+      `${sectionKey}_card`
+    ],
+    warnings: [
+      providerWarning(
+        "skeleton-content-fallback",
+        "The provider skeleton underfit repeated source content, so a content-derived fallback skeleton was used."
+      )
+    ]
+  };
 }
 
 function maybePromoteHtmlFallback(
@@ -1208,17 +1449,22 @@ function maybePromoteHtmlFallback(
   }
 
   const richFallback = htmlFallbackSkeleton(input);
-  if (!richFallback) {
+  const contentFallback = contentFallbackSkeleton(input);
+  if (!richFallback && !contentFallback) {
     return plan;
   }
+  const fallback = sourceHasMappedData(input)
+    ? contentFallback ?? richFallback!
+    : richFallback ?? contentFallback!;
 
   return {
-    ...richFallback,
+    ...fallback,
     warnings: [
       ...plan.warnings,
+      ...fallback.warnings,
       providerWarning(
         "skeleton-underfit-fallback",
-        "The provider skeleton underfit the source structure, so the HTML-derived fallback skeleton was used instead."
+        "The provider skeleton underfit the source structure, so a richer source-derived fallback skeleton was used instead."
       )
     ]
   };

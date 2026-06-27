@@ -136,15 +136,63 @@ function expandImportCandidates(importPath: string, importerPath: string): strin
       ".jsx",
       ".ts",
       ".js",
+      ".json",
       "/index.tsx",
       "/index.jsx",
       "/index.ts",
-      "/index.js"
+      "/index.js",
+      "/index.json"
     ]) {
       candidates.add(`${base}${suffix}`);
     }
   }
   return [...candidates];
+}
+
+function isDataImportPath(filePath: string): boolean {
+  return (
+    /(?:^|\/)(data|content)\//.test(filePath) &&
+    /\.(ts|js|json)$/.test(filePath)
+  );
+}
+
+function resolveImportFilePath(
+  snapshot: RepositorySnapshot,
+  importPath: string,
+  importerPath: string
+): string | null {
+  return (
+    expandImportCandidates(importPath, importerPath).find((candidate) =>
+      snapshot.files.some((file) => file.path === candidate)
+    ) ?? null
+  );
+}
+
+function collectImportedDataSource(
+  snapshot: RepositorySnapshot,
+  sourceCode: string,
+  sourceFile: string
+): string {
+  const importPaths = dedupe(
+    [...sourceCode.matchAll(/import(?:\s+[\s\S]*?\s+from\s+|\s*)["']([^"']+)["']/g)]
+      .map((match) => match[1])
+      .filter((importPath): importPath is string =>
+        typeof importPath === "string" && isLocalImportPath(importPath)
+      )
+  );
+  const chunks = importPaths
+    .map((importPath) => resolveImportFilePath(snapshot, importPath, sourceFile))
+    .filter((filePath): filePath is string => typeof filePath === "string")
+    .filter(isDataImportPath)
+    .map((filePath) => {
+      const content = snapshot.files.find((file) => file.path === filePath)?.content ?? "";
+      return content
+        ? `\n\n/* Imported data from ${filePath} */\n${content}`
+        : "";
+    })
+    .filter(Boolean);
+
+  return chunks.join("");
 }
 
 function deriveSectionKey(componentName: string, sourceFile: string): string {
@@ -651,7 +699,15 @@ export class MisRepoExtractor {
       typeof params.section.metadata.inlineSourceCode === "string"
         ? params.section.metadata.inlineSourceCode
         : null;
-    const sourceCode = inlineSourceCode ?? fileByPath(params.snapshot, params.section.sourceFile);
+    const rawSourceCode = inlineSourceCode ?? fileByPath(params.snapshot, params.section.sourceFile);
+    const importedDataSource = inlineSourceCode
+      ? ""
+      : collectImportedDataSource(
+          params.snapshot,
+          rawSourceCode,
+          params.section.sourceFile
+        );
+    const sourceCode = `${rawSourceCode}${importedDataSource}`;
     const relevantStylesheets = params.snapshot.files
       .filter((file) => isRelevantStylesheet(file.path))
       .map((file) => ({
