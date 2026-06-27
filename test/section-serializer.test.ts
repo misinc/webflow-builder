@@ -135,4 +135,31 @@ describe("serializeSectionContext", () => {
     expect(values).not.toContain("industry.title");
     expect(values).not.toContain("solv-mosaic-cards");
   });
+
+  it("rejects import names, utility class dumps, and animation values as content", () => {
+    const serialized = serializeSectionContext(
+      htmlContext([
+        "import React from 'react';",
+        "const sectionKey = 'solutions';",
+        "const offset = '-100px';",
+        "export function SolutionsSection() {",
+        "  return <section className='solv-section content-stretch flex flex-col items-center relative shrink-0 w-full'>",
+        "    <div className='content-stretch flex flex-col gap-[48px] md:gap-[64px] items-start relative shrink-0 w-full max-w-[1200px]'>",
+        "      <p>Solutions Tailored to Your Industry</p>",
+        "      <p>Solutions designed around how each industry actually operates.</p>",
+        "    </div>",
+        "  </section>;",
+        "}"
+      ].join("\n"))
+    );
+    const values = serialized.content.map((item) => item.value);
+
+    expect(values).toContain("Solutions Tailored to Your Industry");
+    expect(values).toContain("Solutions designed around how each industry actually operates.");
+    expect(values).not.toContain("react");
+    expect(values).not.toContain("solutions");
+    expect(values).not.toContain("-100px");
+    expect(values).not.toContain("solv-section content-stretch flex flex-col items-center relative shrink-0 w-full");
+    expect(values).not.toContain("content-stretch flex flex-col gap-[48px] md:gap-[64px] items-start relative shrink-0 w-full max-w-[1200px]");
+  });
 });

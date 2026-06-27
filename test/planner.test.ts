@@ -169,6 +169,47 @@ describe("HeuristicBuildPlanner", () => {
     expect(text).not.toContain("Repo extraction");
     expect(text).not.toContain("Plan validation");
     expect(text).not.toContain("Designer execution");
+    expect(text).not.toContain("Planning");
+    expect(text).not.toContain("Execution");
+    expect(text).not.toContain("Review");
+    expect(text.some((value) => value.includes("Mapped into"))).toBe(false);
     expect(text.some((value) => value.includes("});"))).toBe(false);
+  });
+
+  it("does not insert utility class dumps or module names as skeleton text", () => {
+    const planner = new HeuristicBuildPlanner();
+    const plan = planner.plan({
+      pageId: "page-1",
+      sectionId: "section-1",
+      sectionContext: {
+        ...sectionContext,
+        sectionName: "Solutions",
+        componentName: "Solutions",
+        sourceCode: [
+          "import React from 'react';",
+          "const sectionKey = 'solutions';",
+          "const offset = '-100px';",
+          "export function Solutions() {",
+          "  return <section className='solv-section content-stretch flex flex-col items-center relative shrink-0 w-full'>",
+          "    <div className='content-stretch flex flex-col gap-[48px] md:gap-[64px] items-start relative shrink-0 w-full max-w-[1200px]'>",
+          "      <p>Solutions Tailored to Your Industry</p>",
+          "      <p>Solutions designed around how each industry actually operates.</p>",
+          "    </div>",
+          "  </section>;",
+          "}"
+        ].join("\n"),
+        contentHints: []
+      },
+      projectContext,
+      sharedStyleContext
+    });
+
+    const text = collectText(plan.elementTree);
+
+    expect(text).toContain("Solutions Tailored to Your Industry");
+    expect(text).not.toContain("react");
+    expect(text).not.toContain("solutions");
+    expect(text).not.toContain("-100px");
+    expect(text.some((value) => value.includes("content-stretch flex"))).toBe(false);
   });
 });

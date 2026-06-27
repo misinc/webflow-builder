@@ -11,7 +11,7 @@ import { slugify } from "@wfb/shared/text.js";
 import type { SerializedSectionContentItem } from "./section-serializer.js";
 import {
   serializeSectionContext,
-  looksLikeContent
+  looksLikeExtractableContent
 } from "./section-serializer.js";
 
 function sharedOrFallback(
@@ -152,10 +152,11 @@ function chooseCopy(
   fallback: { eyebrow: string; title: string; body: string }
 ): { eyebrow: string; title: string; body: string } {
   const serializedContent = sourceContentValues(sectionContext);
+  const hintContent = sectionContext.contentHints.filter((value) =>
+    looksLikeExtractableContent(value)
+  );
   const [firstHint, secondHint, thirdHint] =
-    sectionContext.contentHints.length > 0
-      ? sectionContext.contentHints.filter((value) => looksLikeContent(value))
-      : serializedContent;
+    hintContent.length > 0 ? hintContent : serializedContent;
   return {
     eyebrow: firstHint ?? fallback.eyebrow,
     title: secondHint ?? firstHint ?? fallback.title,
@@ -165,7 +166,7 @@ function chooseCopy(
 
 function sourceContentItems(sectionContext: SectionContext): SerializedSectionContentItem[] {
   return serializeSectionContext(sectionContext).content.filter((item) =>
-    looksLikeContent(item.value)
+    looksLikeExtractableContent(item.value)
   );
 }
 
@@ -179,13 +180,19 @@ function heroPlan(
 ): BuildNode {
   const tree = createBaseTree("hero", sharedStyleContext);
   const copy = chooseCopy(sectionContext, {
-    eyebrow: "Strategic digital studio",
-    title: "Build a native Webflow hero from repo source",
-    body: "This section reuses shared typography, buttons, and spacing from the active Client-First site."
+    eyebrow: "",
+    title: `${sectionContext.sectionName} section`,
+    body: ""
   });
+  const actionLabels = sourceContentItems(sectionContext)
+    .filter((item) => item.kind === "button" || item.kind === "a")
+    .map((item) => item.value)
+    .filter((value) => value !== copy.eyebrow && value !== copy.title && value !== copy.body)
+    .slice(0, 2);
 
-  tree.contentNode.children.push(
-    buildNode(
+  const contentChildren: BuildNode[] = [
+    ...(copy.eyebrow
+      ? [buildNode(
       "hero-eyebrow",
       "text",
       "p",
@@ -199,7 +206,8 @@ function heroPlan(
       ],
       [],
       copy.eyebrow
-    ),
+    )]
+      : []),
     buildNode(
       "hero-heading",
       "heading",
@@ -222,26 +230,37 @@ function heroPlan(
       ],
       [],
       copy.body
-    ),
-    buildNode("hero-actions", "group", "div", ["hero_actions"], [
+    )
+  ];
+  if (actionLabels.length > 0) {
+    contentChildren.push(
       buildNode(
-        "hero-button-primary",
-        "button",
-        "button",
-        [sharedOrFallback(sharedStyleContext, "button", ["button-primary"], "button")],
-        [],
-        "Build section"
-      ),
-      buildNode(
-        "hero-button-secondary",
-        "button",
-        "button",
-        [sharedOrFallback(sharedStyleContext, "button", ["button-secondary"], "button-secondary")],
-        [],
-        "Review output"
+        "hero-actions",
+        "group",
+        "div",
+        ["hero_actions"],
+        actionLabels.map((label, index) =>
+          buildNode(
+            `hero-button-${index}`,
+            "button",
+            "button",
+            [
+              sharedOrFallback(
+                sharedStyleContext,
+                "button",
+                index === 0 ? ["button-primary", "button"] : ["button-secondary", "button"],
+                index === 0 ? "button" : "button-secondary"
+              )
+            ],
+            [],
+            label
+          )
+        )
       )
-    ])
-  );
+    );
+  }
+
+  tree.contentNode.children.push(...contentChildren);
 
   tree.visualNode.children.push(
     buildNode("hero-image", "image", "img", ["hero_media"], [])
@@ -256,13 +275,16 @@ function servicesPlan(
 ): BuildNode {
   const tree = createBaseTree("services", sharedStyleContext);
   const copy = chooseCopy(sectionContext, {
-    eyebrow: "Strategic services",
-    title: "Shared building blocks, section by section",
-    body: "The planner prefers reusable shared classes before creating new layout-specific styles."
+    eyebrow: "",
+    title: `${sectionContext.sectionName} section`,
+    body: ""
   });
 
   const listNode = buildNode("services-list", "list", "div", ["services_list"], []);
-  ["Planning", "Execution", "Review"].forEach((label, index) => {
+  const listLabels = sourceContentValues(sectionContext)
+    .filter((value) => value !== copy.eyebrow && value !== copy.title && value !== copy.body)
+    .slice(0, 6);
+  listLabels.forEach((label, index) => {
     listNode.children.push(
       buildNode(`services-item-${index}`, "listItem", "article", ["services_item"], [
         buildNode(
@@ -286,7 +308,7 @@ function servicesPlan(
             )
           ],
           [],
-          "Mapped into Webflow with Client-First-compatible structure and reuse-first class decisions."
+          ""
         )
       ])
     );
@@ -317,7 +339,9 @@ function servicesPlan(
       copy.body
     )
   );
-  tree.visualNode.children.push(listNode);
+  if (listNode.children.length > 0) {
+    tree.visualNode.children.push(listNode);
+  }
   return tree.root;
 }
 

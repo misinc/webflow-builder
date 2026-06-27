@@ -96,7 +96,7 @@ function outlineNodeLabel(node: HtmlOutlineNode, includeContent: boolean): strin
     includeContent && (node.children.length === 0 || hasOnlyLineBreakChildren)
       ? cleanText(node.textContent ?? "")
       : "";
-  const textSuffix = textSource ? ` "${textSource.slice(0, 180)}"` : "";
+  const textSuffix = textSource && looksLikeExtractableContent(textSource) ? ` "${textSource.slice(0, 180)}"` : "";
   return `${tag}${idSuffix}${classSuffix}${textSuffix}`;
 }
 
@@ -402,15 +402,46 @@ function looksLikeCodeFragment(value: string): boolean {
   return (
     /[{};]/.test(trimmed) ||
     /^[)\]]/.test(trimmed) ||
+    /^-?\d+(?:\.\d+)?(?:px|rem|em|%|vh|vw|s|ms)$/.test(trimmed) ||
     /\b(const|let|var|return|function|className|whileInView|viewport|transition)\b/.test(trimmed) ||
-    /\b[a-z][a-z0-9]*\.[a-z][a-z0-9]*\b/i.test(trimmed) ||
+    /\b[a-z][a-z0-9_$]*\.[a-z_$][a-z0-9_$]*\b/.test(trimmed) ||
     /^[a-z][a-z0-9]*(?:-[a-z0-9]+)+$/.test(trimmed)
+  );
+}
+
+function looksLikeUtilityToken(value: string): boolean {
+  return (
+    /^(?:flex|grid|hidden|block|inline|relative|absolute|sticky|fixed|content-stretch|items-[a-z-]+|justify-[a-z-]+|gap-\[?[a-z0-9.%/-]+\]?|[mp][trblxy]?-\[?[a-z0-9.%/-]+\]?|w-\[?[a-z0-9.%/-]+\]?|h-\[?[a-z0-9.%/-]+\]?|max-w-\[?[a-z0-9.%/-]+\]?|min-h-\[?[a-z0-9.%/-]+\]?|shrink-\d+|grow|basis-\[?[a-z0-9.%/-]+\]?|text-\[?[#a-z0-9.%/-]+\]?|font-[a-z0-9-]+|leading-\[?[a-z0-9.%/-]+\]?|tracking-\[?[a-z0-9.%/-]+\]?|rounded(?:-\[?[a-z0-9.%/-]+\]?)?|overflow-[a-z-]+|object-[a-z-]+|bg-\[?[#a-z0-9.%/-]+\]?|opacity-\d+|duration-\d+|delay-\d+|transition(?:-[a-z-]+)?|cursor-[a-z-]+|group|mx-auto|inset-\d+|z-\d+)$/.test(value) ||
+    /^(?:sm|md|lg|xl|2xl):/.test(value)
+  );
+}
+
+function looksLikeUtilityDump(value: string): boolean {
+  const tokens = cleanText(value).split(/\s+/).filter(Boolean);
+  if (tokens.length < 2) {
+    return false;
+  }
+  const utilityCount = tokens.filter(looksLikeUtilityToken).length;
+  const classLikeCount = tokens.filter(
+    (token) =>
+      looksLikeUtilityToken(token) ||
+      (
+        /[-_:[\]#/%]/.test(token) &&
+        /^[a-z0-9_:[\].#/%-]+$/i.test(token)
+      )
+  ).length;
+  return (
+    (utilityCount >= 2 && utilityCount / tokens.length >= 0.5) ||
+    (classLikeCount === tokens.length && utilityCount > 0)
   );
 }
 
 export function looksLikeContent(value: string): boolean {
   const trimmed = cleanText(value);
   if (trimmed.length < 2 || trimmed.length > 400) {
+    return false;
+  }
+  if (/^[a-z][a-z0-9_-]*$/.test(trimmed)) {
     return false;
   }
   if (
@@ -427,7 +458,24 @@ export function looksLikeContent(value: string): boolean {
   if (looksLikeCodeFragment(trimmed)) {
     return false;
   }
+  if (looksLikeUtilityDump(trimmed)) {
+    return false;
+  }
   return /[a-z]/i.test(trimmed);
+}
+
+export function looksLikeExtractableContent(value: string): boolean {
+  return (
+    looksLikeContent(value) ||
+    looksLikeStatValue(value) ||
+    looksLikeContactValue(value)
+  );
+}
+
+function isAllowedContentItem(item: SerializedSectionContentItem): boolean {
+  return (
+    looksLikeExtractableContent(item.value)
+  );
 }
 
 function looksLikeStatValue(value: string): boolean {
@@ -537,6 +585,7 @@ function collectLabeledContent(
   }
 
   return items
+    .filter(isAllowedContentItem)
     .filter(
       (item, index, array) =>
         array.findIndex(

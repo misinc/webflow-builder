@@ -314,6 +314,155 @@ describe("OpenAIPlanningProvider footer skeleton normalization", () => {
     ).toBe(true);
   });
 
+  it("does not use dynamic JSX expressions, package names, or utility classes as timeout fallback text", async () => {
+    const abortError = new Error("aborted");
+    abortError.name = "AbortError";
+
+    vi.stubGlobal("fetch", vi.fn(async () => {
+      throw abortError;
+    }));
+
+    const provider = new OpenAIPlanningProvider("test-key", "test-model");
+    const plan = await provider.generateSkeleton({
+      ...input,
+      metadata: {
+        ...input.metadata,
+        sectionName: "Solutions"
+      },
+      sectionContext: {
+        ...input.sectionContext,
+        sectionName: "Solutions",
+        sourceCode: [
+          "import React from 'react';",
+          "const offset = '-100px';",
+          "export function SolutionsSection() {",
+          "  return <section className=\"solv-section content-stretch flex flex-col items-center relative shrink-0 w-full\">",
+          "    <div className=\"content-stretch flex flex-col gap-[48px] md:gap-[64px] items-start relative shrink-0 w-full max-w-[1200px]\">",
+          "      <p>Solutions Tailored to Your Industry</p>",
+          "      <h2>{industry.title}</h2>",
+          "      <p>{industry.copy}</p>",
+          "      <ul>{industries.map((industry, index) => <li key={industry.title}>{industry.title}</li>)}</ul>",
+          "    </div>",
+          "  </section>;",
+          "}"
+        ].join("\n")
+      },
+      serializedSection: {
+        ...input.serializedSection,
+        summary: "Solutions section with dynamic industry cards.",
+        sourceExcerpt: "<section>",
+        content: [
+          { kind: "p", label: "p", value: "Solutions Tailored to Your Industry" }
+        ]
+      }
+    });
+
+    expect(plan.treeText).toContain('"Solutions Tailored to Your Industry"');
+    expect(plan.treeText).not.toContain("industry.title");
+    expect(plan.treeText).not.toContain("industry.copy");
+    expect(plan.treeText).not.toContain("react");
+    expect(plan.treeText).not.toContain("-100px");
+    expect(plan.treeText).not.toContain("content-stretch flex");
+    expect(plan.treeText).not.toContain('"Heading"');
+    expect(plan.treeText).not.toContain('"Body copy"');
+    expect(
+      plan.warnings.some((warning) => warning.code === "unresolved-dynamic-content")
+    ).toBe(true);
+  });
+
+  it("filters model-provided non-content text during skeleton normalization", async () => {
+    const rawPlan = {
+      sectionMetadata: {
+        ...input.metadata,
+        sectionName: "Solutions"
+      },
+      treeText: [
+        "section.section_solutions",
+        "  h2.heading-style-h2 \"react\"",
+        "  p.text-size-medium \"content-stretch flex flex-col gap-[48px] md:gap-[64px] items-start relative shrink-0 w-full\"",
+        "  p.text-size-medium \"-100px\""
+      ].join("\n"),
+      elementTree: {
+        id: "root",
+        type: "box",
+        tag: "section",
+        classNames: ["section_solutions"],
+        children: [
+          {
+            id: "heading",
+            type: "heading",
+            tag: "h2",
+            classNames: ["heading-style-h2"],
+            textContent: "react",
+            children: []
+          },
+          {
+            id: "class-dump",
+            type: "text",
+            tag: "p",
+            classNames: ["text-size-medium"],
+            textContent:
+              "content-stretch flex flex-col gap-[48px] md:gap-[64px] items-start relative shrink-0 w-full",
+            children: []
+          },
+          {
+            id: "animation-value",
+            type: "text",
+            tag: "p",
+            classNames: ["text-size-medium"],
+            textContent: "-100px",
+            children: []
+          }
+        ]
+      },
+      reusableClasses: ["heading-style-h2", "text-size-medium"],
+      suggestedNewClasses: ["section_solutions"],
+      warnings: []
+    };
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(
+          JSON.stringify({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify(rawPlan)
+                }
+              }
+            ]
+          }),
+          { status: 200, headers: { "content-type": "application/json" } }
+        )
+      )
+    );
+
+    const provider = new OpenAIPlanningProvider("test-key", "test-model");
+    const plan = await provider.generateSkeleton({
+      ...input,
+      metadata: {
+        ...input.metadata,
+        sectionName: "Solutions"
+      },
+      sectionContext: {
+        ...input.sectionContext,
+        sectionName: "Solutions",
+        sourceCode: "<section><h2>{industry.title}</h2><p>{industry.copy}</p></section>"
+      },
+      serializedSection: {
+        ...input.serializedSection,
+        summary: "Solutions section with dynamic content.",
+        sourceExcerpt: "<section>",
+        content: []
+      }
+    });
+
+    expect(plan.treeText).not.toContain('"react"');
+    expect(plan.treeText).not.toContain("content-stretch flex");
+    expect(plan.treeText).not.toContain('"-100px"');
+  });
+
   it("retries a transient OpenAI 429 and keeps requests deterministic and bounded", async () => {
     const rawPlan = {
       sectionMetadata: input.metadata,

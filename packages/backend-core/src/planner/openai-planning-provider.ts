@@ -11,7 +11,11 @@ import {
   PlanningProviderInput,
   providerWarning
 } from "./planning-provider.js";
-import { HtmlOutlineNode, parseHtmlOutline } from "./section-serializer.js";
+import {
+  HtmlOutlineNode,
+  looksLikeExtractableContent,
+  parseHtmlOutline
+} from "./section-serializer.js";
 import { slugify } from "@wfb/shared/text.js";
 import { isReservedStyleGuideClassName } from "@wfb/shared/client-first.js";
 
@@ -363,12 +367,13 @@ function normalizeElementTree(value: unknown, fallback: BuildNode): BuildNode {
     ? value.children.map((child) => normalizeElementTree(child, fallback)).filter(Boolean)
     : [];
 
+  const textContent = readString(value.textContent);
   return {
     id: readString(value.id) ?? fallback.id,
     type: readString(value.type) ?? fallback.type,
     tag: readString(value.tag) ?? fallback.tag,
     label: readString(value.label) ?? undefined,
-    textContent: readString(value.textContent) ?? undefined,
+    textContent: textContent && looksLikeExtractableContent(textContent) ? textContent : undefined,
     classNames: stringArray(value.classNames),
     children
   };
@@ -798,7 +803,7 @@ function hydrateMissingTextFromContent(
         typeof node.label === "string" && node.label.startsWith(CLASS_TEXT_FALLBACK_PREFIX)
           ? node.label.slice(CLASS_TEXT_FALLBACK_PREFIX.length).trim()
           : "";
-      if (!fallbackLabel) {
+      if (!fallbackLabel || !looksLikeExtractableContent(fallbackLabel)) {
         return { ...node, children };
       }
       warnings.push(
@@ -939,7 +944,7 @@ function extractBody(input: PlanningProviderInput): string {
   return (
     input.serializedSection.content.find((item) =>
       ["description", "body", "copy", "p"].includes(item.kind)
-    )?.value ?? input.serializedSection.summary
+    )?.value ?? ""
   );
 }
 
@@ -1034,6 +1039,21 @@ function placeholderTextForTag(tag: string): string {
   return "Body copy";
 }
 
+function fallbackTextForTag(tag: string, includeContent: boolean): string | undefined {
+  return includeContent ? undefined : placeholderTextForTag(tag);
+}
+
+function sourceHasUnresolvedDynamicContent(input: PlanningProviderInput): boolean {
+  if ((input.includeContent ?? true) === false) {
+    return false;
+  }
+  const sourceCode = input.sectionContext.sourceCode;
+  return (
+    /\{[^{}]*(?:\bmap\s*\(|\.[a-zA-Z_$][\w$]*|=>)[^{}]*\}/.test(sourceCode) ||
+    /\{[a-zA-Z_$][\w$]*(?:\.[a-zA-Z_$][\w$]*)+\}/.test(sourceCode)
+  );
+}
+
 function buildNode(
   id: string,
   type: string,
@@ -1096,7 +1116,7 @@ function nodeText(
   options?: { deep?: boolean }
 ): string | undefined {
   const normalized = node.textContent?.trim();
-  if (normalized) {
+  if (normalized && looksLikeExtractableContent(normalized)) {
     return normalized;
   }
 
@@ -1111,7 +1131,7 @@ function nodeText(
     .replace(/\s+/g, " ")
     .trim();
 
-  return descendantText || undefined;
+  return descendantText && looksLikeExtractableContent(descendantText) ? descendantText : undefined;
 }
 
 function hasMeaningfulChildren(children: BuildNode[]): boolean {
@@ -1263,7 +1283,7 @@ function convertHtmlNode(
       node.tag,
       [`heading-style-${node.tag.toLowerCase()}`],
       [],
-      text ?? descendantText ?? placeholderTextForTag(node.tag)
+      text ?? descendantText ?? fallbackTextForTag(node.tag, includeContent)
     );
   }
 
@@ -1274,7 +1294,7 @@ function convertHtmlNode(
       "p",
       [text && text.length <= 40 ? "text-size-small" : "text-size-medium"],
       [],
-      text ?? placeholderTextForTag(node.tag)
+      text ?? fallbackTextForTag(node.tag, includeContent)
     );
   }
 
@@ -1285,7 +1305,7 @@ function convertHtmlNode(
       "blockquote",
       ["blockquote"],
       [],
-      text ?? descendantText ?? placeholderTextForTag(node.tag)
+      text ?? descendantText ?? fallbackTextForTag(node.tag, includeContent)
     );
   }
 
@@ -1309,7 +1329,7 @@ function convertHtmlNode(
       "a",
       [children.length === 0 && (text?.length ?? 0) <= 24 ? "button" : `${sectionKey}_link`],
       children,
-      children.length === 0 ? (text ?? descendantText ?? placeholderTextForTag(node.tag)) : undefined
+      children.length === 0 ? (text ?? descendantText ?? fallbackTextForTag(node.tag, includeContent)) : undefined
     );
   }
 
@@ -1320,7 +1340,7 @@ function convertHtmlNode(
       "button",
       [`${sectionKey}_button`],
       [],
-      text ?? descendantText ?? placeholderTextForTag(node.tag)
+      text ?? descendantText ?? fallbackTextForTag(node.tag, includeContent)
     );
   }
 
@@ -1342,7 +1362,7 @@ function convertHtmlNode(
       "li",
       [`${sectionKey}_item`],
       children,
-      children.length === 0 ? (text ?? placeholderTextForTag(node.tag)) : undefined
+      children.length === 0 ? (text ?? fallbackTextForTag(node.tag, includeContent)) : undefined
     );
   }
 
@@ -1373,8 +1393,8 @@ function convertHtmlNode(
     node.tag === "section" || node.tag === "footer" ? "div" : node.tag,
     [className],
     children,
-    (text ?? (!includeContent ? placeholderTextForTag(node.tag) : undefined)) && children.length === 0
-      ? text ?? placeholderTextForTag(node.tag)
+    (text ?? fallbackTextForTag(node.tag, includeContent)) && children.length === 0
+      ? text ?? fallbackTextForTag(node.tag, includeContent)
       : undefined
   );
 }
@@ -1516,7 +1536,15 @@ function htmlFallbackSkeleton(input: PlanningProviderInput): SkeletonPlan | null
       providerWarning(
         "skeleton-html-fallback",
         "OpenAI skeleton generation was unavailable, so a deterministic HTML-derived fallback skeleton was used."
-      )
+      ),
+      ...(sourceHasUnresolvedDynamicContent(input)
+        ? [
+            providerWarning(
+              "unresolved-dynamic-content",
+              "Some section copy appears to come from dynamic JSX expressions. The skeleton preserves structure but leaves unresolved text blank instead of guessing."
+            )
+          ]
+        : [])
     ]
   };
 }
