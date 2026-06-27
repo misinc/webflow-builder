@@ -1040,10 +1040,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           return next;
         });
         await ensureSiteBound();
-        if (siteStylePlan?.status !== "confirmed") {
-          await refreshSiteStylePlan();
-          throw new Error("Confirm the site style plan before building sections.");
-        }
         const request = currentWorkflowRequest(nextSectionId);
         const nextAnalysis = await backend.analyzeSection(request, controller.signal);
         setAnalysis(nextAnalysis);
@@ -1073,10 +1069,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     activeQueue,
     currentWorkflowRequest,
     ensureSiteBound,
-    refreshSiteStylePlan,
     resetSectionRunState,
     selectedSectionId,
-    siteStylePlan?.status,
     withMutation
   ]);
 
@@ -1293,6 +1287,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         if (!context.siteId) {
           throw new Error("No active Webflow site.");
         }
+        if (siteStylePlan?.status !== "confirmed") {
+          await refreshSiteStylePlan();
+          throw new Error("Confirm the site style plan before applying styles.");
+        }
         const styles =
           sharedStyleContext?.siteId === context.siteId
             ? sharedStyleContext
@@ -1408,7 +1406,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     selectedWorkflowItem?.placedRootNodeId,
     sharedStyleContext,
     skeleton,
+    refreshSiteStylePlan,
     rollbackCurrentExecution,
+    siteStylePlan?.status,
     withMutation
   ]);
 
