@@ -463,6 +463,174 @@ describe("OpenAIPlanningProvider footer skeleton normalization", () => {
     expect(plan.treeText).not.toContain('"-100px"');
   });
 
+  it("does not hydrate skeleton text from unsafe serialized content", async () => {
+    const rawPlan = {
+      sectionMetadata: {
+        ...input.metadata,
+        sectionName: "Solutions"
+      },
+      treeText: [
+        "section.section_solutions",
+        "  h2.heading-style-h2",
+        "  p.text-size-medium",
+        "  ul.solutions_list",
+        "    li.solutions_item",
+        "      p.text-size-medium"
+      ].join("\n"),
+      elementTree: {
+        id: "root",
+        type: "box",
+        tag: "section",
+        classNames: ["section_solutions"],
+        children: [
+          {
+            id: "heading",
+            type: "heading",
+            tag: "h2",
+            classNames: ["heading-style-h2"],
+            children: []
+          },
+          {
+            id: "body",
+            type: "text",
+            tag: "p",
+            classNames: ["text-size-medium"],
+            children: []
+          },
+          {
+            id: "list",
+            type: "list",
+            tag: "ul",
+            classNames: ["solutions_list"],
+            children: [
+              {
+                id: "item",
+                type: "listItem",
+                tag: "li",
+                classNames: ["solutions_item"],
+                children: [
+                  {
+                    id: "item-copy",
+                    type: "text",
+                    tag: "p",
+                    classNames: ["text-size-medium"],
+                    children: []
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      reusableClasses: ["heading-style-h2", "text-size-medium"],
+      suggestedNewClasses: ["section_solutions"],
+      warnings: []
+    };
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(
+          JSON.stringify({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify(rawPlan)
+                }
+              }
+            ]
+          }),
+          { status: 200, headers: { "content-type": "application/json" } }
+        )
+      )
+    );
+
+    const provider = new OpenAIPlanningProvider("test-key", "test-model");
+    const plan = await provider.generateSkeleton({
+      ...input,
+      metadata: {
+        ...input.metadata,
+        sectionName: "Solutions"
+      },
+      serializedSection: {
+        ...input.serializedSection,
+        summary: "Solutions section with unsafe extracted values.",
+        sourceExcerpt: "<section>",
+        content: [
+          { kind: "h2", label: "h2", value: "@/app/data/solutionIndustries" },
+          { kind: "p", label: "p", value: "@/styles/solutions-section-variants.css" },
+          { kind: "p", label: "p", value: "font-[" },
+          { kind: "p", label: "p", value: "--accent" },
+          {
+            kind: "p",
+            label: "p",
+            value: "Solutions designed around how each industry actually operates."
+          }
+        ]
+      }
+    });
+
+    expect(plan.treeText).toContain(
+      '"Solutions designed around how each industry actually operates."'
+    );
+    expect(plan.treeText).not.toContain("@/app/data/solutionIndustries");
+    expect(plan.treeText).not.toContain("@/styles/solutions-section-variants.css");
+    expect(plan.treeText).not.toContain("font-[");
+    expect(plan.treeText).not.toContain("--accent");
+  });
+
+  it("filters unsafe content returned by analysis normalization", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(
+          JSON.stringify({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify({
+                    sectionMetadata: input.metadata,
+                    summary: "Solutions section.",
+                    sourceCode: "source",
+                    goals: [],
+                    content: [
+                      { kind: "h2", label: "h2", value: "@/app/data/solutionIndustries" },
+                      { kind: "p", label: "p", value: "@/styles/solutions-section-variants.css" },
+                      { kind: "p", label: "p", value: "font-[" },
+                      { kind: "p", label: "p", value: "--accent" },
+                      {
+                        kind: "p",
+                        label: "p",
+                        value: "Solutions Tailored to Your Industry"
+                      }
+                    ],
+                    recommendedMode: "skeletonThenStyle",
+                    reusableClasses: [],
+                    suggestedNewClasses: [],
+                    warnings: []
+                  })
+                }
+              }
+            ]
+          }),
+          { status: 200, headers: { "content-type": "application/json" } }
+        )
+      )
+    );
+
+    const provider = new OpenAIPlanningProvider("test-key", "test-model");
+    const analysis = await provider.analyzeSection({
+      ...input,
+      metadata: {
+        ...input.metadata,
+        sectionName: "Solutions"
+      }
+    });
+    const values = analysis.content.map((item) => item.value);
+
+    expect(values).toEqual(["Solutions Tailored to Your Industry"]);
+  });
+
   it("retries a transient OpenAI 429 and keeps requests deterministic and bounded", async () => {
     const rawPlan = {
       sectionMetadata: input.metadata,

@@ -162,4 +162,29 @@ describe("serializeSectionContext", () => {
     expect(values).not.toContain("solv-section content-stretch flex flex-col items-center relative shrink-0 w-full");
     expect(values).not.toContain("content-stretch flex flex-col gap-[48px] md:gap-[64px] items-start relative shrink-0 w-full max-w-[1200px]");
   });
+
+  it("rejects import aliases, stylesheet paths, partial utility fragments, and CSS variables as content", () => {
+    const serialized = serializeSectionContext(
+      htmlContext([
+        "import { solutionIndustries } from '@/app/data/solutionIndustries';",
+        "import '@/styles/solutions-section-variants.css';",
+        "const badClass = 'font-[';",
+        "const accent = '--accent';",
+        "export function SolutionsSection() {",
+        "  return <section>",
+        "    <p>Solutions Tailored to Your Industry</p>",
+        "    <p>Solutions designed around how each industry actually operates.</p>",
+        "  </section>;",
+        "}"
+      ].join("\n"))
+    );
+    const values = serialized.content.map((item) => item.value);
+
+    expect(values).toContain("Solutions Tailored to Your Industry");
+    expect(values).toContain("Solutions designed around how each industry actually operates.");
+    expect(values).not.toContain("@/app/data/solutionIndustries");
+    expect(values).not.toContain("@/styles/solutions-section-variants.css");
+    expect(values).not.toContain("font-[");
+    expect(values).not.toContain("--accent");
+  });
 });

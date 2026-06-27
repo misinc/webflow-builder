@@ -402,6 +402,10 @@ function looksLikeCodeFragment(value: string): boolean {
   return (
     /[{};]/.test(trimmed) ||
     /^[)\]]/.test(trimmed) ||
+    /^--[a-z0-9_-]+$/i.test(trimmed) ||
+    /^[a-z]+-\[$/i.test(trimmed) ||
+    /[\[\]]/.test(trimmed) ||
+    /^@[a-z0-9_-]*\//i.test(trimmed) ||
     /^-?\d+(?:\.\d+)?(?:px|rem|em|%|vh|vw|s|ms)$/.test(trimmed) ||
     /\b(const|let|var|return|function|className|whileInView|viewport|transition)\b/.test(trimmed) ||
     /\b[a-z][a-z0-9_$]*\.[a-z_$][a-z0-9_$]*\b/.test(trimmed) ||
@@ -491,8 +495,17 @@ function looksLikeContactValue(value: string): boolean {
   if (trimmed.length < 3 || trimmed.length > 120) {
     return false;
   }
+  if (
+    trimmed.startsWith("@/") ||
+    trimmed.includes("/") ||
+    trimmed.includes("[") ||
+    trimmed.includes("]") ||
+    /^--/.test(trimmed)
+  ) {
+    return false;
+  }
   return (
-    /@/.test(trimmed) ||
+    /^[^\s@/]+@[^\s@/]+\.[^\s@/]+$/.test(trimmed) ||
     /^\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(trimmed)
   );
 }

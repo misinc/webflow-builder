@@ -280,6 +280,9 @@ function contentArray(value: unknown) {
         item
       ): item is { kind: string; label: string; value: string } =>
         Boolean(item?.value)
+    )
+    .filter((item) =>
+      looksLikeExtractableContent(item.value)
     );
 }
 
@@ -762,14 +765,17 @@ function hydrateMissingTextFromContent(
   contentItems: Array<{ kind: string; value: string }>
 ): SkeletonPlan {
   const warnings = [...plan.warnings];
+  const safeContentItems = contentItems.filter((item) =>
+    looksLikeExtractableContent(item.value)
+  );
   const consumed = new Set<number>();
 
   function nextContentFor(node: BuildNode): string | null {
-    for (let index = 0; index < contentItems.length; index += 1) {
+    for (let index = 0; index < safeContentItems.length; index += 1) {
       if (consumed.has(index)) {
         continue;
       }
-      const item = contentItems[index];
+      const item = safeContentItems[index];
       if (!item.value?.trim()) {
         continue;
       }
@@ -935,7 +941,8 @@ function extractHeading(
 ): string {
   return (
     input.serializedSection.content.find((item) =>
-      ["title", "heading", "h1", "h2", "subtitle"].includes(item.kind)
+      ["title", "heading", "h1", "h2", "subtitle"].includes(item.kind) &&
+      looksLikeExtractableContent(item.value)
     )?.value ?? fallback
   );
 }
@@ -943,7 +950,8 @@ function extractHeading(
 function extractBody(input: PlanningProviderInput): string {
   return (
     input.serializedSection.content.find((item) =>
-      ["description", "body", "copy", "p"].includes(item.kind)
+      ["description", "body", "copy", "p"].includes(item.kind) &&
+      looksLikeExtractableContent(item.value)
     )?.value ?? ""
   );
 }
