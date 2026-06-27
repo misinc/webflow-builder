@@ -6,6 +6,7 @@ import {
   SkeletonPlan,
   StylingPlan
 } from "@wfb/shared/contracts.js";
+import { isReservedStyleGuideClassName } from "@wfb/shared/client-first.js";
 import { DesignerContext, WebflowDesignerBridge } from "../webflow/bridge.js";
 
 export interface ExecutionSummary {
@@ -43,6 +44,10 @@ function isTransientDesignerError(error: unknown): boolean {
     error instanceof TypeError ||
     /timeout|timed out|temporar|rate|429|network|busy|unavailable|try again/.test(message)
   );
+}
+
+function filterBuilderClassNames(classNames: string[]): string[] {
+  return classNames.filter((className) => !isReservedStyleGuideClassName(className));
 }
 
 async function retryDelay(ms: number, signal?: AbortSignal | null): Promise<void> {
@@ -104,9 +109,12 @@ async function buildNodeTree(params: {
   params.createdNodeIds.push(created.id);
   params.nodeIdMap.set(params.node.id, created.id);
   throwIfAborted(params.signal);
-  await withDesignerRetry("applyClasses", params.signal, () =>
-    params.bridge.applyClasses(created.id, params.node.classNames)
-  );
+  const classNames = filterBuilderClassNames(params.node.classNames);
+  if (classNames.length > 0) {
+    await withDesignerRetry("applyClasses", params.signal, () =>
+      params.bridge.applyClasses(created.id, classNames)
+    );
+  }
   if (typeof params.node.textContent === "string" && params.node.textContent.trim().length > 0) {
     throwIfAborted(params.signal);
     await withDesignerRetry("setNodeTextContent", params.signal, () =>
@@ -194,7 +202,7 @@ export async function executeSkeletonPlanIntoRoot(params: {
     throwIfAborted(params.signal);
     await params.bridge.configureNode(params.rootNodeId, {
       tag: params.plan.elementTree.tag,
-      classNames: params.plan.elementTree.classNames,
+      classNames: filterBuilderClassNames(params.plan.elementTree.classNames),
       textContent: params.plan.elementTree.textContent
     });
     nodeIdMap.set(params.plan.elementTree.id, params.rootNodeId);
@@ -226,7 +234,7 @@ export async function executeSkeletonPlanIntoRoot(params: {
       success: true,
       createdNodeIds,
       createdStyleIds: [],
-      reusedClasses: params.plan.reusableClasses,
+      reusedClasses: filterBuilderClassNames(params.plan.reusableClasses),
       createdClasses: [],
       warnings: params.plan.warnings,
       missingAssets,
@@ -328,6 +336,14 @@ export async function executeBuildPlan(params: {
 
     for (const styleDefinition of params.plan.styleDefinitions) {
       throwIfAborted(params.signal);
+      if (isReservedStyleGuideClassName(styleDefinition.className)) {
+        executionWarnings.push({
+          code: "reserved-styleguide-class-skipped",
+          message: `Skipped reserved style guide class ${styleDefinition.className}.`,
+          level: "warning"
+        });
+        continue;
+      }
       const style = await withDesignerRetry("ensureStyle", params.signal, () =>
         params.bridge.ensureStyle(
           styleDefinition.className,
@@ -373,8 +389,12 @@ export async function executeBuildPlan(params: {
       success: true,
       createdNodeIds,
       createdStyleIds,
-      reusedClasses: params.plan.classAssignments.flatMap((item) => item.reused),
-      createdClasses: params.plan.styleDefinitions.map((item) => item.className),
+      reusedClasses: params.plan.classAssignments
+        .flatMap((item) => item.reused)
+        .filter((className) => !isReservedStyleGuideClassName(className)),
+      createdClasses: params.plan.styleDefinitions
+        .map((item) => item.className)
+        .filter((className) => !isReservedStyleGuideClassName(className)),
       warnings: [...params.plan.warnings, ...executionWarnings],
       missingAssets,
       rollbackOutcome: null,
@@ -407,7 +427,9 @@ export async function executeBuildPlan(params: {
       createdNodeIds,
       createdStyleIds,
       reusedClasses: [],
-      createdClasses: params.plan.styleDefinitions.map((item) => item.className),
+      createdClasses: params.plan.styleDefinitions
+        .map((item) => item.className)
+        .filter((className) => !isReservedStyleGuideClassName(className)),
       warnings: [
         ...params.plan.warnings,
         {
@@ -442,7 +464,7 @@ export async function executeSkeletonPlan(params: {
     {
       nodeId: node.id,
       classNames: node.classNames,
-      reused: node.classNames,
+      reused: filterBuilderClassNames(node.classNames),
       created: []
     },
     ...node.children.flatMap(collectAssignments)
@@ -490,6 +512,14 @@ export async function applyStylingPlan(params: {
   try {
     for (const styleDefinition of params.plan.styleDefinitions) {
       throwIfAborted(params.signal);
+      if (isReservedStyleGuideClassName(styleDefinition.className)) {
+        warnings.push({
+          code: "reserved-styleguide-class-skipped",
+          message: `Skipped reserved style guide class ${styleDefinition.className}.`,
+          level: "warning"
+        });
+        continue;
+      }
       const style = await withDesignerRetry("ensureStyle", params.signal, () =>
         params.bridge.ensureStyle(
           styleDefinition.className,
@@ -499,12 +529,13 @@ export async function applyStylingPlan(params: {
       createdStyleIds.push(style.styleId);
     }
 
-    if (params.plan.requiredClassNames.length > 0) {
+    const requiredClassNames = filterBuilderClassNames(params.plan.requiredClassNames);
+    if (requiredClassNames.length > 0) {
       throwIfAborted(params.signal);
       await withDesignerRetry("applyClasses", params.signal, () =>
         params.bridge.applyClasses(
           targetNodeId,
-          params.plan.requiredClassNames
+          requiredClassNames
         )
       );
     }
@@ -535,8 +566,10 @@ export async function applyStylingPlan(params: {
       success: true,
       createdNodeIds: [],
       createdStyleIds,
-      reusedClasses: params.plan.reusableClasses,
-      createdClasses: params.plan.styleDefinitions.map((item) => item.className),
+      reusedClasses: filterBuilderClassNames(params.plan.reusableClasses),
+      createdClasses: params.plan.styleDefinitions
+        .map((item) => item.className)
+        .filter((className) => !isReservedStyleGuideClassName(className)),
       warnings,
       missingAssets: [],
       rollbackOutcome: null,
@@ -567,7 +600,9 @@ export async function applyStylingPlan(params: {
       createdNodeIds: [],
       createdStyleIds,
       reusedClasses: [],
-      createdClasses: params.plan.styleDefinitions.map((item) => item.className),
+      createdClasses: params.plan.styleDefinitions
+        .map((item) => item.className)
+        .filter((className) => !isReservedStyleGuideClassName(className)),
       warnings: [
         ...warnings,
         {

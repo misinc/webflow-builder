@@ -23,6 +23,14 @@ export function isClientFirstName(name: string): boolean {
   return /^[a-z0-9]+(?:[-_][a-z0-9]+)*$/.test(name);
 }
 
+export function isReservedStyleGuideClassName(name: string): boolean {
+  return name.toLowerCase().startsWith("rl-styleguide");
+}
+
+export function isBuilderClassName(name: string): boolean {
+  return isClientFirstName(name) && !isReservedStyleGuideClassName(name);
+}
+
 export function isPageScopedClassName(name: string): boolean {
   const lower = name.toLowerCase();
   return PAGE_SCOPED_PREFIXES.some((prefix) => lower.startsWith(prefix));

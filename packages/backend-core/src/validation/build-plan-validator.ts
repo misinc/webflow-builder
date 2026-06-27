@@ -9,6 +9,7 @@ import {
 import {
   dedupe,
   inferSharedCategory,
+  isBuilderClassName,
   isClientFirstName,
   isPageScopedClassName
 } from "@wfb/shared/client-first.js";
@@ -47,6 +48,9 @@ export class BuildPlanValidator {
       node.classNames.forEach((className) => {
         if (!isClientFirstName(className)) {
           throw new Error(`Invalid Client-First class name: ${className}`);
+        }
+        if (!isBuilderClassName(className)) {
+          throw new Error(`Reserved style guide classes are not allowed: ${className}`);
         }
         if (isPageScopedClassName(className)) {
           throw new Error(`Page-scoped class names are not allowed: ${className}`);

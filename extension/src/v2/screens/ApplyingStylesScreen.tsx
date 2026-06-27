@@ -8,6 +8,7 @@ import { AiBadge } from "../components/Badge";
 import { Spinner } from "../components/Spinner";
 import { useNavigation } from "../context/NavigationContext";
 import { useAppState } from "../context/AppStateContext";
+import { isReservedStyleGuideClassName } from "@wfb/shared/client-first.js";
 
 interface StyleLine {
   selector?: string;
@@ -48,7 +49,9 @@ export function ApplyingStylesScreen() {
   }, [cancelActiveWorkflow, isMutating]);
 
   const appliedLines: StyleLine[] =
-    styling?.styleDefinitions.slice(0, 18).map((definition) => {
+    styling?.styleDefinitions.filter(
+      (definition) => !isReservedStyleGuideClassName(definition.className)
+    ).slice(0, 18).map((definition) => {
       const [prop, value] = Object.entries(definition.properties)[0] ?? [];
       return {
         selector: `.${definition.className}`,
@@ -58,12 +61,23 @@ export function ApplyingStylesScreen() {
     }) ?? [];
 
   const requiredClassLines: StyleLine[] =
-    styling?.requiredClassNames.slice(0, Math.max(0, 18 - appliedLines.length)).map((className) => ({
-      selector: `.${className}`,
-      prop: "applied",
-      value: "section root"
-    })) ?? [];
+    styling?.requiredClassNames
+      .filter((className) => !isReservedStyleGuideClassName(className))
+      .slice(0, Math.max(0, 18 - appliedLines.length))
+      .map((className) => ({
+        selector: `.${className}`,
+        prop: "applied",
+        value: "section root"
+      })) ?? [];
   const visibleLines = [...appliedLines, ...requiredClassLines];
+  const visibleStyleDefinitionCount =
+    styling?.styleDefinitions.filter(
+      (definition) => !isReservedStyleGuideClassName(definition.className)
+    ).length ?? 0;
+  const visibleRequiredClassCount =
+    styling?.requiredClassNames.filter(
+      (className) => !isReservedStyleGuideClassName(className)
+    ).length ?? 0;
   const hasBlockedVerification = Boolean(verification && !verification.readyForApproval);
 
   if (isMutating && visibleLines.length === 0) {
@@ -162,7 +176,7 @@ export function ApplyingStylesScreen() {
           title="Styles applied"
           count={
             styling
-              ? `${styling.styleDefinitions.length + styling.requiredClassNames.length} classes · ${styling.variableBindings.length} variables`
+              ? `${visibleStyleDefinitionCount + visibleRequiredClassCount} classes · ${styling.variableBindings.length} variables`
               : isMutating
                 ? "Generating styling plan"
                 : "Waiting on styling plan"

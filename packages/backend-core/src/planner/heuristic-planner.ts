@@ -6,7 +6,7 @@ import {
   SectionContext,
   SharedStyleContext
 } from "@wfb/shared/contracts.js";
-import { dedupe } from "@wfb/shared/client-first.js";
+import { dedupe, isReservedStyleGuideClassName } from "@wfb/shared/client-first.js";
 import { slugify } from "@wfb/shared/text.js";
 import { serializeSectionContext } from "./section-serializer.js";
 
@@ -17,7 +17,7 @@ function sharedOrFallback(
   fallback: string
 ): string {
   const candidates = sharedStyleContext.classes.filter(
-    (item) => item.category === category
+    (item) => item.category === category && !isReservedStyleGuideClassName(item.name)
   );
   const normalizedPreferred = preferred.map((value) => value.toLowerCase());
 
@@ -445,8 +445,12 @@ export class HeuristicBuildPlanner {
     const classAssignments: BuildPlan["classAssignments"] = [];
     const createdClasses = new Set<string>();
     walkTree(elementTree, (node) => {
-      const reused = node.classNames.filter((name) => sharedClassSet.has(name));
-      const created = node.classNames.filter((name) => !sharedClassSet.has(name));
+      const reused = node.classNames.filter(
+        (name) => sharedClassSet.has(name) && !isReservedStyleGuideClassName(name)
+      );
+      const created = node.classNames.filter(
+        (name) => !sharedClassSet.has(name) && !isReservedStyleGuideClassName(name)
+      );
       created.forEach((name) => createdClasses.add(name));
       classAssignments.push({
         nodeId: node.id,

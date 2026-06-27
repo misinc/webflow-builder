@@ -13,6 +13,7 @@ import {
 } from "./planning-provider.js";
 import { HtmlOutlineNode, parseHtmlOutline } from "./section-serializer.js";
 import { slugify } from "@wfb/shared/text.js";
+import { isReservedStyleGuideClassName } from "@wfb/shared/client-first.js";
 
 interface OpenAIMessage {
   role: "system" | "user";
@@ -215,11 +216,14 @@ function readString(value: unknown): string | null {
 function stringArray(value: unknown): string[] {
   if (!Array.isArray(value)) {
     const single = readString(value);
-    return single ? [single] : [];
+    return single && !isReservedStyleGuideClassName(single) ? [single] : [];
   }
   return value
     .map((item) => readString(item))
-    .filter((item): item is string => Boolean(item));
+    .filter(
+      (item): item is string =>
+        typeof item === "string" && !isReservedStyleGuideClassName(item)
+    );
 }
 
 function warningsArray(value: unknown) {
@@ -310,6 +314,9 @@ function normalizeStyleDefinitions(value: unknown) {
           )
         : {};
       if (!className) {
+        return null;
+      }
+      if (isReservedStyleGuideClassName(className)) {
         return null;
       }
       return {
@@ -1001,7 +1008,10 @@ function preferredSharedClass(
   fallback: string
 ): string {
   const shared = new Set(
-    input.sharedStyleContext.classes.map((item) => item.name.toLowerCase())
+    input.sharedStyleContext.classes
+      .map((item) => item.name)
+      .filter((name) => !isReservedStyleGuideClassName(name))
+      .map((name) => name.toLowerCase())
   );
   return (
     candidates.find((candidate) => shared.has(candidate.toLowerCase())) ?? fallback

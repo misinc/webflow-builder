@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  applyStylingPlan,
   executeBuildPlan,
   executeSkeletonPlan
 } from "../extension/src/executor/buildExecutor.js";
@@ -81,7 +82,7 @@ class FailingBridge implements WebflowDesignerBridge {
     return { id: "component-1", name: "Component" };
   }
 
-  async applyClasses() {}
+  async applyClasses(_nodeId: string, _classNames: string[]) {}
 
   async ensureStyle(
     _className: string,
@@ -488,5 +489,64 @@ describe("executeBuildPlan", () => {
     expect(result.success).toBe(true);
     expect(bridge.createNodeCalls).toBe(1);
     expect(bridge.applyClassesCalls).toBe(2);
+  });
+
+  it("skips reserved Relume styleguide classes during styling execution", async () => {
+    class RecordingBridge extends FailingBridge {
+      public appliedClassNames: string[][] = [];
+      public ensuredClassNames: string[] = [];
+
+      override async applyClasses(_nodeId: string, classNames: string[]) {
+        this.appliedClassNames.push(classNames);
+      }
+
+      override async ensureStyle(className: string) {
+        this.ensuredClassNames.push(className);
+        return { styleId: `style-${className}` };
+      }
+    }
+
+    const bridge = new RecordingBridge();
+    const context = await bridge.getContext();
+    const result = await applyStylingPlan({
+      bridge,
+      context,
+      targetNodeId: "root-node",
+      plan: {
+        sectionMetadata: {
+          repoId: "repo-1",
+          pageId: "page-1",
+          sectionId: "section-1",
+          pageName: "Home",
+          sectionName: "Hero",
+          sourceFile: "Hero.tsx"
+        },
+        mode: "fullAssist",
+        styleDefinitions: [
+          {
+            className: "rl-styleguide_component",
+            properties: { display: "grid" },
+            shared: false
+          },
+          {
+            className: "hero_component",
+            properties: { display: "grid" },
+            shared: false
+          }
+        ],
+        variableBindings: [],
+        reusableClasses: [],
+        suggestedNewClasses: [],
+        requiredClassNames: ["rl-styleguide_item", "hero_component"],
+        notes: [],
+        warnings: []
+      }
+    });
+
+    expect(result.success).toBe(true);
+    expect(bridge.ensuredClassNames).toEqual(["hero_component"]);
+    expect(bridge.appliedClassNames).toEqual([["hero_component"]]);
+    expect(result.createdClasses).toEqual(["hero_component"]);
+    expect(result.warnings.some((warning) => warning.code === "reserved-styleguide-class-skipped")).toBe(true);
   });
 });

@@ -79,6 +79,16 @@ describe("parseSkeletonTreeText", () => {
     expect(plan.elementTree.children[0]?.textContent).toBe("FOUNDED IN 1995");
   });
 
+  it("drops reserved Relume styleguide classes from edited skeletons", () => {
+    const plan = parseSkeletonTreeText(
+      basePlan(),
+      "section.section-name.rl-styleguide_component\n  div.rl-styleguide_item.padding-global"
+    );
+
+    expect(plan.elementTree.classNames).toEqual(["section-name"]);
+    expect(plan.elementTree.children[0]?.classNames).toEqual(["padding-global"]);
+  });
+
   it("serializes tagline-style div nodes back to textblock syntax", () => {
     const normalized = normalizeSkeletonPlan(
       parseSkeletonTreeText(

@@ -1,6 +1,7 @@
 import {
   dedupe,
-  inferSharedCategory
+  inferSharedCategory,
+  isReservedStyleGuideClassName
 } from "@wfb/shared/client-first.js";
 import {
   BuildNode,
@@ -972,7 +973,14 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
       throw new Error(`Unable to apply styles to node ${nodeId}.`);
     }
 
-    const styles = await Promise.all(classNames.map((className) => this.getOrCreateStyle(className)));
+    const builderClassNames = classNames.filter(
+      (className) => !isReservedStyleGuideClassName(className)
+    );
+    if (builderClassNames.length === 0) {
+      return;
+    }
+
+    const styles = await Promise.all(builderClassNames.map((className) => this.getOrCreateStyle(className)));
     await element.setStyles(styles);
   }
 
@@ -980,6 +988,9 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
     className: string,
     properties: Record<string, string>
   ): Promise<{ styleId: string }> {
+    if (isReservedStyleGuideClassName(className)) {
+      throw new Error(`Reserved style guide classes cannot be applied: ${className}`);
+    }
     const style = await this.getOrCreateStyle(className);
     if (style.setProperties) {
       await style.setProperties(properties);

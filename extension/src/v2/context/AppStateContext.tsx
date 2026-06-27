@@ -47,6 +47,7 @@ import {
   mergeExecutionSummaries,
   rollbackExecutionSummary
 } from "./executionRollback.js";
+import { isReservedStyleGuideClassName } from "@wfb/shared/client-first.js";
 import {
   type CreatePageInput,
   type DesignerContext,
@@ -187,9 +188,15 @@ function isAbortError(error: unknown) {
 
 function stylingHasMaterialChanges(plan: StylingPlan): boolean {
   return (
-    plan.styleDefinitions.some((definition) => Object.keys(definition.properties).length > 0) ||
+    plan.styleDefinitions.some(
+      (definition) =>
+        !isReservedStyleGuideClassName(definition.className) &&
+        Object.keys(definition.properties).length > 0
+    ) ||
     plan.variableBindings.length > 0 ||
-    plan.requiredClassNames.length > 0
+    plan.requiredClassNames.some(
+      (className) => !isReservedStyleGuideClassName(className)
+    )
   );
 }
 

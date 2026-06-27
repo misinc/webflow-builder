@@ -9,7 +9,7 @@ import {
   WorkflowMode,
   stylingPlanSchema
 } from "@wfb/shared/contracts.js";
-import { dedupe } from "@wfb/shared/client-first.js";
+import { dedupe, isReservedStyleGuideClassName } from "@wfb/shared/client-first.js";
 
 function walkTree(node: BuildNode, visit: (node: BuildNode) => void): void {
   visit(node);
@@ -21,7 +21,11 @@ function classSuffix(node: BuildNode, suffix: string): boolean {
 }
 
 function sharedClassSet(sharedStyleContext: SharedStyleContext): Set<string> {
-  return new Set(sharedStyleContext.classes.map((item) => item.name));
+  return new Set(
+    sharedStyleContext.classes
+      .map((item) => item.name)
+      .filter((name) => !isReservedStyleGuideClassName(name))
+  );
 }
 
 function maxWidthFromSource(sourceCode: string): string | null {
@@ -170,7 +174,11 @@ export function buildFallbackStylingFromSkeleton(input: {
 
   walkTree(input.skeleton.elementTree, (node) => {
     for (const className of node.classNames) {
-      if (shared.has(className) || styleDefinitions.has(className)) {
+      if (
+        isReservedStyleGuideClassName(className) ||
+        shared.has(className) ||
+        styleDefinitions.has(className)
+      ) {
         continue;
       }
       const properties = inferStyleProperties(node, input.sectionContext);

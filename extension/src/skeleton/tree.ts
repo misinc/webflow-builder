@@ -1,4 +1,4 @@
-import { isClientFirstName } from "@wfb/shared/client-first.js";
+import { isBuilderClassName } from "@wfb/shared/client-first.js";
 import { BuildNode, SkeletonPlan } from "@wfb/shared/contracts.js";
 
 const LEAF_TAGS = new Set(["img", "source", "br", "hr", "input", "meta", "link"]);
@@ -225,7 +225,7 @@ function remapAssetBindings(
 
 function countInvalidClassNames(node: BuildNode): number {
   return (
-    node.classNames.filter((className) => !isClientFirstName(className)).length +
+    node.classNames.filter((className) => !isBuilderClassName(className)).length +
     node.children.reduce((total, child) => total + countInvalidClassNames(child), 0)
   );
 }
@@ -427,7 +427,7 @@ export function parseSkeletonTreeText(
             token !== "+" &&
             token !== "|"
         )
-    ].filter((className) => isClientFirstName(className));
+    ].filter((className) => isBuilderClassName(className));
     if (!tag) {
       throw new Error(`Missing element tag on line ${index + 1}.`);
     }
@@ -519,7 +519,7 @@ export function sanitizeSkeletonPlan(plan: SkeletonPlan): SkeletonPlan {
       normalizedChildren.push(...sanitizedChild.hoistedChildren);
     }
 
-    const filteredClassNames = node.classNames.filter((className) => isClientFirstName(className));
+    const filteredClassNames = node.classNames.filter((className) => isBuilderClassName(className));
     const safeTag = WRAPPER_TO_DIV_TAGS.has(normalizedTag) ? "div" : normalizedTag;
     let retagged = safeTag !== normalizedTag;
     let nextTag = safeTag;
