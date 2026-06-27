@@ -9,6 +9,7 @@ import { dedupe, inferSharedCategory } from "@wfb/shared/client-first.js";
 import { RepositorySnapshot } from "../github/client.js";
 import { slugify, stableId } from "../utils.js";
 import { extractAssetReferencesFromSource } from "./asset-references.js";
+import { looksLikeContent } from "../planner/section-serializer.js";
 
 const SUPPORTED_SECTION_KEYS = new Set(["hero", "services", "solutions"]);
 
@@ -391,7 +392,7 @@ function pageNameFromPath(filePath: string): string {
 function contentHintsFromSource(sourceCode: string): string[] {
   const strings = [...sourceCode.matchAll(/>([^<>{]{3,80})</g)]
     .map((match) => match[1].trim())
-    .filter(Boolean)
+    .filter((value) => looksLikeContent(value))
     .slice(0, 6);
   return dedupe(strings);
 }

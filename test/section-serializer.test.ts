@@ -115,4 +115,24 @@ describe("serializeSectionContext", () => {
     expect(serialized.sourceExcerpt).toContain('a "Home"');
     expect(serialized.sourceExcerpt).toContain("[repeats x6]");
   });
+
+  it("rejects JSX control-flow fragments as content", () => {
+    const serialized = serializeSectionContext(
+      htmlContext([
+        "export function SolutionsSection() {",
+        "  return <section>",
+        "    <div>{industries.map((industry, index) => {",
+        "      const Icon = industry.icon;",
+        "      return <p>{industry.title}</p>;",
+        "    })}</div>",
+        "  </section>;",
+        "}"
+      ].join("\n"))
+    );
+    const values = serialized.content.map((item) => item.value);
+
+    expect(values).not.toContain("}); }");
+    expect(values).not.toContain("industry.title");
+    expect(values).not.toContain("solv-mosaic-cards");
+  });
 });

@@ -8,7 +8,11 @@ import {
 } from "@wfb/shared/contracts.js";
 import { dedupe, isReservedStyleGuideClassName } from "@wfb/shared/client-first.js";
 import { slugify } from "@wfb/shared/text.js";
-import { serializeSectionContext } from "./section-serializer.js";
+import type { SerializedSectionContentItem } from "./section-serializer.js";
+import {
+  serializeSectionContext,
+  looksLikeContent
+} from "./section-serializer.js";
 
 function sharedOrFallback(
   sharedStyleContext: SharedStyleContext,
@@ -147,18 +151,26 @@ function chooseCopy(
   sectionContext: SectionContext,
   fallback: { eyebrow: string; title: string; body: string }
 ): { eyebrow: string; title: string; body: string } {
-  const serializedContent = serializeSectionContext(sectionContext).content
-    .map((item) => item.value.trim())
-    .filter(Boolean);
+  const serializedContent = sourceContentValues(sectionContext);
   const [firstHint, secondHint, thirdHint] =
     sectionContext.contentHints.length > 0
-      ? sectionContext.contentHints
+      ? sectionContext.contentHints.filter((value) => looksLikeContent(value))
       : serializedContent;
   return {
     eyebrow: firstHint ?? fallback.eyebrow,
     title: secondHint ?? firstHint ?? fallback.title,
-    body: thirdHint ?? secondHint ?? "Body copy"
+    body: thirdHint ?? fallback.body
   };
+}
+
+function sourceContentItems(sectionContext: SectionContext): SerializedSectionContentItem[] {
+  return serializeSectionContext(sectionContext).content.filter((item) =>
+    looksLikeContent(item.value)
+  );
+}
+
+function sourceContentValues(sectionContext: SectionContext): string[] {
+  return sourceContentItems(sectionContext).map((item) => item.value.trim()).filter(Boolean);
 }
 
 function heroPlan(
@@ -317,8 +329,9 @@ function solutionsPlan(
   const copy = chooseCopy(sectionContext, {
     eyebrow: "Solutions",
     title: `${sectionContext.sectionName} section`,
-    body: "Body copy"
+    body: ""
   });
+  const contentValues = sourceContentValues(sectionContext);
 
   tree.contentNode.children.push(
     buildNode(
@@ -361,9 +374,13 @@ function solutionsPlan(
     )
   );
 
-  const bulletList = buildNode("solutions-bullets", "list", "ul", ["solutions_list"], []);
-  ["Repo extraction", "Plan validation", "Designer execution"].forEach(
-    (label, index) => {
+  const listLabels = contentValues
+    .filter((value) => value !== copy.eyebrow && value !== copy.title && value !== copy.body)
+    .slice(0, 6);
+
+  if (listLabels.length > 0) {
+    const bulletList = buildNode("solutions-bullets", "list", "ul", ["solutions_list"], []);
+    listLabels.forEach((label, index) => {
       bulletList.children.push(
         buildNode(
           `solutions-bullet-${index}`,
@@ -374,10 +391,9 @@ function solutionsPlan(
           label
         )
       );
-    }
-  );
-
-  tree.visualNode.children.push(bulletList);
+    });
+    tree.visualNode.children.push(bulletList);
+  }
   return tree.root;
 }
 

@@ -64,6 +64,13 @@ function findNodeById(node: BuildNode, id: string): BuildNode | null {
   return null;
 }
 
+function collectText(node: BuildNode): string[] {
+  return [
+    ...(node.textContent ? [node.textContent] : []),
+    ...node.children.flatMap(collectText)
+  ];
+}
+
 describe("HeuristicBuildPlanner", () => {
   it("binds image assets to the image node when one exists", () => {
     const planner = new HeuristicBuildPlanner();
@@ -131,5 +138,37 @@ describe("HeuristicBuildPlanner", () => {
 
     expect(bodyNode?.textContent).toBe("Reusable sections that match your repo source.");
     expect(bodyNode?.textContent).not.toContain("Unsupported patterns become warnings");
+    expect(collectText(plan.elementTree)).not.toContain("Repo extraction");
+  });
+
+  it("does not invent list text for dynamic-only source content", () => {
+    const planner = new HeuristicBuildPlanner();
+    const plan = planner.plan({
+      pageId: "page-1",
+      sectionId: "section-1",
+      sectionContext: {
+        ...sectionContext,
+        sectionName: "Solutions",
+        componentName: "Solutions",
+        sourceCode: [
+          "export function Solutions() {",
+          "  return <section><div>{industries.map((industry, index) => {",
+          "    const Icon = industry.icon;",
+          "    return <article key={industry.title}><h3>{industry.title}</h3><p>{industry.copy}</p></article>;",
+          "  })}</div></section>;",
+          "}"
+        ].join("\n"),
+        contentHints: []
+      },
+      projectContext,
+      sharedStyleContext
+    });
+
+    const text = collectText(plan.elementTree);
+
+    expect(text).not.toContain("Repo extraction");
+    expect(text).not.toContain("Plan validation");
+    expect(text).not.toContain("Designer execution");
+    expect(text.some((value) => value.includes("});"))).toBe(false);
   });
 });

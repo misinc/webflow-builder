@@ -397,7 +397,18 @@ function collectHtmlContent(
     .slice(0, 24);
 }
 
-function looksLikeContent(value: string): boolean {
+function looksLikeCodeFragment(value: string): boolean {
+  const trimmed = cleanText(value);
+  return (
+    /[{};]/.test(trimmed) ||
+    /^[)\]]/.test(trimmed) ||
+    /\b(const|let|var|return|function|className|whileInView|viewport|transition)\b/.test(trimmed) ||
+    /\b[a-z][a-z0-9]*\.[a-z][a-z0-9]*\b/i.test(trimmed) ||
+    /^[a-z][a-z0-9]*(?:-[a-z0-9]+)+$/.test(trimmed)
+  );
+}
+
+export function looksLikeContent(value: string): boolean {
   const trimmed = cleanText(value);
   if (trimmed.length < 2 || trimmed.length > 400) {
     return false;
@@ -411,6 +422,9 @@ function looksLikeContent(value: string): boolean {
     trimmed.includes("=>") ||
     trimmed.includes("import ")
   ) {
+    return false;
+  }
+  if (looksLikeCodeFragment(trimmed)) {
     return false;
   }
   return /[a-z]/i.test(trimmed);
