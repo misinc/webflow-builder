@@ -491,6 +491,25 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setComponentBannerDismissed(false);
   }, [selectedRepoId]);
 
+  const refreshRepoData = useCallback(async (
+    repoId: string,
+    options?: { shouldSkipApply?: () => boolean }
+  ) => {
+    const [tree, opportunitiesResponse] = await Promise.all([
+      backend.getRepoTree(repoId).catch(() => null),
+      backend
+        .getComponentOpportunities(repoId)
+        .catch(() => ({ opportunities: [] as ComponentOpportunity[] }))
+    ]);
+    if (options?.shouldSkipApply?.()) {
+      return tree;
+    }
+    setRepoTree(tree);
+    setComponentOpportunities(opportunitiesResponse.opportunities);
+    setComponentBannerDismissed(false);
+    return tree;
+  }, []);
+
   const refreshWorkflowState = useCallback(async (repoIdOverride?: string) => {
     const effectiveRepoId = repoIdOverride ?? selectedRepoId;
     if (!effectiveRepoId || !session?.userId || !designerContext?.siteId) {
@@ -656,18 +675,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
     async function loadRepoData() {
       try {
-        const [tree, opportunitiesResponse] = await Promise.all([
-          backend.getRepoTree(repoId).catch(() => null),
-          backend
-            .getComponentOpportunities(repoId)
-            .catch(() => ({ opportunities: [] as ComponentOpportunity[] }))
-        ]);
+        await refreshRepoData(repoId, { shouldSkipApply: () => cancelled });
         if (cancelled) {
           return;
         }
-        setRepoTree(tree);
-        setComponentOpportunities(opportunitiesResponse.opportunities);
-        setComponentBannerDismissed(false);
       } catch (err) {
         if (!cancelled) {
           setError(
@@ -684,6 +695,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     };
   }, [
     resetSectionRunState,
+    refreshRepoData,
     selectedRepo?.lastSyncedAt,
     selectedRepo?.pageCount,
     selectedRepo?.status,
@@ -1680,6 +1692,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           bootstrapPayload.repos.find((repo) => repo.fullName === selectedRepo.fullName)?.id ??
           repoId;
         setSelectedRepoId(nextRepoId);
+        await refreshRepoData(nextRepoId);
+        await refreshWorkflowState(nextRepoId);
         setError(null);
         return true;
       });
@@ -1687,7 +1701,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setError(err instanceof Error ? err.message : "Failed to re-scan the repository.");
       return false;
     }
-  }, [bootstrapState, selectedRepo, session?.userId, withMutation]);
+  }, [bootstrapState, refreshRepoData, refreshWorkflowState, selectedRepo, session?.userId, withMutation]);
 
   const value = useMemo<AppStateContextValue>(
     () => ({

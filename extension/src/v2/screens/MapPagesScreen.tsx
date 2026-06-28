@@ -1,4 +1,4 @@
-import { Home, FileText, ArrowRight, Plus } from "lucide-react";
+import { Home, FileText, ArrowRight, Plus, RefreshCw } from "lucide-react";
 import { Panel, PanelContent } from "../components/Panel";
 import { Button } from "../components/Button";
 import { Stepper, type Step } from "../components/Stepper";
@@ -22,6 +22,7 @@ export function MapPagesScreen() {
     loadingLabel,
     mappingRows,
     repoTree,
+    rescanSelectedRepo,
     savePageMappings,
     updateMapping
   } = useAppState();
@@ -72,6 +73,17 @@ export function MapPagesScreen() {
         <span className="text-[11px] text-wb-text-tertiary tabular-nums">
           {mappingSummaryLabel}
         </span>
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={isMutating}
+          onClick={() => {
+            void rescanSelectedRepo();
+          }}
+        >
+          <RefreshCw size={12} />
+          Re-scan repo
+        </Button>
       </div>
 
       <PanelContent>
