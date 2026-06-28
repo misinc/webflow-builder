@@ -130,6 +130,76 @@ describe("HTML repo support", () => {
     expect(index.sections[0].metadata.inlineSourceCode).toContain("<h1>About</h1>");
   });
 
+  it("indexes top-level exported HTML pages and skips private helper downloads", () => {
+    const extractor = new HtmlRepoExtractor();
+    const snapshot: RepositorySnapshot = {
+      owner: "misinc",
+      name: "misinc-2026-html",
+      defaultBranch: "main",
+      commitSha: "abc",
+      files: [
+        { path: "_downloads.html", content: "<main><h1>Downloads</h1></main>" },
+        { path: "index.html", content: "<main><h1>Home</h1></main>" },
+        { path: "blog.html", content: "<main><h1>Blog</h1></main>" },
+        { path: "case-studies.html", content: "<main><h1>Case Studies</h1></main>" },
+        { path: "contact.html", content: "<main><h1>Contact</h1></main>" },
+        { path: "resources.html", content: "<main><h1>Resources</h1></main>" },
+        { path: "services.html", content: "<main><h1>Services</h1></main>" },
+        { path: "assets/preview.html", content: "<main><h1>Asset helper</h1></main>" }
+      ]
+    };
+
+    const index = extractor.extractRepoIndex("repo-1", snapshot);
+
+    expect(index.pages.map((page) => page.sourceFile)).toEqual([
+      "blog.html",
+      "case-studies.html",
+      "contact.html",
+      "index.html",
+      "resources.html",
+      "services.html"
+    ]);
+    expect(index.pages.map((page) => page.route)).toEqual([
+      "/blog",
+      "/case-studies",
+      "/contact",
+      "/",
+      "/resources",
+      "/services"
+    ]);
+  });
+
+  it("indexes nested single-folder HTML exports as root-relative pages", () => {
+    const extractor = new HtmlRepoExtractor();
+    const snapshot: RepositorySnapshot = {
+      owner: "misinc",
+      name: "misinc-2026-html",
+      defaultBranch: "main",
+      commitSha: "abc",
+      files: [
+        { path: "misinc/index.html", content: "<main><h1>Home</h1></main>" },
+        { path: "misinc/blog.html", content: "<main><h1>Blog</h1></main>" },
+        { path: "misinc/contact.html", content: "<main><h1>Contact</h1></main>" },
+        { path: "misinc/services/index.html", content: "<main><h1>Services</h1></main>" }
+      ]
+    };
+
+    const index = extractor.extractRepoIndex("repo-1", snapshot);
+
+    expect(index.pages.map((page) => page.sourceFile)).toEqual([
+      "misinc/blog.html",
+      "misinc/contact.html",
+      "misinc/index.html",
+      "misinc/services/index.html"
+    ]);
+    expect(index.pages.map((page) => page.route)).toEqual([
+      "/blog",
+      "/contact",
+      "/",
+      "/services"
+    ]);
+  });
+
   it("parses HTML text only from visible text nodes and preserves source classes", () => {
     const plan = htmlToSkeletonPlan({
       metadata: metadata(),

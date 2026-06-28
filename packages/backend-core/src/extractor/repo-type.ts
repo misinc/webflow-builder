@@ -19,14 +19,13 @@ function isHtmlPageFile(path: string): boolean {
   if (!/\.html?$/i.test(path)) {
     return false;
   }
-  if (/(^|\/)(404|500)\.html?$/i.test(path)) {
+  if (/(^|\/)(404|500)\.html?$/i.test(path) || /(^|\/)_/.test(path)) {
     return false;
   }
-  return (
-    /^[^/]+\.html?$/i.test(path) ||
-    /^(pages|public|dist|build|out|site)\//i.test(path) ||
-    /\/index\.html?$/i.test(path)
-  );
+  if (/(^|\/)(node_modules|assets|static|images|img|media|fonts)(\/|$)/i.test(path)) {
+    return false;
+  }
+  return true;
 }
 
 function hasReactEntry(snapshot: RepositorySnapshot): boolean {

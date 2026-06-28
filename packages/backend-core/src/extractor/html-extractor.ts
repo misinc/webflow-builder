@@ -25,8 +25,9 @@ function textContent(element: HTMLElement): string {
   return element.text.replace(/\s+/g, " ").trim();
 }
 
-function htmlPageName(filePath: string): string {
-  const withoutExtension = filePath.replace(/\.html?$/i, "");
+function htmlPageName(filePath: string, siteRoot = ""): string {
+  const normalizedPath = stripSiteRoot(filePath, siteRoot);
+  const withoutExtension = normalizedPath.replace(/\.html?$/i, "");
   const parts = withoutExtension.split("/").filter(Boolean);
   const last = parts.at(-1) ?? "index";
   if (last === "index") {
@@ -47,14 +48,39 @@ function titleCase(value: string): string {
     .join(" ") || "Page";
 }
 
-function routeFromHtmlPath(filePath: string): string {
-  const normalized = filePath.replace(/\\/g, "/").replace(/\.html?$/i, "");
+function stripSiteRoot(filePath: string, siteRoot: string): string {
+  const normalized = filePath.replace(/\\/g, "/");
+  return siteRoot && normalized.startsWith(`${siteRoot}/`)
+    ? normalized.slice(siteRoot.length + 1)
+    : normalized;
+}
+
+function routeFromHtmlPath(filePath: string, siteRoot = ""): string {
+  const normalized = stripSiteRoot(filePath, siteRoot).replace(/\.html?$/i, "");
   const stripped = normalized.replace(/^(public|dist|build|out|site|pages)\//, "");
   if (stripped === "index" || stripped.endsWith("/index")) {
     const route = stripped.replace(/\/?index$/, "");
     return route ? `/${route}` : "/";
   }
   return `/${stripped}`;
+}
+
+function commonExportRoot(filePaths: string[]): string {
+  if (filePaths.some((filePath) => !filePath.includes("/"))) {
+    return "";
+  }
+  const firstSegments = new Set(
+    filePaths
+      .map((filePath) => filePath.split("/").filter(Boolean))
+      .filter((parts) => parts.length > 1)
+      .map((parts) => parts[0]!)
+  );
+  if (firstSegments.size !== 1) {
+    return "";
+  }
+  const root = [...firstSegments][0]!;
+  const hasRootIndex = filePaths.some((filePath) => filePath === `${root}/index.html`);
+  return hasRootIndex ? root : "";
 }
 
 function componentNameFromSection(name: string, index: number): string {
@@ -170,6 +196,7 @@ export class HtmlRepoExtractor {
     const pageFiles = snapshot.files
       .filter((file) => isHtmlRepoPageFile(file.path))
       .sort((left, right) => left.path.localeCompare(right.path));
+    const siteRoot = commonExportRoot(pageFiles.map((file) => file.path));
     const pages: RepoPageRecord[] = [];
     const sections: RepoSectionRecord[] = [];
 
@@ -178,15 +205,16 @@ export class HtmlRepoExtractor {
       const page: RepoPageRecord = {
         id: pageId,
         repoId,
-        name: htmlPageName(pageFile.path),
-        route: routeFromHtmlPath(pageFile.path),
+        name: htmlPageName(pageFile.path, siteRoot),
+        route: routeFromHtmlPath(pageFile.path, siteRoot),
         sourceFile: pageFile.path,
         sourceCode: pageFile.content,
         sortOrder: pageIndex,
         metadata: {
           repoType: "html",
           parseStatus: "parsed",
-          confidence: 0.95
+          confidence: 0.95,
+          siteRoot: siteRoot || undefined
         }
       };
       pages.push(page);
