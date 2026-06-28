@@ -481,6 +481,37 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     sharedStyleContext
   ]);
 
+  const ensureHtmlSiteStylePlan = useCallback(async () => {
+    if (!selectedRepoId || !session?.userId || !designerContext?.siteId) {
+      throw new Error("Open a Webflow site and choose a repo first.");
+    }
+    if (
+      siteStylePlan?.repoId === selectedRepoId &&
+      siteStylePlan.webflowSiteId === designerContext.siteId
+    ) {
+      return siteStylePlan;
+    }
+    const styles =
+      sharedStyleContext?.siteId === designerContext.siteId
+        ? sharedStyleContext
+        : await captureSharedStyles(designerContext.siteId);
+    const plan = await backend.rebuildSiteStylePlan({
+      repoId: selectedRepoId,
+      webflowSiteId: designerContext.siteId,
+      requestedBy: session.userId,
+      sharedStyleContext: styles
+    });
+    setSiteStylePlan(plan);
+    return plan;
+  }, [
+    captureSharedStyles,
+    designerContext?.siteId,
+    selectedRepoId,
+    session?.userId,
+    sharedStyleContext,
+    siteStylePlan
+  ]);
+
   const refreshComponentOpportunities = useCallback(async () => {
     if (!selectedRepoId) {
       setComponentOpportunities([]);
@@ -1053,11 +1084,16 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         });
         await ensureSiteBound();
         const request = currentWorkflowRequest(nextSectionId);
+        const sectionRecord = repoSectionById.get(nextSectionId) ?? selectedSectionRecord;
+        const planForSkeleton =
+          sectionRecord?.metadata.repoType === "html"
+            ? await ensureHtmlSiteStylePlan()
+            : siteStylePlan;
         const nextAnalysis = await backend.analyzeSection(request, controller.signal);
         setAnalysis(nextAnalysis);
         const nextSkeleton = normalizeSkeletonPlan(
           await backend.generateSkeleton(request, controller.signal),
-          { siteStylePlan }
+          { siteStylePlan: planForSkeleton }
         );
         setSkeleton(nextSkeleton);
         setSkeletonDraft(nextSkeleton.treeText);
@@ -1081,9 +1117,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   }, [
     activeQueue,
     currentWorkflowRequest,
+    ensureHtmlSiteStylePlan,
     ensureSiteBound,
+    repoSectionById,
     resetSectionRunState,
     selectedSectionId,
+    selectedSectionRecord,
     siteStylePlan,
     withMutation
   ]);
@@ -1114,8 +1153,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       return false;
     }
     try {
+      const planForSkeleton =
+        skeleton.sectionMetadata.repoType === "html"
+          ? siteStylePlan ?? null
+          : null;
       const parsed = normalizeSkeletonPlan(
-        parseSkeletonTreeText(skeleton, skeletonDraft || skeleton.treeText)
+        parseSkeletonTreeText(skeleton, skeletonDraft || skeleton.treeText),
+        { siteStylePlan: planForSkeleton }
       );
       setSkeleton(parsed);
       setSkeletonDraft(parsed.treeText);
@@ -1126,7 +1170,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setError(err instanceof Error ? err.message : "Failed to parse skeleton changes.");
       return false;
     }
-  }, [skeleton, skeletonDraft]);
+  }, [siteStylePlan, skeleton, skeletonDraft]);
 
   const rollbackCurrentExecution = useCallback(async () => {
     const executionRecord = activeExecutionRecordRef.current ?? lastExecutionRecordRef.current;
@@ -1174,10 +1218,16 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           throw new Error("No active Webflow site.");
         }
         await ensureSiteBound();
+        const planForSkeleton =
+          skeleton.sectionMetadata.repoType === "html"
+            ? await ensureHtmlSiteStylePlan()
+            : siteStylePlan;
         const nextSkeleton =
           isEditingSkeleton && skeletonDraft.trim()
-            ? normalizeSkeletonPlan(parseSkeletonTreeText(skeleton, skeletonDraft))
-            : normalizeSkeletonPlan(skeleton, { siteStylePlan });
+            ? normalizeSkeletonPlan(parseSkeletonTreeText(skeleton, skeletonDraft), {
+                siteStylePlan: planForSkeleton
+              })
+            : normalizeSkeletonPlan(skeleton, { siteStylePlan: planForSkeleton });
         const nodeExecution = await executeSkeletonPlan({
           bridge,
           context,
@@ -1236,6 +1286,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
   }, [
     currentTargetNodeId,
+    ensureHtmlSiteStylePlan,
     ensureSiteBound,
     isEditingSkeleton,
     rollbackCurrentExecution,

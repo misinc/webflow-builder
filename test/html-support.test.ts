@@ -344,6 +344,65 @@ describe("HTML repo support", () => {
     expect(plan!.elementTree.classNames).not.toContain("md:py-[120px]");
   });
 
+  it("normalizes HTML skeletons with draft site style plan mappings before review", async () => {
+    const repository = new MemoryAppRepository();
+    const repo = await repository.createRepo({
+      owner: "local",
+      name: "html-site",
+      repoUrl: "https://github.com/local/html-site",
+      provider: "github",
+      requestedBy: "user-1",
+      defaultBranch: "main"
+    });
+    await repository.replaceRepoIndex(
+      repo.id,
+      [
+        {
+          id: "page-1",
+          repoId: repo.id,
+          name: "Home",
+          route: "/",
+          sourceFile: "index.html",
+          sortOrder: 0,
+          metadata: { repoType: "html" }
+        }
+      ],
+      [
+        {
+          id: "section-1",
+          repoId: repo.id,
+          pageId: "page-1",
+          name: "Hero",
+          sectionKey: "hero",
+          sourceFile: "index.html",
+          importPath: "index.html",
+          sortOrder: 0,
+          componentName: "Hero",
+          metadata: { repoType: "html", inlineSourceCode: messyHtml }
+        }
+      ]
+    );
+    const draft = await new SiteStylePlanService(repository).rebuildPlan({
+      repoId: repo.id,
+      webflowSiteId: "site-1",
+      requestedBy: "user-1",
+      sharedStyleContext
+    });
+    const rawPlan = htmlToSkeletonPlan({
+      metadata: metadata(),
+      sourceCode: messyHtml,
+      sharedStyleContext
+    });
+
+    const normalized = normalizeSkeletonPlan(rawPlan!, { siteStylePlan: draft });
+
+    expect(draft.status).toBe("draft");
+    expect(normalized.elementTree.classNames).toContain("html_md-py-120px");
+    expect(normalized.elementTree.classNames).not.toContain("md:py-[120px]");
+    expect(normalized.treeText).toContain("html_md-py-120px");
+    expect(normalized.treeText).not.toContain("md:py-[120px]");
+  });
+
   it("normalizes HTML skeletons without DSL reparsing or class stripping", () => {
     const plan: SkeletonPlan = {
       sectionMetadata: metadata(),

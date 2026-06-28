@@ -238,7 +238,7 @@ function mapHtmlClassNames(
 ): string[] {
   const confirmedPlan = siteStylePlan?.status === "confirmed" ? siteStylePlan : null;
   const decisionMap = new Map(
-    confirmedPlan?.classDecisions
+    siteStylePlan?.classDecisions
       .filter((decision) => decision.source === "repo")
       .map((decision) => [decision.sourceClassName, decision.targetClassName]) ?? []
   );
