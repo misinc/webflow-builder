@@ -4,7 +4,7 @@ import { detectRepoType } from "@wfb/backend-core/extractor/repo-type.js";
 import { htmlToSkeletonPlan } from "@wfb/backend-core/planner/html-planner.js";
 import { MemoryAppRepository } from "@wfb/backend-core/repositories/memory-app-repository.js";
 import { SiteStylePlanService } from "@wfb/backend-core/services/site-style-plan-service.js";
-import { RepositorySnapshot } from "@wfb/backend-core/github/client.js";
+import { isRelevantRepoFile, RepositorySnapshot } from "@wfb/backend-core/github/client.js";
 import { normalizeSkeletonPlan } from "../extension/src/skeleton/tree.js";
 import type { SharedStyleContext, SkeletonPlan } from "@wfb/shared/contracts.js";
 
@@ -53,6 +53,15 @@ function flattenText(plan: SkeletonPlan): string {
 }
 
 describe("HTML repo support", () => {
+  it("keeps HTML snapshot files text-only so D1 JSON blobs do not include binary assets", () => {
+    expect(isRelevantRepoFile("index.html")).toBe(true);
+    expect(isRelevantRepoFile("fonts.googleapis.com/css2﹖family=Manrope.css")).toBe(true);
+    expect(isRelevantRepoFile("fonts.gstatic.com/s/manrope/v20/font.ttf")).toBe(false);
+    expect(isRelevantRepoFile("assets/hero.png")).toBe(false);
+    expect(isRelevantRepoFile("media/intro.mp4")).toBe(false);
+    expect(isRelevantRepoFile("public/logo.svg")).toBe(false);
+  });
+
   it("detects HTML repos and honors explicit repo type markers", () => {
     const htmlSnapshot: RepositorySnapshot = {
       owner: "local",
