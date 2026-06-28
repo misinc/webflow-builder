@@ -1207,7 +1207,7 @@ export class WorkflowService {
 
   async styleSection(request: WorkflowSectionRequest): Promise<StylingPlan> {
     const context = await this.getSectionStateContext(request);
-    if (context.state?.status !== "skeleton_approved") {
+    if (!["skeleton_approved", "styled"].includes(context.state?.status ?? "")) {
       throw new Error("Approve the placed skeleton before applying styles.");
     }
     const latestSkeletonRun = await this.repository.getLatestSectionRun(

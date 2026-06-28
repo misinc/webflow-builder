@@ -9,6 +9,7 @@ import { Spinner } from "../components/Spinner";
 import { useNavigation } from "../context/NavigationContext";
 import { useAppState } from "../context/AppStateContext";
 import { isReservedStyleGuideClassName } from "@wfb/shared/client-first.js";
+import type { BuildNode } from "@wfb/shared/contracts.js";
 
 interface StyleLine {
   selector?: string;
@@ -84,14 +85,21 @@ export function ApplyingStylesScreen() {
   );
 
   if (isMutating && visibleLines.length === 0) {
-    const pendingClassName =
-      skeleton?.elementTree.classNames.find((className) => className !== "section") ??
-      skeleton?.elementTree.classNames[0];
-    visibleLines.push({
-      selector: pendingClassName ? `.${pendingClassName}` : undefined,
-      pending: true,
-      message: styling ? "Applying styles" : "Preparing styling plan"
-    });
+    collectSkeletonClassNames(skeleton?.elementTree)
+      .slice(0, 8)
+      .forEach((className) => {
+        visibleLines.push({
+          selector: `.${className}`,
+          pending: true,
+          message: styling ? "Applying styles" : "Preparing styling plan"
+        });
+      });
+    if (visibleLines.length === 0) {
+      visibleLines.push({
+        pending: true,
+        message: styling ? "Applying styles" : "Preparing styling plan"
+      });
+    }
   }
 
   return (
@@ -194,6 +202,23 @@ export function ApplyingStylesScreen() {
       </div>
     </Panel>
   );
+}
+
+function collectSkeletonClassNames(node: BuildNode | undefined): string[] {
+  if (!node) {
+    return [];
+  }
+  const values = new Set<string>();
+  function visit(current: BuildNode): void {
+    current.classNames.forEach((className) => {
+      if (className !== "section" && !isReservedStyleGuideClassName(className)) {
+        values.add(className);
+      }
+    });
+    current.children.forEach(visit);
+  }
+  visit(node);
+  return [...values];
 }
 
 function StyleLineRow({ line }: { line: StyleLine }) {

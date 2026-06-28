@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
+import { MemoryBlobStore } from "@wfb/backend-core/blob/blob-store.js";
 import { HtmlRepoExtractor } from "@wfb/backend-core/extractor/html-extractor.js";
 import { detectRepoType } from "@wfb/backend-core/extractor/repo-type.js";
 import { htmlToSkeletonPlan } from "@wfb/backend-core/planner/html-planner.js";
+import type { PlanningProvider } from "@wfb/backend-core/planner/planning-provider.js";
 import { MemoryAppRepository } from "@wfb/backend-core/repositories/memory-app-repository.js";
 import { SiteStylePlanService } from "@wfb/backend-core/services/site-style-plan-service.js";
 import { V2ReadService } from "@wfb/backend-core/services/v2-read-service.js";
+import { WorkflowService } from "@wfb/backend-core/services/workflow-service.js";
 import {
   AvailableRepository,
   GitHubRepositoryClient,
@@ -12,7 +15,13 @@ import {
   RepositorySnapshot
 } from "@wfb/backend-core/github/client.js";
 import { normalizeSkeletonPlan, serializeSkeletonTree } from "../extension/src/skeleton/tree.js";
-import type { SharedStyleContext, SkeletonPlan } from "@wfb/shared/contracts.js";
+import type {
+  SectionAnalysis,
+  SectionVerification,
+  SharedStyleContext,
+  SkeletonPlan,
+  StylingPlan
+} from "@wfb/shared/contracts.js";
 
 const messyHtml = `
   <section class="hero-wrap md:py-[120px]" data-title="Do not leak">
@@ -43,6 +52,21 @@ const emptyGithubClient: GitHubRepositoryClient = {
   },
   async listAvailableRepos(): Promise<AvailableRepository[]> {
     return [];
+  }
+};
+
+const fallbackOnlyProvider: PlanningProvider = {
+  async analyzeSection(): Promise<SectionAnalysis> {
+    throw new Error("not used");
+  },
+  async generateSkeleton(): Promise<SkeletonPlan> {
+    throw new Error("not used");
+  },
+  async generateStylingPlan(): Promise<StylingPlan> {
+    throw new Error("force deterministic styling fallback");
+  },
+  async verifySection(): Promise<SectionVerification> {
+    throw new Error("not used");
   }
 };
 
@@ -408,6 +432,143 @@ describe("HTML repo support", () => {
     expect(normalized.treeText).toContain("section_hero");
     expect(normalized.treeText).not.toContain("hero-wrap");
     expect(normalized.treeText).not.toContain("md:py-[120px]");
+  });
+
+  it("styles an approved HTML skeleton with deterministic fallback classes", async () => {
+    const repository = new MemoryAppRepository();
+    const blobStore = new MemoryBlobStore();
+    const repo = await repository.createRepo({
+      owner: "local",
+      name: "html-site",
+      repoUrl: "https://github.com/local/html-site",
+      provider: "github",
+      requestedBy: "user-1",
+      defaultBranch: "main"
+    });
+    await repository.replaceRepoIndex(
+      repo.id,
+      [
+        {
+          id: "page-1",
+          repoId: repo.id,
+          name: "Home",
+          route: "/",
+          sourceFile: "index.html",
+          sortOrder: 0,
+          metadata: { repoType: "html" }
+        }
+      ],
+      [
+        {
+          id: "section-1",
+          repoId: repo.id,
+          pageId: "page-1",
+          name: "Solutions",
+          sectionKey: "solutions",
+          sourceFile: "index.html",
+          importPath: "index.html",
+          sortOrder: 0,
+          componentName: "Solutions",
+          metadata: { repoType: "html", inlineSourceCode: messyHtml }
+        }
+      ]
+    );
+    await repository.upsertSiteBinding({
+      repoId: repo.id,
+      webflowSiteId: "site-1",
+      requestedBy: "user-1",
+      sharedStyleContext
+    });
+    await repository.upsertPageMappings({
+      repoId: repo.id,
+      webflowSiteId: "site-1",
+      requestedBy: "user-1",
+      mappings: [
+        {
+          webflowPageId: "webflow-page-1",
+          webflowPageName: "Home",
+          webflowPageRoute: "/",
+          repoPageId: "page-1"
+        }
+      ]
+    });
+    await repository.replaceSectionWorkflowStates(
+      "user-1",
+      "site-1",
+      "webflow-page-1",
+      "page-1",
+      [{ repoSectionId: "section-1", sortOrder: 0 }]
+    );
+    await blobStore.putJson(`repos/${repo.id}/snapshots/latest.json`, {
+      owner: "local",
+      name: "html-site",
+      defaultBranch: "main",
+      commitSha: "abc",
+      files: [{ path: "index.html", content: messyHtml }]
+    });
+    const workflow = new WorkflowService(
+      repository,
+      blobStore,
+      new HtmlRepoExtractor() as never,
+      fallbackOnlyProvider
+    );
+
+    const skeleton = await workflow.generateSkeleton({
+      repoId: repo.id,
+      webflowSiteId: "site-1",
+      webflowPageId: "webflow-page-1",
+      sectionId: "section-1",
+      requestedBy: "user-1",
+      mode: "fullAssist",
+      sharedStyleContext
+    });
+    await workflow.recordSkeletonPlacement({
+      repoId: repo.id,
+      webflowSiteId: "site-1",
+      webflowPageId: "webflow-page-1",
+      sectionId: "section-1",
+      requestedBy: "user-1",
+      rootNodeId: "runtime-root-1",
+      nodeIdMap: { [skeleton.elementTree.id]: "runtime-root-1" }
+    });
+    await workflow.approveSkeleton({
+      repoId: repo.id,
+      webflowSiteId: "site-1",
+      webflowPageId: "webflow-page-1",
+      sectionId: "section-1",
+      requestedBy: "user-1"
+    });
+
+    const styling = await workflow.styleSection({
+      repoId: repo.id,
+      webflowSiteId: "site-1",
+      webflowPageId: "webflow-page-1",
+      sectionId: "section-1",
+      requestedBy: "user-1",
+      mode: "fullAssist",
+      sharedStyleContext
+    });
+
+    expect(styling.styleDefinitions.map((definition) => definition.className)).toEqual(
+      expect.arrayContaining(["section_solutions", "solutions_component"])
+    );
+    expect(styling.warnings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "styling-html-fallback" })
+      ])
+    );
+
+    const retryStyling = await workflow.styleSection({
+      repoId: repo.id,
+      webflowSiteId: "site-1",
+      webflowPageId: "webflow-page-1",
+      sectionId: "section-1",
+      requestedBy: "user-1",
+      mode: "fullAssist",
+      sharedStyleContext
+    });
+
+    expect(retryStyling.styleDefinitions.length).toBeGreaterThan(0);
   });
 
   it("normalizes HTML skeletons without DSL reparsing or class stripping", () => {
