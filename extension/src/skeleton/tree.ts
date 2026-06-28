@@ -1,5 +1,5 @@
 import { isBuilderClassName } from "@wfb/shared/client-first.js";
-import { BuildNode, SkeletonPlan } from "@wfb/shared/contracts.js";
+import { BuildNode, SiteStylePlan, SkeletonPlan } from "@wfb/shared/contracts.js";
 
 const LEAF_TAGS = new Set(["img", "source", "br", "hr", "input", "meta", "link"]);
 const REMOVED_TAGS = new Set([
@@ -228,6 +228,45 @@ function countInvalidClassNames(node: BuildNode): number {
     node.classNames.filter((className) => !isBuilderClassName(className)).length +
     node.children.reduce((total, child) => total + countInvalidClassNames(child), 0)
   );
+}
+
+function mapHtmlClassNames(
+  classNames: string[],
+  siteStylePlan: SiteStylePlan | null | undefined,
+  warnings: SkeletonPlan["warnings"],
+  tag: string
+): string[] {
+  const confirmedPlan = siteStylePlan?.status === "confirmed" ? siteStylePlan : null;
+  const decisionMap = new Map(
+    confirmedPlan?.classDecisions
+      .filter((decision) => decision.source === "repo")
+      .map((decision) => [decision.sourceClassName, decision.targetClassName]) ?? []
+  );
+  const mapped: string[] = [];
+  for (const className of classNames) {
+    const planned = decisionMap.get(className);
+    if (planned) {
+      mapped.push(planned);
+      continue;
+    }
+    if (confirmedPlan && !isBuilderClassName(className)) {
+      warnings.push({
+        code: "html-unmapped-class-dropped",
+        message: `Dropped unmapped HTML class "${className}" from <${tag}> because the confirmed site style plan has no mapping for it.`,
+        level: "warning"
+      });
+      continue;
+    }
+    mapped.push(className);
+    if (!isBuilderClassName(className)) {
+      warnings.push({
+        code: "html-unmapped-class-preserved",
+        message: `Preserved unmapped HTML class "${className}" on <${tag}> until the site style plan is confirmed.`,
+        level: "info"
+      });
+    }
+  }
+  return [...new Set(mapped)];
 }
 
 function hasClass(node: BuildNode | undefined, className: string): boolean {
@@ -469,7 +508,11 @@ export function parseSkeletonTreeText(
   };
 }
 
-export function sanitizeSkeletonPlan(plan: SkeletonPlan): SkeletonPlan {
+export function sanitizeSkeletonPlan(
+  plan: SkeletonPlan,
+  options: { siteStylePlan?: SiteStylePlan | null; htmlMode?: boolean } = {}
+): SkeletonPlan {
+  const htmlMode = options.htmlMode ?? plan.sectionMetadata.repoType === "html";
   const warnings = [...plan.warnings];
   const seenIds = new Set<string>();
 
@@ -519,7 +562,9 @@ export function sanitizeSkeletonPlan(plan: SkeletonPlan): SkeletonPlan {
       normalizedChildren.push(...sanitizedChild.hoistedChildren);
     }
 
-    const filteredClassNames = node.classNames.filter((className) => isBuilderClassName(className));
+    const filteredClassNames = htmlMode
+      ? mapHtmlClassNames(node.classNames, options.siteStylePlan, warnings, normalizedTag)
+      : node.classNames.filter((className) => isBuilderClassName(className));
     const safeTag = WRAPPER_TO_DIV_TAGS.has(normalizedTag) ? "div" : normalizedTag;
     let retagged = safeTag !== normalizedTag;
     let nextTag = safeTag;
@@ -572,7 +617,7 @@ export function sanitizeSkeletonPlan(plan: SkeletonPlan): SkeletonPlan {
       });
     }
 
-    if (filteredClassNames.length !== node.classNames.length) {
+    if (!htmlMode && filteredClassNames.length !== node.classNames.length) {
       warnings.push({
         code: "removed-invalid-class-name",
         message: `Removed invalid class tokens from <${nextTag}> before Webflow insertion.`,
@@ -693,8 +738,21 @@ export function sanitizeSkeletonPlan(plan: SkeletonPlan): SkeletonPlan {
   };
 }
 
-export function normalizeSkeletonPlan(plan: SkeletonPlan): SkeletonPlan {
-  const sanitized = sanitizeSkeletonPlan(plan);
+export function normalizeSkeletonPlan(
+  plan: SkeletonPlan,
+  options: { siteStylePlan?: SiteStylePlan | null } = {}
+): SkeletonPlan {
+  const htmlMode = plan.sectionMetadata.repoType === "html";
+  const sanitized = sanitizeSkeletonPlan(plan, {
+    siteStylePlan: options.siteStylePlan,
+    htmlMode
+  });
+  if (htmlMode) {
+    return {
+      ...sanitized,
+      treeText: serializeSkeletonTree(sanitized.elementTree)
+    };
+  }
   const existingClassCount = new Set(collectClassNames(sanitized.elementTree)).size;
   const existingInvalidClassCount = countInvalidClassNames(sanitized.elementTree);
 

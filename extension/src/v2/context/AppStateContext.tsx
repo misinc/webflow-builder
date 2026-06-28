@@ -1044,7 +1044,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         const nextAnalysis = await backend.analyzeSection(request, controller.signal);
         setAnalysis(nextAnalysis);
         const nextSkeleton = normalizeSkeletonPlan(
-          await backend.generateSkeleton(request, controller.signal)
+          await backend.generateSkeleton(request, controller.signal),
+          { siteStylePlan }
         );
         setSkeleton(nextSkeleton);
         setSkeletonDraft(nextSkeleton.treeText);
@@ -1071,6 +1072,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     ensureSiteBound,
     resetSectionRunState,
     selectedSectionId,
+    siteStylePlan,
     withMutation
   ]);
 
@@ -1163,7 +1165,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         const nextSkeleton =
           isEditingSkeleton && skeletonDraft.trim()
             ? normalizeSkeletonPlan(parseSkeletonTreeText(skeleton, skeletonDraft))
-            : normalizeSkeletonPlan(skeleton);
+            : normalizeSkeletonPlan(skeleton, { siteStylePlan });
         const nodeExecution = await executeSkeletonPlan({
           bridge,
           context,
@@ -1230,6 +1232,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     session?.userId,
     skeleton,
     skeletonDraft,
+    siteStylePlan,
     withMutation
   ]);
 

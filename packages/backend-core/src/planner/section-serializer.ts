@@ -3,6 +3,9 @@ import {
   normalizeImageLikeJsx,
   parseJsxAttributeValue
 } from "../extractor/asset-references.js";
+import { htmlToOutline, type HtmlOutlineNode } from "./html-planner.js";
+
+export type { HtmlOutlineNode } from "./html-planner.js";
 
 export interface SerializedSectionContentItem {
   kind: string;
@@ -33,14 +36,6 @@ function cleanText(value: string): string {
 function isHtmlLike(sourceCode: string): boolean {
   const trimmed = sourceCode.trim();
   return /^<([a-z][a-z0-9-]*)\b/i.test(trimmed);
-}
-
-export interface HtmlOutlineNode {
-  tag: string;
-  id?: string;
-  classNames: string[];
-  textContent?: string;
-  children: HtmlOutlineNode[];
 }
 
 function iconEmbedClassForSvg(tagSource: string): string {
@@ -115,6 +110,10 @@ function signatureForElement(node: HtmlOutlineNode): string {
 
 export function parseHtmlOutline(sourceCode: string): HtmlOutlineNode | null {
   const normalizedSourceCode = normalizeImageLikeJsx(sourceCode);
+  const parsed = htmlToOutline(normalizedSourceCode);
+  if (parsed) {
+    return parsed;
+  }
   const tagPattern = /<!--[\s\S]*?-->|<\/?([a-z][a-z0-9-]*)\b[^>]*>/gi;
   const banned = new Set([
     "script",

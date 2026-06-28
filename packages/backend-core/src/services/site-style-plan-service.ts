@@ -1,4 +1,9 @@
 import {
+  isBuilderClassName,
+  inferSharedCategory
+} from "@wfb/shared/client-first.js";
+import { slugify } from "@wfb/shared/text.js";
+import {
   SharedStyleContext,
   siteStylePlanRequestSchema,
   SiteStylePlan,
@@ -19,7 +24,7 @@ function classTokensFromSource(source: string): string[] {
     for (const match of source.matchAll(pattern)) {
       for (const token of (match[1] ?? "").split(/\s+/)) {
         const normalized = token.trim();
-        if (normalized && !/[{}[\]()`$]/.test(normalized)) {
+        if (normalized && !/[{}()`$]/.test(normalized)) {
           tokens.add(normalized);
         }
       }
@@ -36,6 +41,21 @@ function emptySharedStyleContext(siteId: string): SharedStyleContext {
     variables: [],
     styleIds: []
   };
+}
+
+function repoTypeFromSection(section: { metadata: Record<string, unknown> }): "react" | "html" {
+  return section.metadata.repoType === "html" ? "html" : "react";
+}
+
+function clientFirstTargetName(sourceClassName: string, repoType: "react" | "html"): string {
+  if (isBuilderClassName(sourceClassName)) {
+    return sourceClassName;
+  }
+  const slug = slugify(sourceClassName) || "class";
+  const category = inferSharedCategory(slug) ?? "html";
+  const prefix = repoType === "html" ? `${category}_` : "";
+  const candidate = `${prefix}${slug}`;
+  return isBuilderClassName(candidate) ? candidate : `html_${slugify(candidate) || "class"}`;
 }
 
 export class SiteStylePlanService {
@@ -67,24 +87,28 @@ export class SiteStylePlanService {
       emptySharedStyleContext(request.webflowSiteId);
 
     const sections = await this.repository.getSections(request.repoId);
-    const repoClassNames = new Set<string>();
+    const repoClassNames = new Map<string, "react" | "html">();
     for (const section of sections) {
       const source =
         typeof section.metadata.inlineSourceCode === "string"
           ? section.metadata.inlineSourceCode
           : "";
-      classTokensFromSource(source).forEach((className) => repoClassNames.add(className));
+      classTokensFromSource(source).forEach((className) =>
+        repoClassNames.set(className, repoTypeFromSection(section))
+      );
     }
 
     const webflowClassNames = new Set(
       sharedStyleContext.classes.map((classRecord) => classRecord.name)
     );
-    const classDecisions: SiteStylePlanClassDecision[] = [...repoClassNames].sort().map((className) => {
+    const classDecisions: SiteStylePlanClassDecision[] = [...repoClassNames.keys()].sort().map((className) => {
       const shouldReuse = webflowClassNames.has(className);
       return {
         sourceClassName: className,
         action: shouldReuse ? "reuse" as const : "create" as const,
-        targetClassName: className,
+        targetClassName: shouldReuse
+          ? className
+          : clientFirstTargetName(className, repoClassNames.get(className) ?? "react"),
         source: "repo" as const
       };
     });

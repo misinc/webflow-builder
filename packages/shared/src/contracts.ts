@@ -318,7 +318,8 @@ export const sectionMetadataSchema = z.object({
   sectionId: z.string().min(1),
   pageName: z.string().min(1),
   sectionName: z.string().min(1),
-  sourceFile: z.string().min(1)
+  sourceFile: z.string().min(1),
+  repoType: z.enum(["react", "html"]).optional()
 });
 
 export const sectionAnalysisSchema = z.object({
@@ -346,6 +347,13 @@ export const skeletonPlanSchema = z.object({
   assetBindings: z.array(assetBindingSchema).default([]),
   reusableClasses: z.array(z.string()).default([]),
   suggestedNewClasses: z.array(z.string()).default([]),
+  classMappingDecisions: z.array(
+    z.object({
+      sourceClassName: z.string().min(1),
+      targetClassName: z.string(),
+      action: z.enum(["reuse", "create", "unmapped"])
+    })
+  ).optional(),
   warnings: z.array(plannerWarningSchema).default([])
 });
 

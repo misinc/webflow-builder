@@ -43,6 +43,7 @@ import { MisRepoExtractor } from "../extractor/mis-extractor.js";
 import { extractAssetReferencesFromSource } from "../extractor/asset-references.js";
 import { RepositorySnapshot } from "../github/client.js";
 import { HeuristicBuildPlanner } from "../planner/heuristic-planner.js";
+import { htmlToSkeletonPlan } from "../planner/html-planner.js";
 import { PlanningProvider, providerWarning } from "../planner/planning-provider.js";
 import { serializeSectionContext } from "../planner/section-serializer.js";
 import {
@@ -237,6 +238,10 @@ function countAssignedClasses(node: BuildNode): number {
     node.classNames.length +
     node.children.reduce((total, child) => total + countAssignedClasses(child), 0)
   );
+}
+
+function repoTypeFromMetadata(metadata: Record<string, unknown> | undefined): "react" | "html" {
+  return metadata?.repoType === "html" ? "html" : "react";
 }
 
 function deterministicSkeleton(input: {
@@ -598,7 +603,8 @@ export class WorkflowService {
       sectionId: section.id,
       pageName: repoPage.name,
       sectionName: section.name,
-      sourceFile: section.sourceFile
+      sourceFile: section.sourceFile,
+      repoType: repoTypeFromMetadata(section.metadata)
     };
     const projectContext = createProjectContext(sharedStyleContext);
     const state =
@@ -681,7 +687,8 @@ export class WorkflowService {
       sectionId: section.id,
       pageName: repoPage.name,
       sectionName: section.name,
-      sourceFile: section.sourceFile
+      sourceFile: section.sourceFile,
+      repoType: repoTypeFromMetadata(section.metadata)
     };
     const state =
       (
@@ -856,12 +863,27 @@ export class WorkflowService {
 
   async generateSkeleton(request: WorkflowSectionRequest): Promise<SkeletonPlan> {
     const context = await this.getSectionStateContext(request);
-    const skeleton = deterministicSkeleton({
-      metadata: context.metadata,
-      sectionContext: context.sectionContext,
-      projectContext: context.projectContext,
-      sharedStyleContext: context.sharedStyleContext
-    });
+    const siteStylePlan =
+      context.metadata.repoType === "html"
+        ? await this.repository.getSiteStylePlan(request.repoId, request.webflowSiteId)
+        : null;
+    const htmlSkeleton =
+      context.metadata.repoType === "html"
+        ? htmlToSkeletonPlan({
+            metadata: context.metadata,
+            sourceCode: context.sectionContext.sourceCode,
+            siteStylePlan,
+            sharedStyleContext: context.sharedStyleContext
+          })
+        : null;
+    const skeleton =
+      htmlSkeleton ??
+      deterministicSkeleton({
+        metadata: context.metadata,
+        sectionContext: context.sectionContext,
+        projectContext: context.projectContext,
+        sharedStyleContext: context.sharedStyleContext
+      });
 
     const runId = await this.persistRun(
       request,
@@ -929,7 +951,8 @@ export class WorkflowService {
       sectionId: stableId("debug-section", request.sectionName, request.inputType, request.code),
       pageName: request.pageName,
       sectionName: request.sectionName,
-      sourceFile
+      sourceFile,
+      repoType: request.inputType === "html" ? "html" as const : "react" as const
     };
     return {
       metadata,
@@ -953,6 +976,16 @@ export class WorkflowService {
       ...this.buildDebugSkeletonProviderInput(request),
       openAiTimeoutMs: options?.openAiTimeoutMs
     };
+    if (request.inputType === "html") {
+      const htmlSkeleton = htmlToSkeletonPlan({
+        metadata: providerInput.metadata,
+        sourceCode: request.code,
+        sharedStyleContext: providerInput.sharedStyleContext
+      });
+      if (htmlSkeleton) {
+        return htmlSkeleton;
+      }
+    }
     const skeleton = skeletonPlanSchema.parse(
       await this.planningProvider.generateSkeleton(providerInput)
     );

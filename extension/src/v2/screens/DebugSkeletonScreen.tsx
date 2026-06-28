@@ -56,6 +56,7 @@ export function DebugSkeletonScreen() {
   const [loadingLabel, setLoadingLabel] = useState<string | null>(null);
   const [insertedRootNodeId, setInsertedRootNodeId] = useState<string | null>(null);
   const [copyLabel, setCopyLabel] = useState("Copy skeleton");
+  const [fixtureLabel, setFixtureLabel] = useState("Copy fixture");
   const [lastGeneratedInput, setLastGeneratedInput] = useState<{
     code: string;
     inputType: DebugSkeletonRequest["inputType"];
@@ -223,6 +224,32 @@ export function DebugSkeletonScreen() {
     }
   };
 
+  const copyFixture = async () => {
+    if (!displaySkeleton) {
+      setError("Generate a skeleton before exporting a fixture.");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(
+        JSON.stringify(
+          {
+            inputHtml: inputType === "html" ? normalizedCode : null,
+            inputType,
+            expectedSkeleton: displaySkeleton,
+            expectedBuildNode: displaySkeleton.elementTree,
+            warnings: displaySkeleton.warnings
+          },
+          null,
+          2
+        )
+      );
+      setFixtureLabel("Copied fixture");
+      window.setTimeout(() => setFixtureLabel("Copy fixture"), 2000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to copy fixture JSON.");
+    }
+  };
+
   return (
     <Panel
       onClose={() => navigate("welcome")}
@@ -265,6 +292,16 @@ export function DebugSkeletonScreen() {
             {copyLabel}
           </Button>
           <Button
+            variant="ghost"
+            disabled={!displaySkeleton || isMutating || hasDraftChanges}
+            onClick={() => {
+              void copyFixture();
+            }}
+          >
+            <Copy size={12} />
+            {fixtureLabel}
+          </Button>
+          <Button
             variant="primary"
             disabled={!displaySkeleton || isMutating || hasDraftChanges}
             onClick={() => {
@@ -302,21 +339,25 @@ export function DebugSkeletonScreen() {
           <SplitHeader title="Skeleton tree" />
           <div className="px-4 py-3 overflow-auto flex-1">
             {displaySkeleton ? (
-              <SkeletonTree
-                node={displaySkeleton.elementTree}
-                collapsedIds={collapsedIds}
-                onToggle={(nodeId) =>
-                  setCollapsedIds((current) => {
-                    const next = new Set(current);
-                    if (next.has(nodeId)) {
-                      next.delete(nodeId);
-                    } else {
-                      next.add(nodeId);
-                    }
-                    return next;
-                  })
-                }
-              />
+              <div className="space-y-4">
+                <SkeletonTree
+                  node={displaySkeleton.elementTree}
+                  collapsedIds={collapsedIds}
+                  onToggle={(nodeId) =>
+                    setCollapsedIds((current) => {
+                      const next = new Set(current);
+                      if (next.has(nodeId)) {
+                        next.delete(nodeId);
+                      } else {
+                        next.add(nodeId);
+                      }
+                      return next;
+                    })
+                  }
+                />
+                <DebugWarnings warnings={displaySkeleton.warnings} />
+                <ClassMappingPanel decisions={displaySkeleton.classMappingDecisions ?? []} />
+              </div>
             ) : (
               <div className="h-full flex items-center justify-center">
                 {isGenerating ? (
@@ -447,6 +488,7 @@ function TreeNodeLine({
   const hasChildren = node.children.length > 0;
   const isCollapsed = collapsedIds.has(node.id);
   const textContent = node.textContent?.trim();
+  const suspiciousText = Boolean(textContent && /[<>{}]|className|--|\n{2,}/.test(textContent));
 
   return (
     <div>
@@ -472,7 +514,10 @@ function TreeNodeLine({
           <span className="text-[#8ad7ff]">{node.classNames.map((name) => `.${name}`).join("")}</span>
         ) : null}
         {textContent ? (
-          <span className="text-wb-text-tertiary italic">{JSON.stringify(textContent)}</span>
+          <span className={suspiciousText ? "text-[#ffcf4a] italic" : "text-wb-text-tertiary italic"}>
+            {JSON.stringify(textContent)}
+            {suspiciousText ? " suspicious" : ""}
+          </span>
         ) : null}
       </div>
       {hasChildren && !isCollapsed ? (
@@ -488,6 +533,53 @@ function TreeNodeLine({
           ))}
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function DebugWarnings({ warnings }: { warnings: SkeletonPlan["warnings"] }) {
+  if (warnings.length === 0) {
+    return null;
+  }
+  return (
+    <div className="border border-white/[0.08] rounded-md overflow-hidden">
+      <div className="px-2.5 py-1.5 text-[10px] uppercase tracking-wider text-wb-text-tertiary bg-white/[0.03]">
+        Warnings
+      </div>
+      <div className="divide-y divide-white/[0.06]">
+        {warnings.map((warning, index) => (
+          <div key={`${warning.code}-${index}`} className="px-2.5 py-2">
+            <div className="text-[11px] text-wb-text-primary">{warning.code}</div>
+            <div className="text-[11px] text-wb-text-tertiary mt-0.5">{warning.message}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ClassMappingPanel({
+  decisions
+}: {
+  decisions: NonNullable<SkeletonPlan["classMappingDecisions"]>;
+}) {
+  if (decisions.length === 0) {
+    return null;
+  }
+  return (
+    <div className="border border-white/[0.08] rounded-md overflow-hidden">
+      <div className="px-2.5 py-1.5 text-[10px] uppercase tracking-wider text-wb-text-tertiary bg-white/[0.03]">
+        Class mapping
+      </div>
+      <div className="divide-y divide-white/[0.06]">
+        {decisions.slice(0, 80).map((decision, index) => (
+          <div key={`${decision.sourceClassName}-${index}`} className="px-2.5 py-1.5 font-mono text-[11px]">
+            <span className="text-[#8ad7ff]">{decision.sourceClassName}</span>
+            <span className="text-wb-text-tertiary"> {decision.action} </span>
+            <span className="text-wb-text-primary">{decision.targetClassName || "unmapped"}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

@@ -48,6 +48,11 @@ function isRelevantRepoFile(filePath: string): boolean {
   }
 
   return (
+    filePath === "webflow-builder.json" ||
+    /\.html?$/i.test(filePath) ||
+    /\.(css|scss)$/i.test(filePath) ||
+    /^(?:public|assets|static|images|img|media)\//i.test(filePath) ||
+    /\.(png|jpe?g|webp|gif|svg|avif|mp4|webm|mov|woff2?|ttf|otf)$/i.test(filePath) ||
     /^src\/app\/pages\/.+\.(tsx|jsx|ts|js)$/.test(filePath) ||
     /^(?:src\/)?app(?:\/.+)?\/page\.(tsx|jsx|ts|js)$/.test(filePath) ||
     /^(?:src\/)?pages\/(?!_app\.|_document\.|_error\.).+\.(tsx|jsx|ts|js)$/.test(filePath) ||
