@@ -15,6 +15,7 @@ import {
 } from "../github/client.js";
 import { AppRepository } from "../repositories/app-repository.js";
 import { stableId } from "../utils.js";
+import { HTML_REPO_INDEX_VERSION } from "../extractor/html-extractor.js";
 
 function humanizeComponentName(value: string): string {
   return value
@@ -53,6 +54,14 @@ function repoAccessMode(env: AppEnv): V2BootstrapDiagnostics["repoAccessMode"] {
     return "github-token";
   }
   return "none";
+}
+
+function needsRepoResync(pages: Array<{ metadata: Record<string, unknown> }>): boolean {
+  return pages.some(
+    (page) =>
+      page.metadata.repoType === "html" &&
+      page.metadata.htmlIndexerVersion !== HTML_REPO_INDEX_VERSION
+  );
 }
 
 export class V2ReadService {
@@ -152,7 +161,8 @@ export class V2ReadService {
           updatedAt: repo.updatedAt,
           lastSyncedAt: latestSync?.completedAt ?? latestSync?.startedAt ?? null,
           pageCount: pages.length,
-          sectionCount: sections.length
+          sectionCount: sections.length,
+          needsResync: needsRepoResync(pages)
         } satisfies V2AvailableRepo;
       })
     );
@@ -190,7 +200,8 @@ export class V2ReadService {
         updatedAt: repo.updatedAt,
         lastSyncedAt: null,
         pageCount: 0,
-        sectionCount: 0
+        sectionCount: 0,
+        needsResync: false
       });
     }
 

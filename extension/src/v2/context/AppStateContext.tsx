@@ -1612,6 +1612,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       selectedRepo.status === "syncing" ||
       selectedRepo.status === "failed" ||
       !selectedRepo.lastSyncedAt ||
+      selectedRepo.needsResync ||
       selectedRepo.pageCount === 0;
 
     if (!needsSync) {

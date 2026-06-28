@@ -12,7 +12,7 @@ const STEPS: Step[] = [
   { label: "Map pages", state: "pending" }
 ];
 
-function formatRepoMeta(updatedAt: string | null, branch: string, pageCount: number) {
+function formatRepoMeta(updatedAt: string | null, branch: string, pageCount: number, needsResync: boolean) {
   const timeLabel = updatedAt
     ? new Intl.DateTimeFormat("en-US", {
         month: "short",
@@ -21,7 +21,8 @@ function formatRepoMeta(updatedAt: string | null, branch: string, pageCount: num
         minute: "2-digit"
       }).format(new Date(updatedAt))
     : "Not synced yet";
-  return `${timeLabel} · ${branch} · ${pageCount} indexed pages`;
+  const syncLabel = needsResync ? "re-scan required" : `${pageCount} indexed pages`;
+  return `${timeLabel} · ${branch} · ${syncLabel}`;
 }
 
 export function ChooseRepoScreen() {
@@ -134,7 +135,8 @@ export function ChooseRepoScreen() {
               meta={formatRepoMeta(
                 repo.lastSyncedAt ?? repo.updatedAt,
                 repo.defaultBranch,
-                repo.pageCount
+                repo.pageCount,
+                repo.needsResync
               )}
               selected={repo.id === selectedRepoId}
               onClick={() => selectRepo(repo.id)}

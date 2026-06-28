@@ -4,7 +4,13 @@ import { detectRepoType } from "@wfb/backend-core/extractor/repo-type.js";
 import { htmlToSkeletonPlan } from "@wfb/backend-core/planner/html-planner.js";
 import { MemoryAppRepository } from "@wfb/backend-core/repositories/memory-app-repository.js";
 import { SiteStylePlanService } from "@wfb/backend-core/services/site-style-plan-service.js";
-import { isRelevantRepoFile, RepositorySnapshot } from "@wfb/backend-core/github/client.js";
+import { V2ReadService } from "@wfb/backend-core/services/v2-read-service.js";
+import {
+  AvailableRepository,
+  GitHubRepositoryClient,
+  isRelevantRepoFile,
+  RepositorySnapshot
+} from "@wfb/backend-core/github/client.js";
 import { normalizeSkeletonPlan } from "../extension/src/skeleton/tree.js";
 import type { SharedStyleContext, SkeletonPlan } from "@wfb/shared/contracts.js";
 
@@ -26,6 +32,18 @@ const sharedStyleContext: SharedStyleContext = {
   classes: [{ name: "content-shell", category: "layout" }],
   variables: [],
   styleIds: []
+};
+
+const emptyGithubClient: GitHubRepositoryClient = {
+  async connectRepo() {
+    return { defaultBranch: "main", remoteId: "remote-1" };
+  },
+  async fetchSnapshot(): Promise<RepositorySnapshot> {
+    throw new Error("not used");
+  },
+  async listAvailableRepos(): Promise<AvailableRepository[]> {
+    return [];
+  }
 };
 
 function metadata(repoType: "react" | "html" = "html") {
@@ -198,6 +216,48 @@ describe("HTML repo support", () => {
       "/",
       "/services"
     ]);
+  });
+
+  it("marks previously indexed HTML repos as needing a one-time resync", async () => {
+    const repository = new MemoryAppRepository();
+    const repo = await repository.createRepo({
+      owner: "misinc",
+      name: "misinc-2026-html",
+      repoUrl: "https://github.com/misinc/misinc-2026-html",
+      provider: "github",
+      requestedBy: "user-1",
+      defaultBranch: "main"
+    });
+    await repository.replaceRepoIndex(
+      repo.id,
+      [
+        {
+          id: "page-1",
+          repoId: repo.id,
+          name: "Home",
+          route: "/",
+          sourceFile: "misinc/index.html",
+          sortOrder: 0,
+          metadata: { repoType: "html" }
+        }
+      ],
+      []
+    );
+
+    const bootstrap = await new V2ReadService(
+      repository,
+      emptyGithubClient,
+      {
+        canonicalWebflowSiteId: "site-1",
+        openAiModel: "test-model"
+      }
+    ).getBootstrap();
+
+    expect(bootstrap.repos[0]).toMatchObject({
+      fullName: "misinc/misinc-2026-html",
+      pageCount: 1,
+      needsResync: true
+    });
   });
 
   it("parses HTML text only from visible text nodes and preserves source classes", () => {

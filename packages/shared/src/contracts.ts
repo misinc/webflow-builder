@@ -615,7 +615,8 @@ export const v2AvailableRepoSchema = z.object({
   updatedAt: z.string().datetime().nullable(),
   lastSyncedAt: z.string().datetime().nullable(),
   pageCount: z.number().int().nonnegative().default(0),
-  sectionCount: z.number().int().nonnegative().default(0)
+  sectionCount: z.number().int().nonnegative().default(0),
+  needsResync: z.boolean().default(false)
 });
 
 export const v2BootstrapDiagnosticsSchema = z.object({

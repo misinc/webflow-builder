@@ -10,6 +10,7 @@ const SECTION_TAGS = new Set(["section", "header", "footer", "article"]);
 const LANDMARK_TAGS = new Set(["main", "aside", "nav"]);
 const WRAPPER_TAGS = new Set(["div", "main", "body"]);
 const HEADING_TAG_PATTERN = /^h[1-6]$/;
+export const HTML_REPO_INDEX_VERSION = 2;
 
 function elementChildren(element: HTMLElement): HTMLElement[] {
   return element.childNodes.filter(
@@ -212,6 +213,7 @@ export class HtmlRepoExtractor {
         sortOrder: pageIndex,
         metadata: {
           repoType: "html",
+          htmlIndexerVersion: HTML_REPO_INDEX_VERSION,
           parseStatus: "parsed",
           confidence: 0.95,
           siteRoot: siteRoot || undefined
@@ -236,6 +238,7 @@ export class HtmlRepoExtractor {
           componentName: componentNameFromSection(name, sectionIndex),
           metadata: {
             repoType: "html",
+            htmlIndexerVersion: HTML_REPO_INDEX_VERSION,
             parseStatus: "parsed",
             confidence: 0.9,
             displayOrder: sectionIndex,
