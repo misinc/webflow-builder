@@ -89,12 +89,15 @@ export class SiteStylePlanService {
     const sections = await this.repository.getSections(request.repoId);
     const repoClassNames = new Map<string, "react" | "html">();
     for (const section of sections) {
+      if (repoTypeFromSection(section) === "html") {
+        continue;
+      }
       const source =
         typeof section.metadata.inlineSourceCode === "string"
           ? section.metadata.inlineSourceCode
           : "";
       classTokensFromSource(source).forEach((className) =>
-        repoClassNames.set(className, repoTypeFromSection(section))
+        repoClassNames.set(className, "react")
       );
     }
 

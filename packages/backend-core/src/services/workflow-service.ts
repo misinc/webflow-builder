@@ -863,16 +863,11 @@ export class WorkflowService {
 
   async generateSkeleton(request: WorkflowSectionRequest): Promise<SkeletonPlan> {
     const context = await this.getSectionStateContext(request);
-    const siteStylePlan =
-      context.metadata.repoType === "html"
-        ? await this.repository.getSiteStylePlan(request.repoId, request.webflowSiteId)
-        : null;
     const htmlSkeleton =
       context.metadata.repoType === "html"
         ? htmlToSkeletonPlan({
             metadata: context.metadata,
             sourceCode: context.sectionContext.sourceCode,
-            siteStylePlan,
             sharedStyleContext: context.sharedStyleContext
           })
         : null;

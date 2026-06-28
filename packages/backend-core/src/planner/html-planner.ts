@@ -4,11 +4,11 @@ import {
   PlannerWarning,
   SectionMetadata,
   SharedStyleContext,
-  SiteStylePlan,
   SkeletonPlan,
   skeletonPlanSchema
 } from "@wfb/shared/contracts.js";
-import { dedupe, isBuilderClassName } from "@wfb/shared/client-first.js";
+import { dedupe, isReservedStyleGuideClassName } from "@wfb/shared/client-first.js";
+import { slugify } from "@wfb/shared/text.js";
 
 export interface HtmlOutlineNode {
   tag: string;
@@ -153,96 +153,107 @@ function outlineTextFor(element: HTMLElement): string | undefined {
   return text;
 }
 
-function sourceClassMap(siteStylePlan?: SiteStylePlan | null): Map<string, {
-  targetClassName: string;
-  action: "reuse" | "create";
-}> {
-  const map = new Map<string, { targetClassName: string; action: "reuse" | "create" }>();
-  if (!siteStylePlan || siteStylePlan.status !== "confirmed") {
-    return map;
-  }
-  for (const decision of siteStylePlan.classDecisions) {
-    if (decision.source === "repo") {
-      map.set(decision.sourceClassName, {
-        targetClassName: decision.targetClassName,
-        action: decision.action
-      });
-    }
-  }
-  return map;
+function sharedOrFallback(
+  sharedStyleContext: SharedStyleContext | undefined,
+  category: string,
+  preferred: string[],
+  fallback: string
+): string {
+  const candidates = (sharedStyleContext?.classes ?? []).filter(
+    (item) => item.category === category && !isReservedStyleGuideClassName(item.name)
+  );
+  const normalizedPreferred = preferred.map((value) => value.toLowerCase());
+  return (
+    candidates.find((item) => normalizedPreferred.includes(item.name.toLowerCase()))?.name ??
+    candidates.find((item) =>
+      normalizedPreferred.some((value) => item.name.toLowerCase().startsWith(value))
+    )?.name ??
+    candidates.find((item) =>
+      normalizedPreferred.some((value) => item.name.toLowerCase().includes(value))
+    )?.name ??
+    fallback
+  );
 }
 
-function mapClassNames(input: {
-  classNames: string[];
-  siteStylePlan?: SiteStylePlan | null;
+function generatedClassNames(input: {
+  tag: string;
+  type: BuildNode["type"];
+  sectionKey: string;
+  path: number[];
+  textContent?: string;
+  childCount: number;
   sharedStyleContext?: SharedStyleContext;
-  warnings: PlannerWarning[];
-  decisions: HtmlBuildResult["classMappingDecisions"];
 }): string[] {
-  const planMap = sourceClassMap(input.siteStylePlan);
-  const sharedClassNames = new Set(input.sharedStyleContext?.classes.map((item) => item.name) ?? []);
-  const mapped: string[] = [];
-  for (const className of input.classNames) {
-    const planned = planMap.get(className);
-    if (planned) {
-      mapped.push(planned.targetClassName);
-      input.decisions.push({
-        sourceClassName: className,
-        targetClassName: planned.targetClassName,
-        action: planned.action
-      });
-      continue;
-    }
-    if (sharedClassNames.has(className) || isBuilderClassName(className)) {
-      mapped.push(className);
-      input.decisions.push({
-        sourceClassName: className,
-        targetClassName: className,
-        action: sharedClassNames.has(className) ? "reuse" : "unmapped"
-      });
-      continue;
-    }
-    if (input.siteStylePlan?.status === "confirmed") {
-      input.warnings.push(
-        warning(
-          "html-unmapped-class-dropped",
-          `Dropped unmapped HTML class "${className}" because the confirmed site style plan has no decision for it.`
-        )
-      );
-      input.decisions.push({
-        sourceClassName: className,
-        targetClassName: "",
-        action: "unmapped"
-      });
-      continue;
-    }
-    mapped.push(className);
-    input.warnings.push(
-      warning(
-        "html-unmapped-class-preserved",
-        `Preserved unmapped HTML class "${className}" until the site style plan is confirmed.`,
-        "info"
-      )
-    );
-    input.decisions.push({
-      sourceClassName: className,
-      targetClassName: className,
-      action: "unmapped"
-    });
+  const { tag, type, sectionKey, path, textContent, childCount, sharedStyleContext } = input;
+  if (tag === "section" || tag === "header" || tag === "footer" || tag === "main") {
+    return [`section_${sectionKey}`];
   }
-  return dedupe(mapped);
+  if (tag === "article") {
+    return [`${sectionKey}_card`];
+  }
+  if (tag === "ul" || tag === "ol") {
+    return [`${sectionKey}_list`];
+  }
+  if (tag === "li") {
+    return [`${sectionKey}_item`];
+  }
+  if (tag === "img") {
+    return [`${sectionKey}_image`];
+  }
+  if (tag === "a" || tag === "button") {
+    return [`${sectionKey}_link`];
+  }
+  if (/^h[1-6]$/.test(tag)) {
+    return [
+      sharedOrFallback(
+        sharedStyleContext,
+        "heading",
+        [`heading-style-${tag}`, "heading-style-h2", "heading"],
+        `heading-style-${tag}`
+      )
+    ];
+  }
+  if (tag === "p" || tag === "blockquote" || tag === "span" || tag === "label") {
+    return [
+      sharedOrFallback(
+        sharedStyleContext,
+        "text",
+        ["text-size-medium", "body", "text-medium"],
+        "text-size-medium"
+      )
+    ];
+  }
+  if (tag === "div") {
+    if (textContent && childCount === 0) {
+      return [
+        sharedOrFallback(
+          sharedStyleContext,
+          "text",
+          ["text-size-medium", "body", "text-medium"],
+          "text-size-medium"
+        )
+      ];
+    }
+    if (path.length <= 2) {
+      return [`${sectionKey}_component`];
+    }
+    if (type === "list") {
+      return [`${sectionKey}_list`];
+    }
+    return [`${sectionKey}_content`];
+  }
+  return [];
 }
 
 function buildNodeFromElement(input: {
   element: HTMLElement;
   sectionId: string;
+  sectionKey: string;
   path: number[];
-  siteStylePlan?: SiteStylePlan | null;
   sharedStyleContext?: SharedStyleContext;
   warnings: PlannerWarning[];
   assetBindings: SkeletonPlan["assetBindings"];
   sourceClassNames: Set<string>;
-  decisions: HtmlBuildResult["classMappingDecisions"];
 }): BuildNode | null {
   const tag = elementTag(input.element);
   if (SKIPPED_TAGS.has(tag)) {
@@ -259,13 +270,6 @@ function buildNodeFromElement(input: {
   const sourceClasses = classNamesFor(input.element);
   sourceClasses.forEach((className) => input.sourceClassNames.add(className));
   const id = `${input.sectionId}-html-${input.path.join("-") || "root"}`;
-  const classNames = mapClassNames({
-    classNames: sourceClasses,
-    siteStylePlan: input.siteStylePlan,
-    sharedStyleContext: input.sharedStyleContext,
-    warnings: input.warnings,
-    decisions: input.decisions
-  });
   const textContent = TEXT_TAGS.has(tag) || tag === "div" ? directTextFor(input.element) : undefined;
   const children: BuildNode[] = [];
 
@@ -295,9 +299,19 @@ function buildNodeFromElement(input: {
     }
   });
 
+  const type = inferNodeType(tag);
+  const classNames = generatedClassNames({
+    tag,
+    type,
+    sectionKey: input.sectionKey,
+    path: input.path,
+    textContent,
+    childCount: children.length,
+    sharedStyleContext: input.sharedStyleContext
+  });
   const node: BuildNode = {
     id,
-    type: inferNodeType(tag),
+    type,
     tag,
     classNames,
     textContent,
@@ -342,7 +356,7 @@ function describeNodeTree(node: BuildNode, depth = 0): string[] {
 export function htmlToBuildNode(input: {
   sourceCode: string;
   sectionId: string;
-  siteStylePlan?: SiteStylePlan | null;
+  sectionName?: string;
   sharedStyleContext?: SharedStyleContext;
 }): HtmlBuildResult | null {
   const document = parse(input.sourceCode, {
@@ -361,17 +375,16 @@ export function htmlToBuildNode(input: {
   const warnings: PlannerWarning[] = [];
   const assetBindings: SkeletonPlan["assetBindings"] = [];
   const sourceClassNames = new Set<string>();
-  const decisions: HtmlBuildResult["classMappingDecisions"] = [];
+  const sectionKey = slugify(input.sectionName ?? input.sectionId) || "section";
   const root = buildNodeFromElement({
     element: rootElement,
     sectionId: input.sectionId,
+    sectionKey,
     path: [0],
-    siteStylePlan: input.siteStylePlan,
     sharedStyleContext: input.sharedStyleContext,
     warnings,
     assetBindings,
-    sourceClassNames,
-    decisions
+    sourceClassNames
   });
   if (!root) {
     return null;
@@ -381,22 +394,20 @@ export function htmlToBuildNode(input: {
     assetBindings,
     warnings,
     sourceClassNames: [...sourceClassNames].sort(),
-    classMappingDecisions: dedupe(decisions.map((decision) => JSON.stringify(decision)))
-      .map((value) => JSON.parse(value) as HtmlBuildResult["classMappingDecisions"][number])
+    classMappingDecisions: []
   };
 }
 
 export function htmlToSkeletonPlan(input: {
   metadata: SectionMetadata;
   sourceCode: string;
-  siteStylePlan?: SiteStylePlan | null;
   sharedStyleContext?: SharedStyleContext;
   inheritedWarnings?: PlannerWarning[];
 }): SkeletonPlan | null {
   const parsed = htmlToBuildNode({
     sourceCode: input.sourceCode,
     sectionId: input.metadata.sectionId,
-    siteStylePlan: input.siteStylePlan,
+    sectionName: input.metadata.sectionName,
     sharedStyleContext: input.sharedStyleContext
   });
   if (!parsed) {
@@ -423,7 +434,7 @@ export function htmlToSkeletonPlan(input: {
     warnings: [
       warning(
         "html-deterministic-skeleton",
-        "Skeleton structure, text, and classes were parsed deterministically from rendered HTML.",
+        "Skeleton structure and text were parsed deterministically from rendered HTML; source HTML class attributes were ignored for Webflow class output.",
         "info"
       ),
       ...(input.inheritedWarnings ?? []),

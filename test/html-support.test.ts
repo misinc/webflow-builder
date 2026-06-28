@@ -260,7 +260,7 @@ describe("HTML repo support", () => {
     });
   });
 
-  it("parses HTML text only from visible text nodes and preserves source classes", () => {
+  it("parses HTML text only from visible text nodes and generates clean skeleton classes", () => {
     const plan = htmlToSkeletonPlan({
       metadata: metadata(),
       sourceCode: messyHtml,
@@ -274,11 +274,14 @@ describe("HTML repo support", () => {
     expect(text).not.toContain("Do not leak");
     expect(text).not.toContain("hero-wrap");
     expect(text).not.toContain("Attribute text must not become visible copy");
-    expect(plan!.elementTree.classNames).toContain("hero-wrap");
-    expect(plan!.elementTree.classNames).toContain("md:py-[120px]");
+    expect(plan!.elementTree.classNames).toEqual(["section_hero"]);
+    expect(plan!.elementTree.classNames).not.toContain("hero-wrap");
+    expect(plan!.elementTree.classNames).not.toContain("md:py-[120px]");
+    expect(plan!.treeText).not.toContain("hero-wrap");
+    expect(plan!.treeText).not.toContain("md:py-[120px]");
   });
 
-  it("maps confirmed site style plan class decisions onto HTML skeletons", async () => {
+  it("does not turn HTML source classes into site style plan repo decisions", async () => {
     const repository = new MemoryAppRepository();
     const repo = await repository.createRepo({
       owner: "local",
@@ -324,27 +327,26 @@ describe("HTML repo support", () => {
       requestedBy: "user-1",
       sharedStyleContext
     });
-    const utilityDecision = confirmed.classDecisions.find(
-      (decision) => decision.sourceClassName === "md:py-[120px]"
-    );
 
-    expect(utilityDecision).toMatchObject({
-      action: "create",
-      targetClassName: "html_md-py-120px"
-    });
+    expect(confirmed.classDecisions).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ sourceClassName: "hero-wrap" }),
+        expect.objectContaining({ sourceClassName: "md:py-[120px]" })
+      ])
+    );
 
     const plan = htmlToSkeletonPlan({
       metadata: metadata(),
       sourceCode: messyHtml,
-      siteStylePlan: confirmed,
       sharedStyleContext
     });
 
-    expect(plan!.elementTree.classNames).toContain("html_md-py-120px");
+    expect(plan!.elementTree.classNames).toEqual(["section_hero"]);
+    expect(plan!.elementTree.classNames).not.toContain("hero-wrap");
     expect(plan!.elementTree.classNames).not.toContain("md:py-[120px]");
   });
 
-  it("normalizes HTML skeletons with draft site style plan mappings before review", async () => {
+  it("keeps generated HTML skeleton classes when a draft site style plan exists", async () => {
     const repository = new MemoryAppRepository();
     const repo = await repository.createRepo({
       owner: "local",
@@ -397,9 +399,11 @@ describe("HTML repo support", () => {
     const normalized = normalizeSkeletonPlan(rawPlan!, { siteStylePlan: draft });
 
     expect(draft.status).toBe("draft");
-    expect(normalized.elementTree.classNames).toContain("html_md-py-120px");
+    expect(normalized.elementTree.classNames).toEqual(["section_hero"]);
+    expect(normalized.elementTree.classNames).not.toContain("hero-wrap");
     expect(normalized.elementTree.classNames).not.toContain("md:py-[120px]");
-    expect(normalized.treeText).toContain("html_md-py-120px");
+    expect(normalized.treeText).toContain("section_hero");
+    expect(normalized.treeText).not.toContain("hero-wrap");
     expect(normalized.treeText).not.toContain("md:py-[120px]");
   });
 
