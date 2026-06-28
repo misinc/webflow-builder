@@ -245,6 +245,48 @@ function generatedClassNames(input: {
   return [];
 }
 
+function wrapSectionWithClientFirstScaffold(root: BuildNode, sectionKey: string): BuildNode {
+  if (root.tag !== "section" || root.children.some((child) => child.classNames.includes("padding-global"))) {
+    return root;
+  }
+  return {
+    ...root,
+    children: [
+      {
+        id: `${root.id}-padding-global`,
+        type: "box",
+        tag: "div",
+        classNames: ["padding-global"],
+        children: [
+          {
+            id: `${root.id}-container-large`,
+            type: "box",
+            tag: "div",
+            classNames: ["container-large"],
+            children: [
+              {
+                id: `${root.id}-section-padding`,
+                type: "box",
+                tag: "div",
+                classNames: ["padding-section-medium"],
+                children: [
+                  {
+                    id: `${root.id}-component`,
+                    type: "group",
+                    tag: "div",
+                    classNames: [`${sectionKey}_component`],
+                    children: root.children
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  };
+}
+
 function buildNodeFromElement(input: {
   element: HTMLElement;
   sectionId: string;
@@ -389,8 +431,9 @@ export function htmlToBuildNode(input: {
   if (!root) {
     return null;
   }
+  const scaffoldedRoot = wrapSectionWithClientFirstScaffold(root, sectionKey);
   return {
-    root,
+    root: scaffoldedRoot,
     assetBindings,
     warnings,
     sourceClassNames: [...sourceClassNames].sort(),

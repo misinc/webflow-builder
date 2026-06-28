@@ -79,6 +79,9 @@ export function ApplyingStylesScreen() {
       (className) => !isReservedStyleGuideClassName(className)
     ).length ?? 0;
   const hasBlockedVerification = Boolean(verification && !verification.readyForApproval);
+  const canApproveSection = Boolean(
+    verification?.readyForApproval || (styling && hasBlockedVerification)
+  );
 
   if (isMutating && visibleLines.length === 0) {
     const pendingClassName =
@@ -121,11 +124,11 @@ export function ApplyingStylesScreen() {
             </Button>
           ) : null}
           <span className="text-[11px] text-wb-text-tertiary mr-2">
-            {loadingLabel ?? (verification ? (verification.readyForApproval ? "Ready for approval" : "Needs retry or redo") : "Applying styles…")}
+            {loadingLabel ?? (verification ? (verification.readyForApproval ? "Ready for approval" : "Can retry or approve visually") : "Applying styles…")}
           </span>
           <Button
             variant="primary"
-            disabled={!verification?.readyForApproval || isMutating}
+            disabled={!canApproveSection || isMutating}
             onClick={() => {
               void approveCurrentSection().then((approved) => {
                 if (approved) {
@@ -134,7 +137,7 @@ export function ApplyingStylesScreen() {
               });
             }}
           >
-            Approve section
+            {verification && !verification.readyForApproval ? "Approve anyway" : "Approve section"}
           </Button>
         </>
       }

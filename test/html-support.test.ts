@@ -11,7 +11,7 @@ import {
   isRelevantRepoFile,
   RepositorySnapshot
 } from "@wfb/backend-core/github/client.js";
-import { normalizeSkeletonPlan } from "../extension/src/skeleton/tree.js";
+import { normalizeSkeletonPlan, serializeSkeletonTree } from "../extension/src/skeleton/tree.js";
 import type { SharedStyleContext, SkeletonPlan } from "@wfb/shared/contracts.js";
 
 const messyHtml = `
@@ -279,6 +279,9 @@ describe("HTML repo support", () => {
     expect(plan!.elementTree.classNames).not.toContain("md:py-[120px]");
     expect(plan!.treeText).not.toContain("hero-wrap");
     expect(plan!.treeText).not.toContain("md:py-[120px]");
+    expect(serializeSkeletonTree(plan!.elementTree)).toContain(
+      "section.section_hero\n  div.padding-global\n    div.container-large\n      div.padding-section-medium\n        div.hero_component"
+    );
   });
 
   it("does not turn HTML source classes into site style plan repo decisions", async () => {

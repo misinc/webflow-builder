@@ -304,7 +304,11 @@ function wrapChildren(
   return [{ ...wrapper, children }];
 }
 
-function patchTopLevelSectionWrapper(node: BuildNode, warnings: SkeletonPlan["warnings"]): BuildNode {
+function patchTopLevelSectionWrapper(
+  node: BuildNode,
+  warnings: SkeletonPlan["warnings"],
+  options: { forceClientFirstScaffold?: boolean } = {}
+): BuildNode {
   if (node.tag !== "section" || node.children.length === 0) {
     return node;
   }
@@ -377,6 +381,7 @@ function patchTopLevelSectionWrapper(node: BuildNode, warnings: SkeletonPlan["wa
   let insertedContainer = false;
   let insertedSectionPadding = false;
   const shouldWrapSparseContent =
+    options.forceClientFirstScaffold ||
     looksLikeContainerWrapper(firstChild) ||
     (node.children.length >= 2 && node.children.every(isTopLevelContentNode));
 
@@ -733,7 +738,9 @@ export function sanitizeSkeletonPlan(
 
   return {
     ...plan,
-    elementTree: patchTopLevelSectionWrapper(sanitizedRoot.node, warnings),
+    elementTree: patchTopLevelSectionWrapper(sanitizedRoot.node, warnings, {
+      forceClientFirstScaffold: htmlMode
+    }),
     warnings
   };
 }
