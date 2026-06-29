@@ -180,17 +180,38 @@ function generatedClassNames(input: {
   type: BuildNode["type"];
   sectionKey: string;
   path: number[];
+  sourceClassNames: string[];
   textContent?: string;
   children: BuildNode[];
   sharedStyleContext?: SharedStyleContext;
 }): string[] {
-  const { tag, sectionKey, path, textContent, children, sharedStyleContext } = input;
+  const { tag, sectionKey, path, sourceClassNames, textContent, children, sharedStyleContext } = input;
   const childTags = new Set(children.map((child) => child.tag));
   const childClassNames = children.flatMap((child) => child.classNames);
   const linkChildren = children.filter((child) => child.tag === "a");
   const cardChildren = children.filter((child) =>
     child.classNames.some((className) => className.endsWith("_card") || className.endsWith("_item"))
   );
+  const sourceClassText = sourceClassNames.join(" ");
+
+  if (/\bsolv-mosaic-grid\b|\bmosaic-grid\b/.test(sourceClassText)) {
+    return [`${sectionKey}_grid`];
+  }
+  if (/\bsolv-mosaic-lead\b|\bmosaic-lead\b|\bfeature\b/.test(sourceClassText)) {
+    return [`${sectionKey}_feature`];
+  }
+  if (/\bsolv-mini-stack\b|\bmini-stack\b|\bpill-list\b|\bpills\b/.test(sourceClassText)) {
+    return [`${sectionKey}_pill_list`];
+  }
+  if (/\bsolv-mosaic-cards\b|\bmosaic-cards\b/.test(sourceClassText)) {
+    return [`${sectionKey}_card_list`];
+  }
+  if (/\bsolv-mosaic-card__title\b|\bcard__title\b|\bcard-title\b/.test(sourceClassText)) {
+    return [`${sectionKey}_card_title`];
+  }
+  if (/\bsolv-mosaic-card\b|\bmosaic-card\b/.test(sourceClassText)) {
+    return [`${sectionKey}_card`];
+  }
 
   if (tag === "section" || tag === "header" || tag === "footer" || tag === "main") {
     return [`section_${sectionKey}`];
@@ -448,6 +469,7 @@ function buildNodeFromElement(input: {
     type,
     sectionKey: input.sectionKey,
     path: input.path,
+    sourceClassNames: sourceClasses,
     textContent,
     children,
     sharedStyleContext: input.sharedStyleContext
@@ -457,6 +479,7 @@ function buildNodeFromElement(input: {
     type,
     tag,
     classNames,
+    sourceClassNames: sourceClasses,
     textContent,
     children
   }, input.sectionKey);

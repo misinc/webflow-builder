@@ -44,24 +44,21 @@ const solutionsHtml = `
           <h3>Solutions designed around how each industry actually operates.</h3>
           <p>Instead of presenting every audience at the same weight, this version creates a stronger entry point.</p>
           <div class="solv-mini-stack">
-            <a class="solv-mini-pill" href="/small-businesses">Small Businesses</a>
-            <a class="solv-mini-pill" href="/real-estate">Real Estate</a>
-            <a class="solv-mini-pill" href="/nonprofits">Nonprofits</a>
+            <a class="solv-mini-pill" href="/small-businesses"><svg><path d="M0 0"></path></svg><span>Small Businesses</span></a>
+            <a class="solv-mini-pill" href="/real-estate"><svg><path d="M0 0"></path></svg><span>Real Estate</span></a>
+            <a class="solv-mini-pill" href="/nonprofits"><svg><path d="M0 0"></path></svg><span>Nonprofits</span></a>
+            <a class="solv-mini-pill" href="/professional-services"><svg><path d="M0 0"></path></svg><span>Professional Services</span></a>
+            <a class="solv-mini-pill" href="/startups-saas"><svg><path d="M0 0"></path></svg><span>Startups & SaaS</span></a>
+            <a class="solv-mini-pill" href="/retail-ecommerce"><svg><path d="M0 0"></path></svg><span>Retail / Ecommerce</span></a>
           </div>
         </div>
         <div class="solv-mosaic-cards">
-          <a class="solv-card solv-mosaic-card" href="/small-businesses">
-            <div class="solv-mosaic-card__title">
-              <h3>Small Businesses</h3>
-              <p>Practical website and growth systems for owner-led teams.</p>
-            </div>
-          </a>
-          <a class="solv-card solv-mosaic-card" href="/real-estate">
-            <div class="solv-mosaic-card__title">
-              <h3>Real Estate</h3>
-              <p>Listing-ready digital experiences and lead funnels.</p>
-            </div>
-          </a>
+          <div><a class="solv-card solv-mosaic-card" href="/small-businesses"><div class="solv-mosaic-card__title"><svg><path d="M0 0"></path></svg><h3>Small Businesses</h3></div><p>Practical website and growth systems for owner-led teams.</p></a></div>
+          <div><a class="solv-card solv-mosaic-card" href="/real-estate"><div class="solv-mosaic-card__title"><svg><path d="M0 0"></path></svg><h3>Real Estate</h3></div><p>Listing-ready digital experiences and lead funnels.</p></a></div>
+          <div><a class="solv-card solv-mosaic-card" href="/nonprofits"><div class="solv-mosaic-card__title"><svg><path d="M0 0"></path></svg><h3>Nonprofits</h3></div><p>Mission-first websites focused on measurable community impact.</p></a></div>
+          <div><a class="solv-card solv-mosaic-card" href="/professional-services"><div class="solv-mosaic-card__title"><svg><path d="M0 0"></path></svg><h3>Professional Services</h3></div><p>Credibility-driven websites that support complex buying cycles.</p></a></div>
+          <div><a class="solv-card solv-mosaic-card" href="/startups-saas"><div class="solv-mosaic-card__title"><svg><path d="M0 0"></path></svg><h3>Startups & SaaS</h3></div><p>Conversion-focused experiences that support product positioning.</p></a></div>
+          <div><a class="solv-card solv-mosaic-card" href="/retail-ecommerce"><div class="solv-mosaic-card__title"><svg><path d="M0 0"></path></svg><h3>Retail / Ecommerce</h3></div><p>Online storefronts and conversion systems designed to increase revenue.</p></a></div>
         </div>
       </div>
     </div>
@@ -99,6 +96,10 @@ const solutionsCss = `
     border-radius: 999px;
     padding: 10px 14px;
   }
+  .solv-mini-pill svg {
+    height: 20px;
+    width: 20px;
+  }
   .solv-mosaic-cards {
     display: grid;
     gap: 22px;
@@ -114,6 +115,11 @@ const solutionsCss = `
   .solv-mosaic-card p {
     color: var(--mis-muted);
     max-width: 32ch;
+  }
+  .solv-mosaic-card__title {
+    align-items: center;
+    display: flex;
+    gap: 12px;
   }
 `;
 
@@ -612,6 +618,8 @@ describe("HTML repo support", () => {
     expect(serializeSkeletonTree(skeleton.elementTree)).toContain("div.solutions_pill_list");
     expect(serializeSkeletonTree(skeleton.elementTree)).toContain("div.solutions_card_list");
     expect(serializeSkeletonTree(skeleton.elementTree)).toContain("div.solutions_item");
+    expect(serializeSkeletonTree(skeleton.elementTree)).toContain("div.solutions_card_title");
+    expect(serializeSkeletonTree(skeleton.elementTree)).toContain("Retail / Ecommerce");
     await workflow.recordSkeletonPlacement({
       repoId: repo.id,
       webflowSiteId: "site-1",
@@ -649,6 +657,7 @@ describe("HTML repo support", () => {
         "solutions_pill",
         "solutions_card_list",
         "solutions_card",
+        "solutions_card_title",
         "solutions_card_heading"
       ])
     );
@@ -673,6 +682,14 @@ describe("HTML repo support", () => {
       styling.styleDefinitions.find((definition) => definition.className === "solutions_card")
         ?.properties["min-height"]
     ).toBe("212px");
+    expect(
+      styling.styleDefinitions.find((definition) => definition.className === "solutions_pill")
+        ?.properties.width
+    ).toBeUndefined();
+    expect(
+      styling.styleDefinitions.find((definition) => definition.className === "solutions_card_title")
+        ?.properties.display
+    ).toBe("flex");
     expect(
       styling.styleDefinitions.find((definition) => definition.className === "solutions_card_text")
         ?.properties.color

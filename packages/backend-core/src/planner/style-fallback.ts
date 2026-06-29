@@ -131,7 +131,7 @@ interface CssStyleContext {
   rules: CssRule[];
 }
 
-type CssTarget = "self" | "heading" | "paragraph";
+type CssTarget = "self" | "heading" | "paragraph" | "svg" | "descendant";
 
 function sourceClassesFromHtml(sourceCode: string): Set<string> {
   const classNames = new Set<string>();
@@ -165,11 +165,17 @@ function selectorMatchesClass(selector: string, className: string): boolean {
 function selectorTarget(selector: string, className: string): CssTarget {
   const classIndex = selector.indexOf(`.${className}`);
   const afterClass = classIndex >= 0 ? selector.slice(classIndex + className.length + 1) : "";
+  if (/\bsvg\b/i.test(afterClass)) {
+    return "svg";
+  }
   if (/\bh[1-6]\b/i.test(afterClass)) {
     return "heading";
   }
   if (/\bp\b/i.test(afterClass)) {
     return "paragraph";
+  }
+  if (/^\s*[>+~\s]/.test(afterClass)) {
+    return "descendant";
   }
   return "self";
 }
@@ -206,6 +212,19 @@ function parseCssStyleContext(sectionContext: SectionContext): CssStyleContext {
     });
 
     root.walkRules((rule) => {
+      if (rule.selector.includes(":") && !rule.selector.includes(":root")) {
+        return;
+      }
+      let parent: postcss.Node | undefined = rule.parent;
+      while (parent) {
+        if (parent.type === "atrule") {
+          const atRule = parent as postcss.AtRule;
+          if (/^(media|supports|container|keyframes)$/i.test(atRule.name)) {
+            return;
+          }
+        }
+        parent = parent.parent;
+      }
       const declarations: Record<string, string> = {};
       rule.walkDecls((decl) => {
         const prop = decl.prop.toLowerCase();
@@ -261,6 +280,9 @@ function roleForGeneratedClass(className: string): {
   if (className.endsWith("_card_heading")) {
     return { sourcePattern: /(?:card(?:__|-)?title|(?:mosaic-)?card)$/i, target: "heading" };
   }
+  if (className.endsWith("_card_title")) {
+    return { sourcePattern: /(?:card(?:__|-)?title)$/i, target: "self" };
+  }
   if (className.endsWith("_card_text")) {
     return { sourcePattern: /(?:mosaic-)?card$/i, target: "paragraph" };
   }
@@ -272,15 +294,17 @@ function roleForGeneratedClass(className: string): {
 
 function cssPropertiesForGeneratedClass(
   className: string,
+  node: BuildNode,
   cssContext: CssStyleContext
 ): Record<string, string> {
   const role = roleForGeneratedClass(className);
   if (!role) {
     return {};
   }
-  const candidateClasses = [...cssContext.sourceClassNames].filter((sourceClassName) =>
-    role.sourcePattern.test(sourceClassName)
-  );
+  const localSourceClassNames = node.sourceClassNames ?? [];
+  const candidateClasses = (localSourceClassNames.length > 0
+    ? localSourceClassNames
+    : [...cssContext.sourceClassNames]).filter((sourceClassName) => role.sourcePattern.test(sourceClassName));
   const properties: Record<string, string> = {};
 
   for (const sourceClassName of candidateClasses) {
@@ -477,8 +501,14 @@ function inferStyleProperties(
     properties["max-width"] = "31ch";
   }
 
+  if (classSuffix(node, "_card_title")) {
+    properties.display = "flex";
+    properties["align-items"] = "center";
+    properties.gap = "0.75rem";
+  }
+
   const cssProperties = nodeClassNames.reduce<Record<string, string>>((acc, className) => {
-    Object.assign(acc, cssPropertiesForGeneratedClass(className, cssContext));
+    Object.assign(acc, cssPropertiesForGeneratedClass(className, node, cssContext));
     return acc;
   }, {});
 

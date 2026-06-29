@@ -6,6 +6,7 @@ export interface BuildNode {
   tag: string;
   label?: string;
   classNames: string[];
+  sourceClassNames?: string[];
   textContent?: string;
   children: BuildNode[];
 }
@@ -156,6 +157,7 @@ export const buildNodeSchema: z.ZodType<BuildNode> = z.lazy(() =>
     tag: z.string().min(1),
     label: z.string().optional(),
     classNames: z.array(z.string()),
+    sourceClassNames: z.array(z.string()).optional(),
     textContent: z.string().optional(),
     children: z.array(buildNodeSchema)
   })
