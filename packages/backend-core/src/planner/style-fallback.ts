@@ -10,10 +10,16 @@ import {
   stylingPlanSchema
 } from "@wfb/shared/contracts.js";
 import { dedupe, isReservedStyleGuideClassName } from "@wfb/shared/client-first.js";
+import postcss from "postcss";
+import { HTMLElement, NodeType, parse } from "node-html-parser";
 
-function walkTree(node: BuildNode, visit: (node: BuildNode) => void): void {
-  visit(node);
-  node.children.forEach((child) => walkTree(child, visit));
+function walkTree(
+  node: BuildNode,
+  visit: (node: BuildNode, parent: BuildNode | null) => void,
+  parent: BuildNode | null = null
+): void {
+  visit(node, parent);
+  node.children.forEach((child) => walkTree(child, visit, node));
 }
 
 function classSuffix(node: BuildNode, suffix: string): boolean {
@@ -75,9 +81,228 @@ function radiusFromSource(sourceCode: string): string | null {
   return null;
 }
 
+const SAFE_CSS_PROPERTIES = new Set([
+  "align-items",
+  "background",
+  "background-color",
+  "border",
+  "border-color",
+  "border-radius",
+  "box-shadow",
+  "color",
+  "display",
+  "flex",
+  "flex-wrap",
+  "font-family",
+  "font-size",
+  "font-weight",
+  "gap",
+  "grid-template-columns",
+  "grid-template-rows",
+  "height",
+  "justify-content",
+  "justify-items",
+  "justify-self",
+  "letter-spacing",
+  "line-height",
+  "margin",
+  "margin-left",
+  "margin-right",
+  "margin-top",
+  "max-width",
+  "min-height",
+  "overflow",
+  "padding",
+  "position",
+  "text-align",
+  "text-decoration",
+  "transition",
+  "width"
+]);
+
+interface CssRule {
+  selector: string;
+  declarations: Record<string, string>;
+}
+
+interface CssStyleContext {
+  sourceClassNames: Set<string>;
+  variables: Map<string, string>;
+  rules: CssRule[];
+}
+
+type CssTarget = "self" | "heading" | "paragraph";
+
+function sourceClassesFromHtml(sourceCode: string): Set<string> {
+  const classNames = new Set<string>();
+  const document = parse(sourceCode, {
+    comment: false,
+    lowerCaseTagName: true,
+    blockTextElements: {
+      script: true,
+      style: true,
+      pre: false
+    }
+  });
+  function visit(element: HTMLElement): void {
+    const rawClass = element.getAttribute("class") ?? "";
+    rawClass.split(/\s+/).filter(Boolean).forEach((className) => classNames.add(className));
+    element.childNodes.forEach((child) => {
+      if (child.nodeType === NodeType.ELEMENT_NODE) {
+        visit(child as HTMLElement);
+      }
+    });
+  }
+  visit(document);
+  return classNames;
+}
+
+function selectorMatchesClass(selector: string, className: string): boolean {
+  const escaped = className.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(^|[^a-zA-Z0-9_-])\\.${escaped}(?![a-zA-Z0-9_-])`).test(selector);
+}
+
+function selectorTarget(selector: string, className: string): CssTarget {
+  const classIndex = selector.indexOf(`.${className}`);
+  const afterClass = classIndex >= 0 ? selector.slice(classIndex + className.length + 1) : "";
+  if (/\bh[1-6]\b/i.test(afterClass)) {
+    return "heading";
+  }
+  if (/\bp\b/i.test(afterClass)) {
+    return "paragraph";
+  }
+  return "self";
+}
+
+function splitSelectors(selector: string): string[] {
+  return selector.split(",").map((value) => value.trim()).filter(Boolean);
+}
+
+function resolveCssValue(value: string, variables: Map<string, string>): string {
+  return value.replace(/var\(\s*(--[a-zA-Z0-9_-]+)(?:\s*,\s*([^)]+))?\s*\)/g, (_match, name: string, fallback: string | undefined) => {
+    return variables.get(name) ?? fallback?.trim() ?? "";
+  });
+}
+
+function parseCssStyleContext(sectionContext: SectionContext): CssStyleContext {
+  const sourceClassNames = sourceClassesFromHtml(sectionContext.sourceCode);
+  const variables = new Map<string, string>();
+  const rules: CssRule[] = [];
+
+  for (const stylesheet of sectionContext.relevantStylesheets) {
+    let root: postcss.Root;
+    try {
+      root = postcss.parse(stylesheet.content, { from: stylesheet.path });
+    } catch {
+      continue;
+    }
+
+    root.walkDecls((decl) => {
+      if (decl.parent?.type === "rule" && (decl.parent as postcss.Rule).selector.includes(":root")) {
+        if (decl.prop.startsWith("--")) {
+          variables.set(decl.prop, decl.value);
+        }
+      }
+    });
+
+    root.walkRules((rule) => {
+      const declarations: Record<string, string> = {};
+      rule.walkDecls((decl) => {
+        const prop = decl.prop.toLowerCase();
+        if (!SAFE_CSS_PROPERTIES.has(prop)) {
+          return;
+        }
+        const value = resolveCssValue(decl.value, variables).trim();
+        if (!value || /url\(/i.test(value) || /!important/i.test(value)) {
+          return;
+        }
+        declarations[prop] = value;
+      });
+      if (Object.keys(declarations).length === 0) {
+        return;
+      }
+      splitSelectors(rule.selector).forEach((selector) => {
+        rules.push({ selector, declarations });
+      });
+    });
+  }
+
+  return { sourceClassNames, variables, rules };
+}
+
+function roleForGeneratedClass(className: string): {
+  sourcePattern: RegExp;
+  target: CssTarget;
+} | null {
+  if (className.startsWith("section_")) {
+    return { sourcePattern: /section/i, target: "self" };
+  }
+  if (className.endsWith("_grid")) {
+    return { sourcePattern: /(?:mosaic-)?grid$/i, target: "self" };
+  }
+  if (className.endsWith("_feature")) {
+    return { sourcePattern: /(?:mosaic-)?(?:lead|feature|story|aside)$/i, target: "self" };
+  }
+  if (className.endsWith("_feature_heading")) {
+    return { sourcePattern: /(?:mosaic-)?(?:lead|feature|story|aside)$/i, target: "heading" };
+  }
+  if (className.endsWith("_feature_text")) {
+    return { sourcePattern: /(?:mosaic-)?(?:lead|feature|story|aside)$/i, target: "paragraph" };
+  }
+  if (className.endsWith("_pill_list")) {
+    return { sourcePattern: /(?:mini-)?(?:stack|pill-list|pills)$/i, target: "self" };
+  }
+  if (className.endsWith("_pill")) {
+    return { sourcePattern: /(?:mini-)?pill$/i, target: "self" };
+  }
+  if (className.endsWith("_card_list")) {
+    return { sourcePattern: /(?:mosaic-)?cards$/i, target: "self" };
+  }
+  if (className.endsWith("_card_heading")) {
+    return { sourcePattern: /(?:card(?:__|-)?title|(?:mosaic-)?card)$/i, target: "heading" };
+  }
+  if (className.endsWith("_card_text")) {
+    return { sourcePattern: /(?:mosaic-)?card$/i, target: "paragraph" };
+  }
+  if (className.endsWith("_card")) {
+    return { sourcePattern: /(?:mosaic-)?card$/i, target: "self" };
+  }
+  return null;
+}
+
+function cssPropertiesForGeneratedClass(
+  className: string,
+  cssContext: CssStyleContext
+): Record<string, string> {
+  const role = roleForGeneratedClass(className);
+  if (!role) {
+    return {};
+  }
+  const candidateClasses = [...cssContext.sourceClassNames].filter((sourceClassName) =>
+    role.sourcePattern.test(sourceClassName)
+  );
+  const properties: Record<string, string> = {};
+
+  for (const sourceClassName of candidateClasses) {
+    for (const rule of cssContext.rules) {
+      if (!selectorMatchesClass(rule.selector, sourceClassName)) {
+        continue;
+      }
+      if (selectorTarget(rule.selector, sourceClassName) !== role.target) {
+        continue;
+      }
+      Object.assign(properties, rule.declarations);
+    }
+  }
+
+  return properties;
+}
+
 function inferStyleProperties(
   node: BuildNode,
-  sectionContext: SectionContext
+  sectionContext: SectionContext,
+  parent: BuildNode | null,
+  cssContext: CssStyleContext
 ): Record<string, string> {
   const sourceCode = sectionContext.sourceCode;
   const properties: Record<string, string> = {};
@@ -85,6 +310,7 @@ function inferStyleProperties(
 
   if (node.tag === "section" && nodeClassNames.some((className) => className.startsWith("section_"))) {
     properties.width = "100%";
+    properties["background-color"] = "#fffdf9";
     const background = sectionBackgroundFromSource(sourceCode);
     if (background) {
       properties["background-color"] = background;
@@ -93,8 +319,15 @@ function inferStyleProperties(
 
   if (classSuffix(node, "_component")) {
     properties.display = "grid";
-    properties.gap = gapFromSource(sourceCode, "3rem");
+    properties.gap = gapFromSource(sourceCode, "4rem");
     properties["justify-items"] = "stretch";
+  }
+
+  if (classSuffix(node, "_grid")) {
+    properties.display = "grid";
+    properties.gap = "1.25rem";
+    properties["grid-template-columns"] = "1.02fr 1.38fr";
+    properties["align-items"] = "stretch";
   }
 
   if (classSuffix(node, "_content")) {
@@ -116,6 +349,70 @@ function inferStyleProperties(
     properties.width = "100%";
   }
 
+  if (classSuffix(node, "_feature")) {
+    properties.display = "grid";
+    properties.gap = "1rem";
+    properties["grid-template-rows"] = "auto auto 1fr auto";
+    properties.height = "100%";
+    properties.padding = "2.125rem";
+    properties["border-radius"] = "30px";
+    properties.overflow = "hidden";
+    properties.position = "relative";
+    properties["background-color"] = "#ffefcf";
+    properties.background =
+      "radial-gradient(circle at top right, rgba(255,153,2,0.20), transparent 28%), linear-gradient(160deg, #fff8ef, #ffefcf)";
+    properties.border = "1px solid rgba(166,32,37,0.12)";
+    properties["box-shadow"] = "0 22px 46px rgba(107,74,30,0.09)";
+  }
+
+  if (classSuffix(node, "_feature_heading")) {
+    properties["font-family"] = "Manrope, sans-serif";
+    properties["font-weight"] = "300";
+    properties["font-size"] = "3.8rem";
+    properties["line-height"] = "0.96";
+    properties["letter-spacing"] = "-0.04em";
+    properties.color = "#6b4a1e";
+    properties.margin = "0";
+  }
+
+  if (classSuffix(node, "_feature_text")) {
+    properties["font-size"] = "1rem";
+    properties["line-height"] = "1.7";
+    properties.color = "#8f6a35";
+    properties.margin = "0";
+    properties["max-width"] = "28ch";
+  }
+
+  if (classSuffix(node, "_pill_list")) {
+    properties.display = "flex";
+    properties["flex-wrap"] = "wrap";
+    properties["align-items"] = "flex-start";
+    properties.gap = "0.5rem";
+    properties["justify-self"] = "start";
+    properties["margin-top"] = "1.125rem";
+    properties["max-width"] = "360px";
+  }
+
+  if (classSuffix(node, "_pill")) {
+    properties.display = "inline-flex";
+    properties["align-items"] = "center";
+    properties.gap = "0.5rem";
+    properties.padding = "0.5625rem 0.8125rem";
+    properties["border-radius"] = "999px";
+    properties.border = "1px solid rgba(166,32,37,0.12)";
+    properties["background-color"] = "rgba(255,255,255,0.70)";
+    properties.color = "#6b4a1e";
+    properties["font-size"] = "0.96rem";
+    properties["text-decoration"] = "none";
+  }
+
+  if (classSuffix(node, "_card_list")) {
+    properties.display = "grid";
+    properties.gap = "1.25rem";
+    properties["grid-template-columns"] = "repeat(2, minmax(0, 1fr))";
+    properties["grid-template-rows"] = "repeat(3, minmax(0, 1fr))";
+  }
+
   if (classSuffix(node, "_list")) {
     const hasItemChildren = node.children.some((child) => classSuffix(child, "_item"));
     properties.display = "grid";
@@ -135,21 +432,60 @@ function inferStyleProperties(
   if (classSuffix(node, "_item") || classSuffix(node, "_card")) {
     properties.display = "grid";
     properties.gap = "1rem";
-    if (/\bbg-white\b/.test(sourceCode)) {
+    if (classSuffix(node, "_card")) {
+      properties["background-color"] = "#ffffff";
+      properties.border = "1px solid rgba(166,32,37,0.12)";
+      properties["box-shadow"] = "0 16px 36px rgba(107,74,30,0.07)";
+      properties["min-height"] = "205px";
+      properties.padding = "1.375rem";
+      properties["border-radius"] = "30px";
+      properties.overflow = "hidden";
+      properties.position = "relative";
+      properties["text-decoration"] = "none";
+      properties.color = "#6b4a1e";
+    } else if (parent && classSuffix(parent, "_card")) {
+      properties.gap = "1rem";
+    } else if (/\bbg-white\b/.test(sourceCode)) {
       properties["background-color"] = "#ffffff";
     }
     const padding = paddingFromSource(sourceCode);
-    if (padding) {
+    if (padding && !classSuffix(node, "_card")) {
       properties.padding = padding;
     }
     const radius = radiusFromSource(sourceCode);
-    if (radius) {
+    if (radius && !classSuffix(node, "_card")) {
       properties["border-radius"] = radius;
     }
     properties["text-align"] = "left";
   }
 
-  return properties;
+  if (classSuffix(node, "_card_heading")) {
+    properties["font-family"] = "Manrope, sans-serif";
+    properties["font-weight"] = "300";
+    properties["font-size"] = "2rem";
+    properties["line-height"] = "1.08";
+    properties["letter-spacing"] = "-0.04em";
+    properties.color = "#6b4a1e";
+    properties.margin = "0";
+  }
+
+  if (classSuffix(node, "_card_text")) {
+    properties["font-size"] = "1rem";
+    properties["line-height"] = "1.7";
+    properties.color = "#8f6a35";
+    properties.margin = "0";
+    properties["max-width"] = "31ch";
+  }
+
+  const cssProperties = nodeClassNames.reduce<Record<string, string>>((acc, className) => {
+    Object.assign(acc, cssPropertiesForGeneratedClass(className, cssContext));
+    return acc;
+  }, {});
+
+  return {
+    ...properties,
+    ...cssProperties
+  };
 }
 
 export function shouldFallbackStylingPlan(plan: StylingPlan): boolean {
@@ -171,8 +507,9 @@ export function buildFallbackStylingFromSkeleton(input: {
 }): StylingPlan {
   const shared = sharedClassSet(input.sharedStyleContext);
   const styleDefinitions = new Map<string, Record<string, string>>();
+  const cssContext = parseCssStyleContext(input.sectionContext);
 
-  walkTree(input.skeleton.elementTree, (node) => {
+  walkTree(input.skeleton.elementTree, (node, parent) => {
     for (const className of node.classNames) {
       if (
         isReservedStyleGuideClassName(className) ||
@@ -181,7 +518,7 @@ export function buildFallbackStylingFromSkeleton(input: {
       ) {
         continue;
       }
-      const properties = inferStyleProperties(node, input.sectionContext);
+      const properties = inferStyleProperties(node, input.sectionContext, parent, cssContext);
       if (Object.keys(properties).length > 0) {
         styleDefinitions.set(className, properties);
       }

@@ -36,28 +36,28 @@ const messyHtml = `
 `;
 
 const solutionsHtml = `
-  <section>
-    <div>
+  <section class="solv-section">
+    <div class="solv-section-inner">
       <h2>Solutions Tailored to Your Industry</h2>
-      <div>
-        <div>
+      <div class="solv-mosaic-grid">
+        <div class="solv-mosaic-lead">
           <h3>Solutions designed around how each industry actually operates.</h3>
           <p>Instead of presenting every audience at the same weight, this version creates a stronger entry point.</p>
-          <div>
-            <a href="/small-businesses">Small Businesses</a>
-            <a href="/real-estate">Real Estate</a>
-            <a href="/nonprofits">Nonprofits</a>
+          <div class="solv-mini-stack">
+            <a class="solv-mini-pill" href="/small-businesses">Small Businesses</a>
+            <a class="solv-mini-pill" href="/real-estate">Real Estate</a>
+            <a class="solv-mini-pill" href="/nonprofits">Nonprofits</a>
           </div>
         </div>
-        <div>
-          <a href="/small-businesses">
-            <div>
+        <div class="solv-mosaic-cards">
+          <a class="solv-card solv-mosaic-card" href="/small-businesses">
+            <div class="solv-mosaic-card__title">
               <h3>Small Businesses</h3>
               <p>Practical website and growth systems for owner-led teams.</p>
             </div>
           </a>
-          <a href="/real-estate">
-            <div>
+          <a class="solv-card solv-mosaic-card" href="/real-estate">
+            <div class="solv-mosaic-card__title">
               <h3>Real Estate</h3>
               <p>Listing-ready digital experiences and lead funnels.</p>
             </div>
@@ -66,6 +66,55 @@ const solutionsHtml = `
       </div>
     </div>
   </section>
+`;
+
+const solutionsCss = `
+  :root {
+    --mis-text: #6b4a1e;
+    --mis-muted: #8f6a35;
+  }
+  .solv-section { background-color: #fffdf9; }
+  .solv-mosaic-grid {
+    display: grid;
+    gap: 21px;
+    grid-template-columns: 1.11fr 1.44fr;
+    align-items: stretch;
+  }
+  .solv-mosaic-lead {
+    background: linear-gradient(160deg, #fff8ef, #ffefcf);
+    border-radius: 31px;
+    padding: 35px;
+  }
+  .solv-mosaic-lead h3 {
+    color: var(--mis-text);
+    font-size: 3.7rem;
+    line-height: .95;
+  }
+  .solv-mini-stack {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 9px;
+  }
+  .solv-mini-pill {
+    border-radius: 999px;
+    padding: 10px 14px;
+  }
+  .solv-mosaic-cards {
+    display: grid;
+    gap: 22px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .solv-mosaic-card {
+    background-color: #fffdfa;
+    border: 1px solid rgba(166,32,37,.12);
+    border-radius: 29px;
+    min-height: 212px;
+    padding: 24px;
+  }
+  .solv-mosaic-card p {
+    color: var(--mis-muted);
+    max-width: 32ch;
+  }
 `;
 
 const sharedStyleContext: SharedStyleContext = {
@@ -537,7 +586,10 @@ describe("HTML repo support", () => {
       name: "html-site",
       defaultBranch: "main",
       commitSha: "abc",
-      files: [{ path: "index.html", content: solutionsHtml }]
+      files: [
+        { path: "index.html", content: solutionsHtml },
+        { path: "assets/index.css", content: solutionsCss }
+      ]
     });
     const workflow = new WorkflowService(
       repository,
@@ -555,7 +607,10 @@ describe("HTML repo support", () => {
       mode: "fullAssist",
       sharedStyleContext
     });
-    expect(serializeSkeletonTree(skeleton.elementTree)).toContain("div.solutions_list");
+    expect(serializeSkeletonTree(skeleton.elementTree)).toContain("div.solutions_grid");
+    expect(serializeSkeletonTree(skeleton.elementTree)).toContain("div.solutions_feature");
+    expect(serializeSkeletonTree(skeleton.elementTree)).toContain("div.solutions_pill_list");
+    expect(serializeSkeletonTree(skeleton.elementTree)).toContain("div.solutions_card_list");
     expect(serializeSkeletonTree(skeleton.elementTree)).toContain("div.solutions_item");
     await workflow.recordSkeletonPlacement({
       repoId: repo.id,
@@ -588,11 +643,44 @@ describe("HTML repo support", () => {
       expect.arrayContaining([
         "section_solutions",
         "solutions_component",
-        "solutions_list",
-        "solutions_item"
+        "solutions_grid",
+        "solutions_feature",
+        "solutions_pill_list",
+        "solutions_pill",
+        "solutions_card_list",
+        "solutions_card",
+        "solutions_card_heading"
       ])
     );
-    expect(styling.styleDefinitions.length).toBeGreaterThan(3);
+    expect(styling.styleDefinitions.length).toBeGreaterThan(8);
+    expect(
+      styling.styleDefinitions.find((definition) => definition.className === "solutions_grid")
+        ?.properties["grid-template-columns"]
+    ).toBe("1.11fr 1.44fr");
+    expect(
+      styling.styleDefinitions.find((definition) => definition.className === "solutions_grid")
+        ?.properties.gap
+    ).toBe("21px");
+    expect(
+      styling.styleDefinitions.find((definition) => definition.className === "solutions_card_list")
+        ?.properties["grid-template-columns"]
+    ).toBe("repeat(2, minmax(0, 1fr))");
+    expect(
+      styling.styleDefinitions.find((definition) => definition.className === "solutions_feature")
+        ?.properties["border-radius"]
+    ).toBe("31px");
+    expect(
+      styling.styleDefinitions.find((definition) => definition.className === "solutions_card")
+        ?.properties["min-height"]
+    ).toBe("212px");
+    expect(
+      styling.styleDefinitions.find((definition) => definition.className === "solutions_card_text")
+        ?.properties.color
+    ).toBe("#8f6a35");
+    expect(
+      styling.styleDefinitions.find((definition) => definition.className === "solutions_feature")
+        ?.properties.background
+    ).toContain("linear-gradient");
     expect(styling.warnings).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ code: "styling-html-fallback" })

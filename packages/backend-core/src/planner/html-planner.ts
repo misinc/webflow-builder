@@ -246,7 +246,26 @@ function generatedClassNames(input: {
       cardChildren.length > 1 ||
       childClassNames.filter((className) => className.endsWith("_card")).length > 1
     ) {
+      if (linkChildren.length > 1 && linkChildren.every((child) => child.children.length === 0)) {
+        return [`${sectionKey}_pill_list`];
+      }
+      if (childClassNames.filter((className) => className.endsWith("_card")).length > 1) {
+        return [`${sectionKey}_card_list`];
+      }
       return [`${sectionKey}_list`];
+    }
+    if (
+      childClassNames.some((className) => className.endsWith("_feature")) &&
+      childClassNames.some((className) => className.endsWith("_card_list"))
+    ) {
+      return [`${sectionKey}_grid`];
+    }
+    if (
+      childTags.has("h3") &&
+      childTags.has("p") &&
+      childClassNames.some((className) => className.endsWith("_pill_list"))
+    ) {
+      return [`${sectionKey}_feature`];
     }
     if (childTags.has("h3") && childTags.has("p")) {
       return [`${sectionKey}_item`];
@@ -263,6 +282,62 @@ function generatedClassNames(input: {
     return [`${sectionKey}_content`];
   }
   return [];
+}
+
+function addClassNames(node: BuildNode, classNames: string[]): BuildNode {
+  return {
+    ...node,
+    classNames: dedupe([...node.classNames, ...classNames])
+  };
+}
+
+function decorateSemanticChildren(node: BuildNode, sectionKey: string): BuildNode {
+  if (node.classNames.some((className) => className.endsWith("_pill_list"))) {
+    return {
+      ...node,
+      children: node.children.map((child) =>
+        child.tag === "a" || child.tag === "button"
+          ? addClassNames(child, [`${sectionKey}_pill`])
+          : child
+      )
+    };
+  }
+
+  if (node.classNames.some((className) => className.endsWith("_feature"))) {
+    return {
+      ...node,
+      children: node.children.map((child) => {
+        if (/^h[1-6]$/.test(child.tag)) {
+          return addClassNames(child, [`${sectionKey}_feature_heading`]);
+        }
+        if (child.tag === "p") {
+          return addClassNames(child, [`${sectionKey}_feature_text`]);
+        }
+        return child;
+      })
+    };
+  }
+
+  if (node.classNames.some((className) => className.endsWith("_card"))) {
+    return {
+      ...node,
+      children: node.children.map((child) => decorateCardDescendants(child, sectionKey))
+    };
+  }
+
+  return node;
+}
+
+function decorateCardDescendants(node: BuildNode, sectionKey: string): BuildNode {
+  const classNames = /^h[1-6]$/.test(node.tag)
+    ? [`${sectionKey}_card_heading`]
+    : node.tag === "p"
+      ? [`${sectionKey}_card_text`]
+      : [];
+  return {
+    ...addClassNames(node, classNames),
+    children: node.children.map((child) => decorateCardDescendants(child, sectionKey))
+  };
 }
 
 function wrapSectionWithClientFirstScaffold(root: BuildNode, sectionKey: string): BuildNode {
@@ -332,7 +407,13 @@ function buildNodeFromElement(input: {
   const sourceClasses = classNamesFor(input.element);
   sourceClasses.forEach((className) => input.sourceClassNames.add(className));
   const id = `${input.sectionId}-html-${input.path.join("-") || "root"}`;
-  const textContent = TEXT_TAGS.has(tag) || tag === "div" ? directTextFor(input.element) : undefined;
+  const hasElementChildren = input.element.childNodes.some(
+    (child) => child.nodeType === NodeType.ELEMENT_NODE
+  );
+  const textContent =
+    TEXT_TAGS.has(tag) || (tag === "div" && !hasElementChildren)
+      ? directTextFor(input.element)
+      : undefined;
   const children: BuildNode[] = [];
 
   input.element.childNodes.forEach((child, index) => {
@@ -341,7 +422,7 @@ function buildNodeFromElement(input: {
     }
     const childElement = child as HTMLElement;
     const childTag = elementTag(childElement);
-    if (INLINE_PHRASING_TAGS.has(childTag)) {
+    if (INLINE_PHRASING_TAGS.has(childTag) && (tag !== "div" || childTag !== "a")) {
       const blockChildren = childElement.childNodes.filter(
         (grandchild) =>
           grandchild.nodeType === NodeType.ELEMENT_NODE &&
@@ -371,14 +452,14 @@ function buildNodeFromElement(input: {
     children,
     sharedStyleContext: input.sharedStyleContext
   });
-  const node: BuildNode = {
+  const node: BuildNode = decorateSemanticChildren({
     id,
     type,
     tag,
     classNames,
     textContent,
     children
-  };
+  }, input.sectionKey);
 
   if (tag === "img") {
     const source = input.element.getAttribute("src")?.trim();

@@ -83,6 +83,21 @@ export function ApplyingStylesScreen() {
   const canApproveSection = Boolean(
     verification?.readyForApproval || (styling && hasBlockedVerification)
   );
+  const statusTitle = verification
+    ? verification.readyForApproval
+      ? "Section styled and verified"
+      : styling
+        ? "Styles applied, visual review needed"
+        : "Automatic verification needs another pass"
+    : `Applying styles to ${selectedSection?.title ?? "current section"}`;
+  const statusDescription = verification
+    ? verification.readyForApproval
+      ? "Automatic verification passed. Review the canvas, then approve this section."
+      : verification.summary
+    : "Applying the generated style plan to the selected section on the canvas.";
+  const visibleVerificationWarnings = verification?.readyForApproval
+    ? []
+    : verification?.warnings.slice(0, 3) ?? [];
 
   if (isMutating && visibleLines.length === 0) {
     collectSkeletonClassNames(skeleton?.elementTree)
@@ -171,15 +186,34 @@ export function ApplyingStylesScreen() {
             {isMutating ? <Spinner size={28} thickness={2.5} /> : null}
           </div>
           <div className="text-[15px] font-medium text-wb-text-primary mb-1.5">
-            {verification
-              ? verification.readyForApproval
-                ? "Section styled and verified"
-                : "Section needs another styling pass"
-              : `Applying styles to ${selectedSection?.title ?? "current section"}`}
+            {statusTitle}
           </div>
           <div className="text-[12.5px] text-wb-text-secondary leading-relaxed max-w-[480px] mx-auto">
-            Watch the section take shape on the canvas behind you. Approval unlocks when verification passes.
+            {statusDescription}
           </div>
+          {visibleVerificationWarnings.length > 0 ? (
+            <div className="mt-3 mx-auto max-w-[560px] space-y-1 text-left">
+              {visibleVerificationWarnings.map((warning) => (
+                <div
+                  key={`${warning.code}-${warning.message}`}
+                  className="rounded border border-white/[0.06] bg-white/[0.025] px-3 py-2 text-[11px] leading-relaxed text-wb-text-tertiary"
+                >
+                  <span
+                    className={
+                      warning.level === "error"
+                        ? "text-wb-danger"
+                        : warning.level === "warning"
+                          ? "text-[#ffd479]"
+                          : "text-[#8ad7ff]"
+                    }
+                  >
+                    {warning.level}
+                  </span>
+                  <span className="text-wb-text-tertiary"> · {warning.message}</span>
+                </div>
+              ))}
+            </div>
+          ) : null}
           {error ? <div className="mt-3 text-[11.5px] text-wb-danger">{error}</div> : null}
         </div>
 
