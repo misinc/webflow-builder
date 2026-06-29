@@ -132,7 +132,7 @@ function inferStyleProperties(
     }
   }
 
-  if (classSuffix(node, "_item")) {
+  if (classSuffix(node, "_item") || classSuffix(node, "_card")) {
     properties.display = "grid";
     properties.gap = "1rem";
     if (/\bbg-white\b/.test(sourceCode)) {

@@ -1379,26 +1379,31 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         };
         const nextStyling = await backend.styleSection(stylingRequest, controller.signal);
         setStyling(nextStyling);
-        if (!stylingHasMaterialChanges(nextStyling)) {
-          throw new Error(
-            "Styling produced no class changes, variable bindings, or class applications. Retry styling or reject and redo the skeleton."
-          );
-        }
+        const hasMaterialStyling = stylingHasMaterialChanges(nextStyling);
 
-        const stylingExecution = await applyStylingPlan({
-          bridge,
-          context,
-          plan: nextStyling,
-          targetNodeId,
-          signal: controller.signal
-        });
-        if (!stylingExecution.success) {
-          throw new Error(
-            stylingExecution.warnings.find((warning) => warning.level === "error")?.message ??
-              "Failed to apply section styles."
-          );
+        if (hasMaterialStyling) {
+          const stylingExecution = await applyStylingPlan({
+            bridge,
+            context,
+            plan: nextStyling,
+            targetNodeId,
+            signal: controller.signal
+          });
+          if (!stylingExecution.success) {
+            throw new Error(
+              stylingExecution.warnings.find((warning) => warning.level === "error")?.message ??
+                "Failed to apply section styles."
+            );
+          }
+          executionParts.push(stylingExecution);
+        } else {
+          nextStyling.warnings.push({
+            code: "styling-no-material-changes",
+            message:
+              "Styling produced no class changes, variable bindings, or class applications. Retry styling or reject and redo the skeleton.",
+            level: "warning"
+          });
         }
-        executionParts.push(stylingExecution);
         const styledSummary = mergeExecutionSummaries(executionParts);
         if (styledSummary) {
           const record = {

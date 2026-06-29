@@ -35,6 +35,39 @@ const messyHtml = `
   </section>
 `;
 
+const solutionsHtml = `
+  <section>
+    <div>
+      <h2>Solutions Tailored to Your Industry</h2>
+      <div>
+        <div>
+          <h3>Solutions designed around how each industry actually operates.</h3>
+          <p>Instead of presenting every audience at the same weight, this version creates a stronger entry point.</p>
+          <div>
+            <a href="/small-businesses">Small Businesses</a>
+            <a href="/real-estate">Real Estate</a>
+            <a href="/nonprofits">Nonprofits</a>
+          </div>
+        </div>
+        <div>
+          <a href="/small-businesses">
+            <div>
+              <h3>Small Businesses</h3>
+              <p>Practical website and growth systems for owner-led teams.</p>
+            </div>
+          </a>
+          <a href="/real-estate">
+            <div>
+              <h3>Real Estate</h3>
+              <p>Listing-ready digital experiences and lead funnels.</p>
+            </div>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+`;
+
 const sharedStyleContext: SharedStyleContext = {
   siteId: "site-1",
   capturedAt: new Date().toISOString(),
@@ -469,7 +502,7 @@ describe("HTML repo support", () => {
           importPath: "index.html",
           sortOrder: 0,
           componentName: "Solutions",
-          metadata: { repoType: "html", inlineSourceCode: messyHtml }
+          metadata: { repoType: "html", inlineSourceCode: solutionsHtml }
         }
       ]
     );
@@ -504,7 +537,7 @@ describe("HTML repo support", () => {
       name: "html-site",
       defaultBranch: "main",
       commitSha: "abc",
-      files: [{ path: "index.html", content: messyHtml }]
+      files: [{ path: "index.html", content: solutionsHtml }]
     });
     const workflow = new WorkflowService(
       repository,
@@ -522,6 +555,8 @@ describe("HTML repo support", () => {
       mode: "fullAssist",
       sharedStyleContext
     });
+    expect(serializeSkeletonTree(skeleton.elementTree)).toContain("div.solutions_list");
+    expect(serializeSkeletonTree(skeleton.elementTree)).toContain("div.solutions_item");
     await workflow.recordSkeletonPlacement({
       repoId: repo.id,
       webflowSiteId: "site-1",
@@ -550,8 +585,14 @@ describe("HTML repo support", () => {
     });
 
     expect(styling.styleDefinitions.map((definition) => definition.className)).toEqual(
-      expect.arrayContaining(["section_solutions", "solutions_component"])
+      expect.arrayContaining([
+        "section_solutions",
+        "solutions_component",
+        "solutions_list",
+        "solutions_item"
+      ])
     );
+    expect(styling.styleDefinitions.length).toBeGreaterThan(3);
     expect(styling.warnings).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ code: "styling-html-fallback" })

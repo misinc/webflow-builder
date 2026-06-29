@@ -181,10 +181,17 @@ function generatedClassNames(input: {
   sectionKey: string;
   path: number[];
   textContent?: string;
-  childCount: number;
+  children: BuildNode[];
   sharedStyleContext?: SharedStyleContext;
 }): string[] {
-  const { tag, type, sectionKey, path, textContent, childCount, sharedStyleContext } = input;
+  const { tag, sectionKey, path, textContent, children, sharedStyleContext } = input;
+  const childTags = new Set(children.map((child) => child.tag));
+  const childClassNames = children.flatMap((child) => child.classNames);
+  const linkChildren = children.filter((child) => child.tag === "a");
+  const cardChildren = children.filter((child) =>
+    child.classNames.some((className) => className.endsWith("_card") || className.endsWith("_item"))
+  );
+
   if (tag === "section" || tag === "header" || tag === "footer" || tag === "main") {
     return [`section_${sectionKey}`];
   }
@@ -201,7 +208,7 @@ function generatedClassNames(input: {
     return [`${sectionKey}_image`];
   }
   if (tag === "a" || tag === "button") {
-    return [`${sectionKey}_link`];
+    return children.length > 0 ? [`${sectionKey}_card`] : [`${sectionKey}_link`];
   }
   if (/^h[1-6]$/.test(tag)) {
     return [
@@ -224,7 +231,7 @@ function generatedClassNames(input: {
     ];
   }
   if (tag === "div") {
-    if (textContent && childCount === 0) {
+    if (textContent && children.length === 0) {
       return [
         sharedOrFallback(
           sharedStyleContext,
@@ -234,11 +241,24 @@ function generatedClassNames(input: {
         )
       ];
     }
+    if (
+      linkChildren.length > 1 ||
+      cardChildren.length > 1 ||
+      childClassNames.filter((className) => className.endsWith("_card")).length > 1
+    ) {
+      return [`${sectionKey}_list`];
+    }
+    if (childTags.has("h3") && childTags.has("p")) {
+      return [`${sectionKey}_item`];
+    }
+    if (
+      children.length === 1 &&
+      children[0]?.classNames.some((className) => className.endsWith("_card"))
+    ) {
+      return [`${sectionKey}_item`];
+    }
     if (path.length <= 2) {
       return [`${sectionKey}_component`];
-    }
-    if (type === "list") {
-      return [`${sectionKey}_list`];
     }
     return [`${sectionKey}_content`];
   }
@@ -348,7 +368,7 @@ function buildNodeFromElement(input: {
     sectionKey: input.sectionKey,
     path: input.path,
     textContent,
-    childCount: children.length,
+    children,
     sharedStyleContext: input.sharedStyleContext
   });
   const node: BuildNode = {

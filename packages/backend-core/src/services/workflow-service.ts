@@ -10,6 +10,8 @@ import {
   pageMappingsUpsertInputSchema,
   PageMappingsUpsertInput,
   PlannerWarning,
+  RepoPageRecord,
+  RepoSectionRecord,
   sectionAnalysisSchema,
   SectionAnalysis,
   SectionMetadata,
@@ -40,6 +42,7 @@ import {
 } from "@wfb/shared/contracts.js";
 import { BlobStore } from "../blob/blob-store.js";
 import { MisRepoExtractor } from "../extractor/mis-extractor.js";
+import { HtmlRepoExtractor } from "../extractor/html-extractor.js";
 import { extractAssetReferencesFromSource } from "../extractor/asset-references.js";
 import { RepositorySnapshot } from "../github/client.js";
 import { HeuristicBuildPlanner } from "../planner/heuristic-planner.js";
@@ -378,12 +381,28 @@ function warnOnOutOfPlanClasses(
 }
 
 export class WorkflowService {
+  private readonly htmlExtractor = new HtmlRepoExtractor();
+
   constructor(
     private readonly repository: AppRepository,
     private readonly blobStore: BlobStore,
     private readonly extractor: MisRepoExtractor,
     private readonly planningProvider: PlanningProvider
   ) {}
+
+  private buildSectionContext(params: {
+    repoId: string;
+    page: RepoPageRecord;
+    section: RepoSectionRecord;
+    snapshot: RepositorySnapshot;
+    sharedStyleContext: SharedStyleContext;
+  }): SectionContext {
+    const extractor =
+      repoTypeFromMetadata(params.section.metadata) === "html"
+        ? this.htmlExtractor
+        : this.extractor;
+    return extractor.buildSectionContext(params);
+  }
 
   private async getSnapshot(repoId: string): Promise<RepositorySnapshot> {
     const snapshot = await this.blobStore.getJson<RepositorySnapshot>(
@@ -589,7 +608,7 @@ export class WorkflowService {
       request.webflowSiteId,
       request.sharedStyleContext
     );
-    const sectionContext = this.extractor.buildSectionContext({
+    const sectionContext = this.buildSectionContext({
       repoId: request.repoId,
       page: repoPage,
       section,
@@ -674,7 +693,7 @@ export class WorkflowService {
 
     const snapshot = await this.getSnapshot(request.repoId);
     const sharedStyleContext = await this.getSharedStyleContext(request.webflowSiteId);
-    const sectionContext = this.extractor.buildSectionContext({
+    const sectionContext = this.buildSectionContext({
       repoId: request.repoId,
       page: repoPage,
       section,
@@ -1221,6 +1240,15 @@ export class WorkflowService {
       latestSkeletonRun?.payload
         ? skeletonPlanSchema.safeParse(latestSkeletonRun.payload).data ?? null
         : null;
+    const deterministicHtmlSkeleton =
+      !latestSkeleton && context.metadata.repoType === "html"
+        ? htmlToSkeletonPlan({
+            metadata: context.metadata,
+            sourceCode: context.sectionContext.sourceCode,
+            sharedStyleContext: context.sharedStyleContext
+          })
+        : null;
+    const stylingSkeleton = latestSkeleton ?? deterministicHtmlSkeleton;
 
     const providerInput = {
       metadata: context.metadata,
@@ -1232,13 +1260,13 @@ export class WorkflowService {
       selectedElementId: request.selectedElementId ?? null
     };
 
-    const deterministicPrimary = latestSkeleton
+    const deterministicPrimary = stylingSkeleton
       ? buildFallbackStylingFromSkeleton({
           metadata: context.metadata,
           mode: request.mode,
           sectionContext: context.sectionContext,
           sharedStyleContext: context.sharedStyleContext,
-          skeleton: latestSkeleton,
+          skeleton: stylingSkeleton,
           inheritedWarnings: [
             providerWarning(
               "deterministic-styling-primary",
