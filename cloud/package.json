@@ -25,6 +25,8 @@
     "astro": "^5.13.5",
     "drizzle-orm": "^0.44.2",
     "node-html-parser": "^8.0.3",
+    "postcss": "^8.5.15",
+    "postcss-value-parser": "^4.2.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "zod": "^4.1.5"
