@@ -82,13 +82,17 @@ class FailingBridge implements WebflowDesignerBridge {
     return { id: "component-1", name: "Component" };
   }
 
-  async applyClasses(_nodeId: string, _classNames: string[]) {}
+  async applyClasses(_nodeId: string, _classNames: string[]) {
+    // Fail at a node-level op that runs AFTER createNode, so rollback has a node
+    // to remove (styles are now created before nodes are built).
+    throw new Error("class failure");
+  }
 
   async ensureStyle(
     _className: string,
     _properties: Record<string, string>
   ): Promise<{ styleId: string }> {
-    throw new Error("style failure");
+    return { styleId: "style-1" };
   }
 
   async bindVariable() {}

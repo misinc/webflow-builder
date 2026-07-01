@@ -342,6 +342,24 @@ export async function executeBuildPlan(params: {
   const nodeIdMap = new Map<string, string>();
   try {
     throwIfAborted(params.signal);
+    // Create classes WITH their properties BEFORE applying them to elements —
+    // Webflow drops a brand-new class that has no properties yet.
+    for (const styleDefinition of params.plan.styleDefinitions) {
+      throwIfAborted(params.signal);
+      if (isReservedStyleGuideClassName(styleDefinition.className)) {
+        executionWarnings.push({
+          code: "reserved-styleguide-class-skipped",
+          message: `Skipped reserved style guide class ${styleDefinition.className}.`,
+          level: "warning"
+        });
+        continue;
+      }
+      const style = await withDesignerRetry("ensureStyle", params.signal, () =>
+        params.bridge.ensureStyle(styleDefinition.className, styleDefinition.properties)
+      );
+      createdStyleIds.push(style.styleId);
+    }
+
     await buildNodeTree({
       bridge: params.bridge,
       node: params.plan.elementTree,
@@ -358,25 +376,6 @@ export async function executeBuildPlan(params: {
       nodeIdMap,
       signal: params.signal
     });
-
-    for (const styleDefinition of params.plan.styleDefinitions) {
-      throwIfAborted(params.signal);
-      if (isReservedStyleGuideClassName(styleDefinition.className)) {
-        executionWarnings.push({
-          code: "reserved-styleguide-class-skipped",
-          message: `Skipped reserved style guide class ${styleDefinition.className}.`,
-          level: "warning"
-        });
-        continue;
-      }
-      const style = await withDesignerRetry("ensureStyle", params.signal, () =>
-        params.bridge.ensureStyle(
-          styleDefinition.className,
-          styleDefinition.properties
-        )
-      );
-      createdStyleIds.push(style.styleId);
-    }
 
     for (const binding of params.plan.variableBindings) {
       throwIfAborted(params.signal);
@@ -506,7 +505,7 @@ export async function executeSkeletonPlan(params: {
       sectionMetadata: params.plan.sectionMetadata,
       elementTree: params.plan.elementTree,
       classAssignments: collectAssignments(params.plan.elementTree),
-      styleDefinitions: [],
+      styleDefinitions: params.plan.styleDefinitions ?? [],
       variableBindings: [],
       assetBindings: params.plan.assetBindings,
       warnings: params.plan.warnings

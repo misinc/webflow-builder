@@ -51,6 +51,7 @@ import { PlanningProvider, providerWarning } from "../planner/planning-provider.
 import { serializeSectionContext } from "../planner/section-serializer.js";
 import { shouldFallbackStylingPlan } from "../planner/style-fallback.js";
 import { buildResolvedStylingFromSkeleton } from "../planner/resolved-styling.js";
+import { splitLayoutVisual } from "../planner/css-resolver.js";
 import { AppRepository } from "../repositories/app-repository.js";
 import { dedupe } from "@wfb/shared/client-first.js";
 import { nowIso, stableId } from "../utils.js";
@@ -897,15 +898,38 @@ export class WorkflowService {
         sharedStyleContext: context.sharedStyleContext
       });
 
+    // Attach LAYOUT-only style definitions so the skeleton executor can create
+    // each new class WITH properties — Webflow drops a brand-new empty class.
+    const cssText = context.sectionContext.relevantStylesheets
+      .map((sheet) => sheet.content)
+      .join("\n");
+    const resolvedStyling = buildResolvedStylingFromSkeleton({
+      metadata: context.metadata,
+      mode: "skeletonThenStyle",
+      skeleton,
+      cssText
+    });
+    const layoutStyleDefinitions = resolvedStyling.styleDefinitions
+      .map((definition) => ({
+        className: definition.className,
+        properties: splitLayoutVisual(definition.properties).layout,
+        shared: definition.shared
+      }))
+      .filter((definition) => Object.keys(definition.properties).length > 0);
+    const skeletonWithLayout: SkeletonPlan = {
+      ...skeleton,
+      styleDefinitions: layoutStyleDefinitions
+    };
+
     const runId = await this.persistRun(
       request,
       context.queue.repoPage!.id,
       request.sectionId,
       "skeleton",
-      skeleton
+      skeletonWithLayout
     );
     await this.updateState(context.state, "skeleton_ready", runId);
-    return skeleton;
+    return skeletonWithLayout;
   }
 
   async generateDebugSkeleton(input: DebugSkeletonRequest): Promise<SkeletonPlan> {

@@ -355,6 +355,9 @@ export const skeletonPlanSchema = z.object({
   assetBindings: z.array(assetBindingSchema).default([]),
   reusableClasses: z.array(z.string()).default([]),
   suggestedNewClasses: z.array(z.string()).default([]),
+  // Layout-only style definitions applied when the skeleton is placed, so new
+  // classes are created WITH properties (Webflow drops brand-new empty classes).
+  styleDefinitions: z.array(styleDefinitionSchema).optional(),
   classMappingDecisions: z.array(
     z.object({
       sourceClassName: z.string().min(1),
