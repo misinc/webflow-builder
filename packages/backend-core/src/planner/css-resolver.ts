@@ -24,9 +24,47 @@ export interface ParsedCss {
   descendantRules: DescendantRule[];
 }
 
-const SIMPLE_CLASS_SELECTOR = /^\.([A-Za-z0-9_-]+)$/;
-const DESCENDANT_TAG_SELECTOR = /^\.([A-Za-z0-9_-]+)(?:\s*>\s*|\s+)([a-z][a-z0-9]*)$/;
-const DESCENDANT_CLASS_SELECTOR = /^\.([A-Za-z0-9_-]+)(?:\s*>\s*|\s+)\.([A-Za-z0-9_-]+)$/;
+// Match class selectors that may contain CSS-escaped characters, e.g. the
+// Tailwind arbitrary-value class `.gap-\[48px\]` (class name "gap-[48px]").
+const SIMPLE_CLASS_SELECTOR = /^\.((?:\\.|[\w-])+)$/;
+const DESCENDANT_TAG_SELECTOR = /^\.((?:\\.|[\w-])+)(?:\s*>\s*|\s+)([a-z][a-z0-9]*)$/;
+const DESCENDANT_CLASS_SELECTOR = /^\.((?:\\.|[\w-])+)(?:\s*>\s*|\s+)\.((?:\\.|[\w-])+)$/;
+
+function unescapeClassName(name: string): string {
+  return name.replace(/\\(.)/g, "$1");
+}
+
+/**
+ * Merge order for a rule: 0 = base (desktop-first). A positive number is a
+ * min-width breakpoint (larger wins → desktop). null = skip (max-width mobile
+ * override, @supports, keyframes) so desktop values always take precedence.
+ */
+function ruleBreakpointOrder(rule: postcss.Rule): number | null {
+  let order = 0;
+  let parent: postcss.Container | postcss.Document | undefined = rule.parent;
+  while (parent) {
+    if (parent.type === "atrule") {
+      const atRule = parent as postcss.AtRule;
+      const name = atRule.name.toLowerCase();
+      if (name === "media") {
+        if (/max-width/i.test(atRule.params)) {
+          return null;
+        }
+        const min = /min-width:\s*([\d.]+)(px|rem|em)?/i.exec(atRule.params);
+        if (!min) {
+          return null;
+        }
+        order = Math.max(order, /rem|em/i.test(min[2] ?? "") ? Number(min[1]) * 16 : Number(min[1]));
+      } else if (name !== "layer" && name !== "scope") {
+        // @layer / @scope are transparent (Tailwind v4 nests utilities in
+        // @layer); @supports / @keyframes / @container / @property are skipped.
+        return null;
+      }
+    }
+    parent = parent.parent;
+  }
+  return order;
+}
 
 export function parseCompiledCss(cssText: string): ParsedCss {
   const classes = new Map<string, Record<string, string>>();
@@ -43,17 +81,18 @@ export function parseCompiledCss(cssText: string): ParsedCss {
     return { classes, variables, descendantRules };
   }
 
+  // Apply base rules first, then min-width breakpoints ascending, so desktop
+  // values win for both desktop-first CSS and mobile-first Tailwind.
+  const ordered: Array<{ order: number; rule: postcss.Rule }> = [];
   root.walkRules((rule) => {
-    // Base (desktop) styles only — @media / @supports overrides are handled
-    // separately when we map breakpoints. Skip any rule nested in an at-rule.
-    let parent: postcss.Container | postcss.Document | undefined = rule.parent;
-    while (parent) {
-      if (parent.type === "atrule") {
-        return;
-      }
-      parent = parent.parent;
+    const order = ruleBreakpointOrder(rule);
+    if (order !== null) {
+      ordered.push({ order, rule });
     }
+  });
+  ordered.sort((a, b) => a.order - b.order);
 
+  for (const { rule } of ordered) {
     const declarations: Record<string, string> = {};
     rule.walkDecls((decl) => {
       declarations[decl.prop] = decl.value;
@@ -71,16 +110,16 @@ export function parseCompiledCss(cssText: string): ParsedCss {
 
       const simple = SIMPLE_CLASS_SELECTOR.exec(selector);
       if (simple) {
-        const current = classes.get(simple[1]) ?? {};
-        classes.set(simple[1], { ...current, ...declarations });
+        const name = unescapeClassName(simple[1]);
+        classes.set(name, { ...(classes.get(name) ?? {}), ...declarations });
         continue;
       }
 
       const descendantClass = DESCENDANT_CLASS_SELECTOR.exec(selector);
       if (descendantClass) {
         descendantRules.push({
-          ancestorClass: descendantClass[1],
-          matchClass: descendantClass[2],
+          ancestorClass: unescapeClassName(descendantClass[1]),
+          matchClass: unescapeClassName(descendantClass[2]),
           declarations
         });
         continue;
@@ -89,13 +128,13 @@ export function parseCompiledCss(cssText: string): ParsedCss {
       const descendantTag = DESCENDANT_TAG_SELECTOR.exec(selector);
       if (descendantTag) {
         descendantRules.push({
-          ancestorClass: descendantTag[1],
+          ancestorClass: unescapeClassName(descendantTag[1]),
           matchTag: descendantTag[2],
           declarations
         });
       }
     }
-  });
+  }
 
   return { classes, variables, descendantRules };
 }

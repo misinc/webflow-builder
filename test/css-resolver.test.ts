@@ -128,3 +128,23 @@ describe("css-resolver variable bindings", () => {
     expect(properties.color).toBe("#111");
   });
 });
+
+describe("css-resolver arbitrary-value classes + responsive", () => {
+  const parsed = parseCompiledCss(
+    ".gap-\\[48px\\] { gap: 48px; }" +
+      ".text-\\[32px\\] { font-size: 32px; }" +
+      ".max-w-\\[1200px\\] { max-width: 1200px; }" +
+      "@media (min-width: 64rem) { .text-\\[32px\\] { font-size: 48px; } }" +
+      "@media (max-width: 40rem) { .gap-\\[48px\\] { gap: 12px; } }"
+  );
+
+  it("captures Tailwind arbitrary-value classes (escaped selectors)", () => {
+    expect(resolveClasses(["gap-[48px]"], parsed).gap).toBe("48px");
+    expect(resolveClasses(["max-w-[1200px]"], parsed)["max-width"]).toBe("1200px");
+  });
+
+  it("prefers desktop (largest min-width) and ignores max-width mobile overrides", () => {
+    expect(resolveClasses(["text-[32px]"], parsed)["font-size"]).toBe("48px");
+    expect(resolveClasses(["gap-[48px]"], parsed).gap).toBe("48px");
+  });
+});
