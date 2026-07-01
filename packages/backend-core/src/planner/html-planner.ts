@@ -542,7 +542,9 @@ function buildNodeFromElement(input: {
     node.children.push({
       id: `${node.id}-text`,
       type: "text",
-      tag: "span",
+      // A classless div becomes a Webflow TextBlock in the executor, whose
+      // text content reliably sticks (a raw <span> preset does not).
+      tag: "div",
       classNames: [],
       textContent: node.textContent,
       children: []
