@@ -542,9 +542,9 @@ function buildNodeFromElement(input: {
     node.children.push({
       id: `${node.id}-text`,
       type: "text",
-      // A classless div becomes a Webflow TextBlock in the executor, whose
-      // text content reliably sticks (a raw <span> preset does not).
-      tag: "div",
+      // Use a <p> — the same node shape as the card body text, which reliably
+      // gets its text applied in Webflow. (A <span>/<div> preset does not.)
+      tag: "p",
       classNames: [],
       textContent: node.textContent,
       children: []
