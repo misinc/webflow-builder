@@ -192,6 +192,12 @@ function generatedClassNames(input: {
   const cardChildren = children.filter((child) =>
     child.classNames.some((className) => className.endsWith("_card") || className.endsWith("_item"))
   );
+  // Decorative icon embeds (inline SVGs) are not real content — they must not
+  // make an otherwise-leaf <a>/<button> look like a card.
+  const contentChildren = children.filter(
+    (child) =>
+      !(child.type === "embed" && child.classNames.some((name) => name.startsWith("icon-embed")))
+  );
   const sourceClassText = sourceClassNames.join(" ");
 
   if (/\bsolv-mosaic-grid\b|\bmosaic-grid\b/.test(sourceClassText)) {
@@ -229,7 +235,7 @@ function generatedClassNames(input: {
     return [`${sectionKey}_image`];
   }
   if (tag === "a" || tag === "button") {
-    return children.length > 0 ? [`${sectionKey}_card`] : [`${sectionKey}_link`];
+    return contentChildren.length > 0 ? [`${sectionKey}_card`] : [`${sectionKey}_link`];
   }
   if (/^h[1-6]$/.test(tag)) {
     return [
@@ -417,6 +423,21 @@ function buildNodeFromElement(input: {
   if (SKIPPED_TAGS.has(tag)) {
     input.warnings.push(warning("html-removed-cruft", `Removed <${tag}> from the HTML skeleton.`));
     return null;
+  }
+  if (tag === "svg") {
+    // Preserve inline icons as a client-first icon-embed carrying the raw SVG,
+    // instead of dropping them. Becomes a Webflow Embed on build.
+    const iconSourceClasses = classNamesFor(input.element);
+    iconSourceClasses.forEach((className) => input.sourceClassNames.add(className));
+    return {
+      id: `${input.sectionId}-html-${input.path.join("-") || "root"}`,
+      type: "embed",
+      tag: "div",
+      classNames: ["icon-embed-xsmall"],
+      sourceClassNames: dedupe(iconSourceClasses),
+      embedHtml: input.element.toString(),
+      children: []
+    };
   }
   if (SVG_INTERNAL_TAGS.has(tag)) {
     input.warnings.push(

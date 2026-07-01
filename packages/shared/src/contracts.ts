@@ -8,6 +8,8 @@ export interface BuildNode {
   classNames: string[];
   sourceClassNames?: string[];
   textContent?: string;
+  /** Raw HTML to embed verbatim (e.g. an inline SVG icon) — rendered as a Webflow Embed. */
+  embedHtml?: string;
   children: BuildNode[];
 }
 
@@ -159,6 +161,7 @@ export const buildNodeSchema: z.ZodType<BuildNode> = z.lazy(() =>
     classNames: z.array(z.string()),
     sourceClassNames: z.array(z.string()).optional(),
     textContent: z.string().optional(),
+    embedHtml: z.string().optional(),
     children: z.array(buildNodeSchema)
   })
 );

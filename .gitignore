@@ -13,3 +13,4 @@ coverage
 build
 .astro
 .wrangler
+preview-output/
