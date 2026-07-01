@@ -26,6 +26,34 @@ function isReusableBaseClass(name: string): boolean {
   return REUSABLE_BASE_CLASS.test(name);
 }
 
+/** Perceived luminance (0 = black, 1 = white) for a hex/rgb color, or null. */
+function perceivedLuminance(color: string): number | null {
+  const hex = color.trim().replace(/^#/, "");
+  let r: number;
+  let g: number;
+  let b: number;
+  if (/^[0-9a-fA-F]{6}$/.test(hex)) {
+    r = parseInt(hex.slice(0, 2), 16);
+    g = parseInt(hex.slice(2, 4), 16);
+    b = parseInt(hex.slice(4, 6), 16);
+  } else if (/^[0-9a-fA-F]{3}$/.test(hex)) {
+    r = parseInt(hex[0] + hex[0], 16);
+    g = parseInt(hex[1] + hex[1], 16);
+    b = parseInt(hex[2] + hex[2], 16);
+  } else {
+    const rgb = /^rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/i.exec(color.trim());
+    if (!rgb) return null;
+    [r, g, b] = [Number(rgb[1]), Number(rgb[2]), Number(rgb[3])];
+  }
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+}
+
+/** A dark, near-neutral literal reads as "default ink" rather than an intentional accent. */
+function isDarkInkLiteral(color: string): boolean {
+  const luminance = perceivedLuminance(color);
+  return luminance !== null && luminance < 0.5;
+}
+
 /**
  * Pick the client-first class a node's resolved CSS should attach to: prefer a
  * section-scoped functional class; fall back to a reusable base class so
@@ -84,6 +112,26 @@ export function buildResolvedStylingFromSkeleton(input: {
     const { properties, bindings } = resolveDeclarationsWithBindings(raw, parsed.variables);
     if (Object.keys(properties).length === 0) {
       return;
+    }
+    // Headings often hardcode a one-off dark ink (a Figma-export artifact) instead
+    // of the design text token. Normalize them to the site's inherited text color
+    // (usually a var), so headings match the rest of the type system. Intentional
+    // non-dark heading colors (e.g. light text on a dark section) are left alone.
+    if (
+      node.type === "heading" &&
+      parsed.defaultTextColor &&
+      typeof properties.color === "string" &&
+      !bindings.some((binding) => binding.property === "color") &&
+      isDarkInkLiteral(properties.color)
+    ) {
+      properties.color = parsed.defaultTextColor.value;
+      if (parsed.defaultTextColor.variableName) {
+        bindings.push({
+          property: "color",
+          variableName: parsed.defaultTextColor.variableName,
+          value: parsed.defaultTextColor.value
+        });
+      }
     }
     const target = targetClassFor(node);
     // First node to claim a class wins — avoids merging semantically different

@@ -129,6 +129,21 @@ describe("css-resolver variable bindings", () => {
   });
 });
 
+describe("css-resolver default (inherited) text color", () => {
+  it("captures the body text color and its token binding", () => {
+    const parsed = parseCompiledCss(
+      ":root { --foreground: #6b4a1e; } body { color: var(--foreground); background: #fff; }"
+    );
+    expect(parsed.defaultTextColor).toEqual({ value: "#6b4a1e", variableName: "foreground" });
+  });
+
+  it("captures a literal body color with no binding, and falls back to html", () => {
+    expect(parseCompiledCss("body { color: #222; }").defaultTextColor).toEqual({ value: "#222" });
+    expect(parseCompiledCss("html { color: #333; }").defaultTextColor).toEqual({ value: "#333" });
+    expect(parseCompiledCss(".x { color: red; }").defaultTextColor).toBeUndefined();
+  });
+});
+
 describe("css-resolver arbitrary-value classes + responsive", () => {
   const parsed = parseCompiledCss(
     ".gap-\\[48px\\] { gap: 48px; }" +

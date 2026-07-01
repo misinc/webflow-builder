@@ -22,6 +22,12 @@ export interface ParsedCss {
   classes: Map<string, Record<string, string>>;
   variables: Map<string, string>;
   descendantRules: DescendantRule[];
+  /**
+   * The site's inherited text color, taken from `body`/`html { color }`. Text
+   * that doesn't set its own color inherits this in the browser; it is usually a
+   * design token (e.g. `var(--foreground)`), so we keep the token binding.
+   */
+  defaultTextColor?: { value: string; variableName?: string };
 }
 
 // Match class selectors that may contain CSS-escaped characters, e.g. the
@@ -70,6 +76,8 @@ export function parseCompiledCss(cssText: string): ParsedCss {
   const classes = new Map<string, Record<string, string>>();
   const variables = new Map<string, string>();
   const descendantRules: DescendantRule[] = [];
+  let rawBodyColor: string | undefined;
+  let rawHtmlColor: string | undefined;
   if (!cssText.trim()) {
     return { classes, variables, descendantRules };
   }
@@ -108,6 +116,14 @@ export function parseCompiledCss(cssText: string): ParsedCss {
         continue;
       }
 
+      if (selector === "body" || selector === "html") {
+        if (declarations.color) {
+          if (selector === "body") rawBodyColor = declarations.color;
+          else rawHtmlColor = declarations.color;
+        }
+        continue;
+      }
+
       const simple = SIMPLE_CLASS_SELECTOR.exec(selector);
       if (simple) {
         const name = unescapeClassName(simple[1]);
@@ -136,7 +152,22 @@ export function parseCompiledCss(cssText: string): ParsedCss {
     }
   }
 
-  return { classes, variables, descendantRules };
+  const rawDefaultTextColor = rawBodyColor ?? rawHtmlColor;
+  let defaultTextColor: ParsedCss["defaultTextColor"];
+  if (rawDefaultTextColor) {
+    const pure = PURE_VAR_VALUE.exec(rawDefaultTextColor.trim());
+    const chain = pure ? resolveVarChain(pure[1], variables) : null;
+    if (chain?.value) {
+      defaultTextColor = { value: chain.value, variableName: chain.token };
+    } else {
+      const value = resolveValue(rawDefaultTextColor, variables).trim();
+      if (value) {
+        defaultTextColor = { value };
+      }
+    }
+  }
+
+  return { classes, variables, descendantRules, defaultTextColor };
 }
 
 /**
