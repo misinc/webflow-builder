@@ -20,6 +20,8 @@ export interface DescendantRule {
 
 export interface ParsedCss {
   classes: Map<string, Record<string, string>>;
+  /** `#id` selector rules, keyed by id (sections often set their background here). */
+  idRules: Map<string, Record<string, string>>;
   variables: Map<string, string>;
   descendantRules: DescendantRule[];
   /**
@@ -33,6 +35,11 @@ export interface ParsedCss {
 // Match class selectors that may contain CSS-escaped characters, e.g. the
 // Tailwind arbitrary-value class `.gap-\[48px\]` (class name "gap-[48px]").
 const SIMPLE_CLASS_SELECTOR = /^\.((?:\\.|[\w-])+)$/;
+// A selector whose rightmost target is `#id` — bare (`#services`) or scoped under
+// a global theme wrapper (`.theme #services`). The theme class lives on <body>,
+// outside the section, so we key purely by id and let source order (active theme
+// last) win. Excludes rules that target a descendant of the id (`#services h2`).
+const ID_TARGET_SELECTOR = /(?:^|[\s>+~])#([\w-]+)$/;
 const DESCENDANT_TAG_SELECTOR = /^\.((?:\\.|[\w-])+)(?:\s*>\s*|\s+)([a-z][a-z0-9]*)$/;
 const DESCENDANT_CLASS_SELECTOR = /^\.((?:\\.|[\w-])+)(?:\s*>\s*|\s+)\.((?:\\.|[\w-])+)$/;
 
@@ -76,17 +83,19 @@ export function parseCompiledCss(cssText: string): ParsedCss {
   const classes = new Map<string, Record<string, string>>();
   const variables = new Map<string, string>();
   const descendantRules: DescendantRule[] = [];
+  const idRules = new Map<string, Record<string, string>>();
+  const scopedVars = new Map<string, string>();
   let rawBodyColor: string | undefined;
   let rawHtmlColor: string | undefined;
   if (!cssText.trim()) {
-    return { classes, variables, descendantRules };
+    return { classes, idRules, variables, descendantRules };
   }
 
   let root: postcss.Root;
   try {
     root = postcss.parse(cssText);
   } catch {
-    return { classes, variables, descendantRules };
+    return { classes, idRules, variables, descendantRules };
   }
 
   // Apply base rules first, then min-width breakpoints ascending, so desktop
@@ -113,6 +122,20 @@ export function parseCompiledCss(cssText: string): ParsedCss {
             variables.set(prop, value);
           }
         }
+        continue;
+      }
+
+      // Custom properties defined outside :root (theme variant classes) — kept
+      // as fallbacks, used only to fill vars that :root doesn't define.
+      for (const [prop, value] of Object.entries(declarations)) {
+        if (prop.startsWith("--") && !scopedVars.has(prop)) {
+          scopedVars.set(prop, value);
+        }
+      }
+
+      const idMatch = ID_TARGET_SELECTOR.exec(selector);
+      if (idMatch) {
+        idRules.set(idMatch[1], { ...(idRules.get(idMatch[1]) ?? {}), ...declarations });
         continue;
       }
 
@@ -152,6 +175,12 @@ export function parseCompiledCss(cssText: string): ParsedCss {
     }
   }
 
+  for (const [prop, value] of scopedVars) {
+    if (!variables.has(prop)) {
+      variables.set(prop, value);
+    }
+  }
+
   const rawDefaultTextColor = rawBodyColor ?? rawHtmlColor;
   let defaultTextColor: ParsedCss["defaultTextColor"];
   if (rawDefaultTextColor) {
@@ -167,7 +196,7 @@ export function parseCompiledCss(cssText: string): ParsedCss {
     }
   }
 
-  return { classes, variables, descendantRules, defaultTextColor };
+  return { classes, idRules, variables, descendantRules, defaultTextColor };
 }
 
 /**
@@ -331,7 +360,7 @@ export function resolveDeclarationsWithBindings(
 
 /** Merge the raw (unresolved) declarations that apply to a node. */
 export function collectRawDeclarations(
-  node: { tag: string; sourceClassNames?: string[] },
+  node: { tag: string; sourceClassNames?: string[]; sourceId?: string },
   ancestorSourceClasses: Set<string>,
   parsed: ParsedCss
 ): Record<string, string> {
@@ -340,6 +369,14 @@ export function collectRawDeclarations(
     const declarations = parsed.classes.get(className);
     if (declarations) {
       Object.assign(raw, declarations);
+    }
+  }
+  // `#id` rules win over class rules (higher specificity) — e.g. a section that
+  // sets its own background by id.
+  if (node.sourceId) {
+    const idDeclarations = parsed.idRules.get(node.sourceId);
+    if (idDeclarations) {
+      Object.assign(raw, idDeclarations);
     }
   }
   const ownClasses = node.sourceClassNames ?? [];

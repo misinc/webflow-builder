@@ -173,6 +173,7 @@ interface WebflowApi {
   elementPresets: {
     DOM: unknown;
     DivBlock?: unknown;
+    LinkBlock?: unknown;
     Blockquote?: unknown;
     TextBlock?: unknown;
     Image?: unknown;
@@ -355,9 +356,9 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
     }
     if (node.tag === "button") {
       // A Webflow Button element is text-only and can't hold children — a CTA
-      // with an icon + label collapses to the default "Button Text". Create it as
-      // a link block (like <a>), which holds children, same as the pills.
-      return "a";
+      // with an icon + label collapses to the default "Button Text" with its
+      // children hoisted out. A Link Block holds children (icon + label).
+      return this.api.elementPresets.LinkBlock ?? this.api.elementPresets.DivBlock ?? "a";
     }
     return node.tag || this.api.elementPresets.DOM;
   }

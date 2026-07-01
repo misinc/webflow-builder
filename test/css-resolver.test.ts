@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  collectRawDeclarations,
   normalizeResolvedLayout,
   parseCompiledCss,
   resolveClasses,
@@ -176,6 +177,37 @@ describe("css-resolver layout normalization (scroll-deck scaffolding)", () => {
     const sidebar = normalizeResolvedLayout({ position: "sticky", top: "24px", display: "grid" });
     expect(sidebar.position).toBe("sticky");
     expect(sidebar.top).toBe("24px");
+  });
+});
+
+describe("css-resolver id rules + theme-scoped variables", () => {
+  const parsed = parseCompiledCss(
+    ".theme-x { --section-warm: #ffefcf; }" +
+      ".theme-x #services { background: var(--section-warm); }" +
+      ".theme-x #services h2 { color: red; }"
+  );
+
+  it("captures a theme-scoped #id rule keyed by id, and non-root vars", () => {
+    expect(parsed.idRules.get("services")).toEqual({ background: "var(--section-warm)" });
+    // the descendant `#services h2` targets h2, not #services — not an id rule
+    expect(parsed.idRules.get("services")?.color).toBeUndefined();
+    expect(parsed.variables.get("--section-warm")).toBe("#ffefcf");
+  });
+
+  it("merges the #id rule into a node with that sourceId", () => {
+    const decls = collectRawDeclarations(
+      { tag: "section", sourceClassNames: [], sourceId: "services" },
+      new Set(),
+      parsed
+    );
+    expect(decls.background).toBe("var(--section-warm)");
+    const { properties, bindings } = resolveDeclarationsWithBindings(decls, parsed.variables);
+    expect(properties.background).toBe("#ffefcf");
+    expect(bindings).toContainEqual({
+      property: "background",
+      variableName: "section-warm",
+      value: "#ffefcf"
+    });
   });
 });
 

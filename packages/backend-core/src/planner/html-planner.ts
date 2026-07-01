@@ -528,6 +528,7 @@ function buildNodeFromElement(input: {
     tag,
     classNames,
     sourceClassNames: sourceClasses,
+    sourceId: input.element.getAttribute("id")?.trim() || undefined,
     textContent,
     children
   }, input.sectionKey);

@@ -7,6 +7,8 @@ export interface BuildNode {
   label?: string;
   classNames: string[];
   sourceClassNames?: string[];
+  /** The source element's `id` attribute, for resolving `#id` CSS rules. */
+  sourceId?: string;
   textContent?: string;
   /** Raw HTML to embed verbatim (e.g. an inline SVG icon) — rendered as a Webflow Embed. */
   embedHtml?: string;
@@ -160,6 +162,7 @@ export const buildNodeSchema: z.ZodType<BuildNode> = z.lazy(() =>
     label: z.string().optional(),
     classNames: z.array(z.string()),
     sourceClassNames: z.array(z.string()).optional(),
+    sourceId: z.string().optional(),
     textContent: z.string().optional(),
     embedHtml: z.string().optional(),
     children: z.array(buildNodeSchema)
