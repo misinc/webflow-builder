@@ -1805,9 +1805,34 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       activeSectionError:
         (selectedSectionId ? sectionErrorsById[selectedSectionId] : null) ?? error,
       selectSection: (sectionId: string) => setSelectedSectionId(sectionId),
-      // Re-insert a completed section: select it and clear cached run state so
-      // the skeleton is regenerated from scratch on the next screen.
-      reinsertSection: (sectionId: string) => resetSectionRunState(sectionId),
+      // Re-insert a completed section: select it, clear cached run state so the
+      // skeleton regenerates from scratch, and flip its status back to
+      // in-progress in the list (the backend catches up when the skeleton is
+      // regenerated on the next screen).
+      reinsertSection: (sectionId: string) => {
+        resetSectionRunState(sectionId);
+        const pageId = designerContext?.pageId;
+        if (!pageId) {
+          return;
+        }
+        setQueueByPageId((current) => {
+          const queue = current[pageId];
+          if (!queue) {
+            return current;
+          }
+          return {
+            ...current,
+            [pageId]: {
+              ...queue,
+              items: queue.items.map((item) =>
+                item.repoSectionId === sectionId
+                  ? { ...item, status: "in_progress" }
+                  : item
+              )
+            }
+          };
+        });
+      },
       startSectionBuild,
       regenerateSkeleton,
       beginSkeletonEdit,
