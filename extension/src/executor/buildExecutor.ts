@@ -133,8 +133,8 @@ async function buildNodeTree(params: {
   }
   const setNodeAttribute = params.bridge.setNodeAttribute?.bind(params.bridge);
   if (params.node.type === "embed" && setNodeAttribute) {
-    // Inline SVG can't be injected via the Designer API — leave a labeled
-    // icon-embed placeholder tagged with the icon name for manual insertion.
+    // Icon embeds render as an Image element (see bridge.getInsertionSpec). Tag it
+    // with the source icon name so the user knows which asset to drop in.
     throwIfAborted(params.signal);
     await withDesignerRetry("setNodeAttribute", params.signal, () =>
       setNodeAttribute(created.id, "data-icon", iconNameFromClasses(params.node.sourceClassNames))

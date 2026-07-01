@@ -332,6 +332,12 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
   }
 
   private getInsertionSpec(node: BuildNode): unknown {
+    // Inline SVG icons can't be injected via the Designer API. Represent them as
+    // a real Image element — a visible, asset-ready placeholder inside the link —
+    // instead of an empty icon-embed div.
+    if (node.type === "embed" && node.classNames.some((name) => name.startsWith("icon-embed"))) {
+      return this.api.elementPresets.Image ?? this.api.elementPresets.DOM;
+    }
     if (node.tag === "img") {
       return this.api.elementPresets.Image ?? this.api.elementPresets.DOM;
     }

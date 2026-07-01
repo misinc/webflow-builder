@@ -279,7 +279,11 @@ function generatedClassNames(input: {
     ) {
       if (
         linkChildren.length > 1 &&
-        linkChildren.every((child) => (child.children ?? []).every(isDecorativeEmbed))
+        linkChildren.every((child) =>
+          (child.children ?? []).every(
+            (grandchild) => isDecorativeEmbed(grandchild) || grandchild.type === "text"
+          )
+        )
       ) {
         return [`${sectionKey}_pill_list`];
       }
@@ -529,6 +533,21 @@ function buildNodeFromElement(input: {
         fallback: "placeholder"
       });
     }
+  }
+
+  // Mixed content: an element with BOTH direct text and child elements (e.g. a
+  // pill link with an icon + label). Webflow can't hold direct text on a
+  // container that has children, so move the text into a trailing text child.
+  if (node.textContent && node.textContent.trim().length > 0 && node.children.length > 0) {
+    node.children.push({
+      id: `${node.id}-text`,
+      type: "text",
+      tag: "span",
+      classNames: [],
+      textContent: node.textContent,
+      children: []
+    });
+    node.textContent = undefined;
   }
 
   return node;
