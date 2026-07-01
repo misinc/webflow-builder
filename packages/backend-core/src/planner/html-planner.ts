@@ -483,7 +483,11 @@ function buildNodeFromElement(input: {
   assetBindings: SkeletonPlan["assetBindings"];
   sourceClassNames: Set<string>;
 }): BuildNode | null {
-  const tag = elementTag(input.element);
+  const rawTag = elementTag(input.element);
+  // Render <button> CTAs as links (<a>). A Webflow Button / Link Block element is
+  // text-only in practice and hoists an icon + label out; the <a> path holds
+  // children (same as the pills). Naming/type treat <a> and <button> identically.
+  const tag = rawTag === "button" ? "a" : rawTag;
   if (SKIPPED_TAGS.has(tag)) {
     input.warnings.push(warning("html-removed-cruft", `Removed <${tag}> from the HTML skeleton.`));
     return null;
