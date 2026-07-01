@@ -228,10 +228,12 @@ function generatedClassNames(input: {
   }
   if (/^h[1-6]$/.test(tag)) {
     return [
+      // Map each heading to its OWN level's class only. Never cross-fall to
+      // heading-style-h2, or an <h3> inherits the big section-heading size.
       sharedOrFallback(
         sharedStyleContext,
         "heading",
-        [`heading-style-${tag}`, "heading-style-h2", "heading"],
+        [`heading-style-${tag}`],
         `heading-style-${tag}`
       )
     ];
