@@ -406,6 +406,45 @@ export const LAYOUT_PROPERTIES = new Set([
   "order"
 ]);
 
+/**
+ * Normalize resolved layout for a clean, JS-free rebuild.
+ *
+ * Scroll-animated decks position their items with `position: absolute` + per-item
+ * `top` offsets (and a fixed-height, scroll-pinned container). Since every deck
+ * item maps to ONE client-first class, they all collapse to the same offset and
+ * pile up. Strip the out-of-flow scaffolding so items flow again:
+ *  - drop `position: absolute|fixed` (and `sticky` when it's paired with a fixed
+ *    pixel height — the scroll-pin signature) plus insets and z-index,
+ *  - drop the fixed pixel height that pinned the container,
+ *  - a `gap` on a `block` box does nothing, so a leftover gap means a flex/grid
+ *    stack was intended (the block came from the animation override) — restore grid.
+ */
+export function normalizeResolvedLayout(
+  declarations: Record<string, string>
+): Record<string, string> {
+  const out = { ...declarations };
+  const position = out.position?.toLowerCase();
+  const hasFixedPxHeight = typeof out.height === "string" && /^\d+(\.\d+)?px$/.test(out.height.trim());
+  const stripPositioning =
+    position === "absolute" || position === "fixed" || (position === "sticky" && hasFixedPxHeight);
+  if (stripPositioning) {
+    delete out.position;
+    delete out.top;
+    delete out.right;
+    delete out.bottom;
+    delete out.left;
+    delete out.inset;
+    delete out["z-index"];
+    if (hasFixedPxHeight) {
+      delete out.height;
+    }
+  }
+  if (out.gap && (!out.display || out.display.toLowerCase() === "block")) {
+    out.display = "grid";
+  }
+  return out;
+}
+
 /** Split resolved declarations into structural (layout) vs visual (skin). */
 export function splitLayoutVisual(declarations: Record<string, string>): {
   layout: Record<string, string>;

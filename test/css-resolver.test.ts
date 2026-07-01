@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  normalizeResolvedLayout,
   parseCompiledCss,
   resolveClasses,
   resolveDeclarationsWithBindings,
@@ -131,6 +132,48 @@ describe("css-resolver variable bindings", () => {
     expect(properties["--accent"]).toBeUndefined();
     expect(properties["-webkit-backdrop-filter"]).toBeUndefined();
     expect(properties.color).toBe("#111");
+  });
+});
+
+describe("css-resolver layout normalization (scroll-deck scaffolding)", () => {
+  it("strips absolute positioning off deck items so they flow", () => {
+    const card = normalizeResolvedLayout({
+      display: "grid",
+      "grid-template-columns": "auto 1fr",
+      gap: "18px",
+      position: "absolute",
+      top: "0",
+      left: "0",
+      right: "0",
+      "z-index": "1"
+    });
+    expect(card.position).toBeUndefined();
+    expect(card.top).toBeUndefined();
+    expect(card["z-index"]).toBeUndefined();
+    expect(card.display).toBe("grid");
+    expect(card["grid-template-columns"]).toBe("auto 1fr");
+  });
+
+  it("unpins a scroll-pinned container (sticky + fixed height) and restores grid+gap", () => {
+    const list = normalizeResolvedLayout({
+      display: "block",
+      gap: "18px",
+      height: "700px",
+      position: "sticky",
+      top: "132px"
+    });
+    expect(list.position).toBeUndefined();
+    expect(list.height).toBeUndefined();
+    // gap on a block box → the author meant a grid/flex stack
+    expect(list.display).toBe("grid");
+    expect(list.gap).toBe("18px");
+  });
+
+  it("keeps position:relative and a bare sticky sidebar (no fixed height)", () => {
+    expect(normalizeResolvedLayout({ position: "relative", display: "grid" }).position).toBe("relative");
+    const sidebar = normalizeResolvedLayout({ position: "sticky", top: "24px", display: "grid" });
+    expect(sidebar.position).toBe("sticky");
+    expect(sidebar.top).toBe("24px");
   });
 });
 

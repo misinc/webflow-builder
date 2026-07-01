@@ -10,6 +10,7 @@ import {
 import { isBuilderClassName, isReservedStyleGuideClassName } from "@wfb/shared/client-first.js";
 import {
   collectRawDeclarations,
+  normalizeResolvedLayout,
   parseCompiledCss,
   resolveDeclarationsWithBindings,
   splitLayoutVisual
@@ -109,7 +110,11 @@ export function buildResolvedStylingFromSkeleton(input: {
 
   walk(input.skeleton.elementTree, new Set<string>(), (node, ancestors) => {
     const raw = collectRawDeclarations(node, ancestors, parsed);
-    const { properties, bindings } = resolveDeclarationsWithBindings(raw, parsed.variables);
+    const resolved = resolveDeclarationsWithBindings(raw, parsed.variables);
+    // Strip scroll-animation positioning scaffolding so decked/absolute items
+    // flow instead of piling up (see normalizeResolvedLayout).
+    const properties = normalizeResolvedLayout(resolved.properties);
+    const bindings = resolved.bindings.filter((binding) => properties[binding.property] !== undefined);
     if (Object.keys(properties).length === 0) {
       return;
     }
