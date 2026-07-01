@@ -362,7 +362,8 @@ export async function executeBuildPlan(params: {
           params.bridge.bindVariable(
             runtimeNodeId,
             binding.property,
-            binding.variableName
+            binding.variableName,
+            binding.value
           )
         );
       } catch (error) {
@@ -547,7 +548,8 @@ export async function applyStylingPlan(params: {
           params.bridge.bindVariable(
             targetNodeId,
             binding.property,
-            binding.variableName
+            binding.variableName,
+            binding.value
           )
         );
       } catch (error) {

@@ -81,7 +81,8 @@ export interface WebflowDesignerBridge {
   bindVariable(
     nodeId: string,
     property: string,
-    variableName: string
+    variableName: string,
+    value?: string
   ): Promise<void>;
   bindAsset(
     nodeId: string,
@@ -1005,7 +1006,8 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
   async bindVariable(
     nodeId: string,
     property: string,
-    variableName: string
+    variableName: string,
+    value?: string
   ): Promise<void> {
     const element = this.elementsById.get(nodeId);
     if (!element) {
@@ -1013,7 +1015,24 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
     }
 
     const collection = await this.api.getDefaultVariableCollection();
-    const variable = await collection?.getVariableByName(variableName);
+    let variable = await collection?.getVariableByName(variableName);
+    if (!variable && value && collection) {
+      // Fall back to matching an existing variable by value when the token name
+      // doesn't line up with the target site's variable names.
+      const normalized = value.trim().toLowerCase();
+      for (const candidate of await collection.getAllVariables()) {
+        const candidateValue = candidate.get
+          ? await candidate.get().catch(() => undefined)
+          : undefined;
+        if (
+          (typeof candidateValue === "string" || typeof candidateValue === "number") &&
+          String(candidateValue).trim().toLowerCase() === normalized
+        ) {
+          variable = candidate;
+          break;
+        }
+      }
+    }
     const style = await this.getLastAppliedStyle(element);
     if (!variable || !style?.setProperty) {
       return;

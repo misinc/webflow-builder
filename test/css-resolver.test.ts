@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   parseCompiledCss,
   resolveClasses,
+  resolveDeclarationsWithBindings,
   resolveDescendantRules,
   resolveValue,
   splitLayoutVisual
@@ -85,5 +86,30 @@ describe("css-resolver descendant/element rules", () => {
     expect(p.color).toBe("#8f6a35");
     // no matching ancestor -> nothing
     expect(resolveDescendantRules({ tag: "h2" }, new Set(["unrelated"]), parsed)).toEqual({});
+  });
+});
+
+describe("css-resolver variable bindings", () => {
+  const parsed = parseCompiledCss(
+    ":root { --mis-primary: #a62025; --accent: var(--mis-primary); --pad: 8px; }"
+  );
+
+  it("binds pure var() properties to the underlying token, keeping a fallback value", () => {
+    const { properties, bindings } = resolveDeclarationsWithBindings(
+      { color: "var(--accent)", padding: "var(--pad)", background: "#ffffff" },
+      parsed.variables
+    );
+    expect(properties.color).toBe("#a62025");
+    expect(properties.padding).toBe("8px");
+    expect(properties.background).toBe("#ffffff");
+    // follows --accent -> --mis-primary (the token that actually holds the literal)
+    expect(bindings).toContainEqual({
+      property: "color",
+      variableName: "mis-primary",
+      value: "#a62025"
+    });
+    expect(bindings).toContainEqual({ property: "padding", variableName: "pad", value: "8px" });
+    // a literal (non-var) value produces no binding
+    expect(bindings.some((binding) => binding.property === "background")).toBe(false);
   });
 });

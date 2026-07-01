@@ -9,9 +9,9 @@ import {
 } from "@wfb/shared/contracts.js";
 import { isBuilderClassName, isReservedStyleGuideClassName } from "@wfb/shared/client-first.js";
 import {
+  collectRawDeclarations,
   parseCompiledCss,
-  resolveClasses,
-  resolveDescendantRules,
+  resolveDeclarationsWithBindings,
   splitLayoutVisual
 } from "./css-resolver.js";
 
@@ -72,13 +72,17 @@ export function buildResolvedStylingFromSkeleton(input: {
 }): StylingPlan {
   const parsed = parseCompiledCss(input.cssText);
   const styleDefinitions = new Map<string, Record<string, string>>();
+  const variableBindings: Array<{
+    nodeId: string;
+    property: string;
+    variableName: string;
+    value: string;
+  }> = [];
 
   walk(input.skeleton.elementTree, new Set<string>(), (node, ancestors) => {
-    const resolved = {
-      ...resolveClasses(node.sourceClassNames ?? [], parsed),
-      ...resolveDescendantRules(node, ancestors, parsed)
-    };
-    if (Object.keys(resolved).length === 0) {
+    const raw = collectRawDeclarations(node, ancestors, parsed);
+    const { properties, bindings } = resolveDeclarationsWithBindings(raw, parsed.variables);
+    if (Object.keys(properties).length === 0) {
       return;
     }
     const target = targetClassFor(node);
@@ -87,7 +91,15 @@ export function buildResolvedStylingFromSkeleton(input: {
     if (!target || isReservedStyleGuideClassName(target) || styleDefinitions.has(target)) {
       return;
     }
-    styleDefinitions.set(target, resolved);
+    styleDefinitions.set(target, properties);
+    for (const binding of bindings) {
+      variableBindings.push({
+        nodeId: node.id,
+        property: binding.property,
+        variableName: binding.variableName,
+        value: binding.value
+      });
+    }
   });
 
   const suggestedNewClasses = [...styleDefinitions.keys()];
@@ -101,7 +113,7 @@ export function buildResolvedStylingFromSkeleton(input: {
       // Layout first (skeleton gate), then visual (styling gate) — order only.
       return { className, properties: { ...layout, ...visual }, shared: false };
     }),
-    variableBindings: [],
+    variableBindings,
     reusableClasses: [],
     suggestedNewClasses,
     requiredClassNames: [],

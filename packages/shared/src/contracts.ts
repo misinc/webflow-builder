@@ -182,7 +182,10 @@ export const styleDefinitionSchema = z.object({
 export const variableBindingSchema = z.object({
   nodeId: z.string().min(1),
   property: z.string().min(1),
-  variableName: z.string().min(1)
+  variableName: z.string().min(1),
+  // Resolved literal (e.g. #A62025) used as a fallback when the variable can't
+  // be matched by name in the target Webflow site.
+  value: z.string().optional()
 });
 
 export const assetBindingSchema = z.object({

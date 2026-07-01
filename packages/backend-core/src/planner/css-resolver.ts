@@ -189,6 +189,93 @@ export function resolveDescendantRules(
   return resolved;
 }
 
+const PURE_VAR_VALUE = /^var\(\s*(--[A-Za-z0-9_-]+)\s*(?:,[^()]*)?\)$/;
+
+/** Follow a var() chain to the token that actually holds a literal value. */
+function resolveVarChain(
+  name: string,
+  variables: Map<string, string>,
+  depth = 0
+): { token: string; value: string } | null {
+  if (depth > 8) {
+    return null;
+  }
+  const raw = variables.get(name);
+  if (raw === undefined) {
+    return null;
+  }
+  const nested = PURE_VAR_VALUE.exec(raw.trim());
+  if (nested) {
+    return resolveVarChain(nested[1], variables, depth + 1);
+  }
+  return { token: name.replace(/^--/, ""), value: resolveValue(raw, variables).trim() };
+}
+
+export interface ResolvedDeclarations {
+  properties: Record<string, string>;
+  bindings: Array<{ property: string; variableName: string; value: string }>;
+}
+
+/**
+ * Resolve declarations AND, for any property whose whole value is a single
+ * var() reference, record a binding to the underlying design token (with the
+ * resolved literal kept as a fallback value).
+ */
+export function resolveDeclarationsWithBindings(
+  raw: Record<string, string>,
+  variables: Map<string, string>
+): ResolvedDeclarations {
+  const properties: Record<string, string> = {};
+  const bindings: ResolvedDeclarations["bindings"] = [];
+  for (const [prop, rawValue] of Object.entries(raw)) {
+    const property = prop.toLowerCase();
+    const pure = PURE_VAR_VALUE.exec(rawValue.trim());
+    if (pure) {
+      const chain = resolveVarChain(pure[1], variables);
+      if (chain && chain.value) {
+        properties[property] = chain.value;
+        bindings.push({ property, variableName: chain.token, value: chain.value });
+        continue;
+      }
+    }
+    const value = resolveValue(rawValue, variables).trim();
+    if (value) {
+      properties[property] = value;
+    }
+  }
+  return { properties, bindings };
+}
+
+/** Merge the raw (unresolved) declarations that apply to a node. */
+export function collectRawDeclarations(
+  node: { tag: string; sourceClassNames?: string[] },
+  ancestorSourceClasses: Set<string>,
+  parsed: ParsedCss
+): Record<string, string> {
+  const raw: Record<string, string> = {};
+  for (const className of node.sourceClassNames ?? []) {
+    const declarations = parsed.classes.get(className);
+    if (declarations) {
+      Object.assign(raw, declarations);
+    }
+  }
+  const ownClasses = node.sourceClassNames ?? [];
+  for (const rule of parsed.descendantRules) {
+    if (!ancestorSourceClasses.has(rule.ancestorClass)) {
+      continue;
+    }
+    const matches = rule.matchTag
+      ? node.tag === rule.matchTag
+      : rule.matchClass
+        ? ownClasses.includes(rule.matchClass)
+        : false;
+    if (matches) {
+      Object.assign(raw, rule.declarations);
+    }
+  }
+  return raw;
+}
+
 /** Properties that determine structure/layout (the skeleton gate). */
 export const LAYOUT_PROPERTIES = new Set([
   "display",
