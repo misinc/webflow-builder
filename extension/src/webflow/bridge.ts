@@ -353,6 +353,12 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
     if (node.tag === "div") {
       return this.api.elementPresets.DivBlock ?? "div";
     }
+    if (node.tag === "button") {
+      // A Webflow Button element is text-only and can't hold children — a CTA
+      // with an icon + label collapses to the default "Button Text". Create it as
+      // a link block (like <a>), which holds children, same as the pills.
+      return "a";
+    }
     return node.tag || this.api.elementPresets.DOM;
   }
 

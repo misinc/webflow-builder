@@ -417,7 +417,9 @@ export const LAYOUT_PROPERTIES = new Set([
  *    pixel height — the scroll-pin signature) plus insets and z-index,
  *  - drop the fixed pixel height that pinned the container,
  *  - a `gap` on a `block` box does nothing, so a leftover gap means a flex/grid
- *    stack was intended (the block came from the animation override) — restore grid.
+ *    stack was intended (the block came from the animation override) — restore a
+ *    flex column so items stretch to full width (absolute items were full-width
+ *    via left:0/right:0, which we just removed).
  */
 export function normalizeResolvedLayout(
   declarations: Record<string, string>
@@ -440,7 +442,8 @@ export function normalizeResolvedLayout(
     }
   }
   if (out.gap && (!out.display || out.display.toLowerCase() === "block")) {
-    out.display = "grid";
+    out.display = "flex";
+    out["flex-direction"] = "column";
   }
   return out;
 }

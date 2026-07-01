@@ -154,7 +154,7 @@ describe("css-resolver layout normalization (scroll-deck scaffolding)", () => {
     expect(card["grid-template-columns"]).toBe("auto 1fr");
   });
 
-  it("unpins a scroll-pinned container (sticky + fixed height) and restores grid+gap", () => {
+  it("unpins a scroll-pinned container (sticky + fixed height) into a flex column", () => {
     const list = normalizeResolvedLayout({
       display: "block",
       gap: "18px",
@@ -164,8 +164,10 @@ describe("css-resolver layout normalization (scroll-deck scaffolding)", () => {
     });
     expect(list.position).toBeUndefined();
     expect(list.height).toBeUndefined();
-    // gap on a block box → the author meant a grid/flex stack
-    expect(list.display).toBe("grid");
+    // gap on a block box → the author meant a stack; flex column so items
+    // stretch to full width (they were full-width via the removed left/right:0)
+    expect(list.display).toBe("flex");
+    expect(list["flex-direction"]).toBe("column");
     expect(list.gap).toBe("18px");
   });
 
