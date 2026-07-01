@@ -91,6 +91,37 @@ function elementTag(node: HTMLElement): string {
   return node.rawTagName.toLowerCase();
 }
 
+// Inline-style properties worth keeping as per-instance accents. Excludes
+// animation/layout scaffolding (opacity, transform, position, width, …) that
+// litters Figma exports and shouldn't become styles.
+const INLINE_STYLE_SAFELIST = new Set([
+  "color",
+  "background",
+  "background-color",
+  "border-color",
+  "border-left-color",
+  "fill",
+  "stroke"
+]);
+
+function inlineStylesFor(element: HTMLElement): Record<string, string> | undefined {
+  const style = element.getAttribute("style");
+  if (!style) {
+    return undefined;
+  }
+  const result: Record<string, string> = {};
+  for (const declaration of style.split(";")) {
+    const colon = declaration.indexOf(":");
+    if (colon < 0) continue;
+    const prop = declaration.slice(0, colon).trim().toLowerCase();
+    const value = declaration.slice(colon + 1).trim();
+    if (value && INLINE_STYLE_SAFELIST.has(prop)) {
+      result[prop] = value;
+    }
+  }
+  return Object.keys(result).length > 0 ? result : undefined;
+}
+
 function classNamesFor(node: HTMLElement): string[] {
   return dedupe(
     (node.getAttribute("class") ?? "")
@@ -271,6 +302,12 @@ function generatedClassNames(input: {
           "text-size-medium"
         )
       ];
+    }
+    // A div wrapping only a decorative icon (e.g. a circular icon badge) — give it
+    // its own class so it keeps its ring/background instead of colliding with the
+    // generic `_content` catch-all.
+    if (children.length === 1 && !textContent && isDecorativeEmbed(children[0])) {
+      return [`${sectionKey}_icon`];
     }
     if (
       linkChildren.length > 1 ||
@@ -529,6 +566,7 @@ function buildNodeFromElement(input: {
     classNames,
     sourceClassNames: sourceClasses,
     sourceId: input.element.getAttribute("id")?.trim() || undefined,
+    inlineStyles: inlineStylesFor(input.element),
     textContent,
     children
   }, input.sectionKey);

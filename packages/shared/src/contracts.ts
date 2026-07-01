@@ -9,6 +9,9 @@ export interface BuildNode {
   sourceClassNames?: string[];
   /** The source element's `id` attribute, for resolving `#id` CSS rules. */
   sourceId?: string;
+  /** Safelisted inline `style` accents (color/background/border-color/…) — kept
+   *  for per-instance combo classes (e.g. an icon's `currentColor` ring). */
+  inlineStyles?: Record<string, string>;
   textContent?: string;
   /** Raw HTML to embed verbatim (e.g. an inline SVG icon) — rendered as a Webflow Embed. */
   embedHtml?: string;
@@ -163,6 +166,7 @@ export const buildNodeSchema: z.ZodType<BuildNode> = z.lazy(() =>
     classNames: z.array(z.string()),
     sourceClassNames: z.array(z.string()).optional(),
     sourceId: z.string().optional(),
+    inlineStyles: z.record(z.string(), z.string()).optional(),
     textContent: z.string().optional(),
     embedHtml: z.string().optional(),
     children: z.array(buildNodeSchema)

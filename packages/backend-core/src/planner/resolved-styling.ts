@@ -74,10 +74,6 @@ function splitBaseAndModifiers(sourceClasses: string[]): { base: string[]; modif
   };
 }
 
-function classSlug(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-}
-
 /**
  * Pick the client-first class a node's resolved CSS should attach to: prefer a
  * section-scoped functional class; fall back to a reusable base class so
@@ -125,12 +121,31 @@ export function buildResolvedStylingFromSkeleton(input: {
   const parsed = parseCompiledCss(input.cssText);
   const styleDefinitions = new Map<string, Record<string, string>>();
   const comboClasses = new Set<string>();
+  const comboByKey = new Map<string, string>();
+  const comboCountByTarget = new Map<string, number>();
   const variableBindings: Array<{
     nodeId: string;
     property: string;
     variableName: string;
     value: string;
   }> = [];
+
+  // Get (or create) the combo class for a target + override, deduped by content so
+  // instances with the same override (e.g. two same-colored icons) share a class.
+  const comboClassFor = (target: string, props: Record<string, string>): string => {
+    const key = `${target}|${JSON.stringify(Object.entries(props).sort())}`;
+    const existing = comboByKey.get(key);
+    if (existing) {
+      return existing;
+    }
+    const index = (comboCountByTarget.get(target) ?? 0) + 1;
+    comboCountByTarget.set(target, index);
+    const name = `${target}_v${index}`;
+    comboByKey.set(key, name);
+    comboClasses.add(name);
+    styleDefinitions.set(name, props);
+    return name;
+  };
 
   walk(input.skeleton.elementTree, new Set<string>(), (node, ancestors) => {
     const { base, modifiers } = splitBaseAndModifiers(node.sourceClassNames ?? []);
@@ -178,25 +193,22 @@ export function buildResolvedStylingFromSkeleton(input: {
       }
     }
 
-    // COMBO → a per-instance modifier class (e.g. this card's accent) applied on
-    // top of the shared base class. Resolved from the modifier classes alone.
-    if (target && modifiers.length > 0) {
-      const modifierRaw: Record<string, string> = {};
-      for (const modifier of modifiers) {
-        Object.assign(modifierRaw, parsed.classes.get(modifier) ?? {});
-      }
-      const comboResolved = resolveDeclarationsWithBindings(modifierRaw, parsed.variables);
+    // COMBO → a per-instance override applied on top of the shared base class,
+    // from BEM `--modifier` classes and/or safelisted inline styles (e.g. a card's
+    // accent border, or an icon's inline color that drives a currentColor ring).
+    const overrideRaw: Record<string, string> = {};
+    for (const modifier of modifiers) {
+      Object.assign(overrideRaw, parsed.classes.get(modifier) ?? {});
+    }
+    Object.assign(overrideRaw, node.inlineStyles ?? {});
+    if (target && Object.keys(overrideRaw).length > 0) {
+      const comboResolved = resolveDeclarationsWithBindings(overrideRaw, parsed.variables);
       const comboProps = normalizeResolvedLayout(comboResolved.properties);
       for (const key of SCAFFOLD_KEYS) {
         delete comboProps[key];
       }
       if (Object.keys(comboProps).length > 0) {
-        const suffix = classSlug(modifiers[0].split("--").pop() ?? "") || String(comboClasses.size + 1);
-        const comboClass = `${target}_v${suffix}`;
-        if (!styleDefinitions.has(comboClass)) {
-          styleDefinitions.set(comboClass, comboProps);
-          comboClasses.add(comboClass);
-        }
+        const comboClass = comboClassFor(target, comboProps);
         if (!node.classNames.includes(comboClass)) {
           node.classNames.push(comboClass);
         }

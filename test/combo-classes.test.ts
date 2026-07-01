@@ -54,3 +54,30 @@ describe("per-instance combo modifier classes", () => {
     expect(cards.some((c) => c.includes(comboClass))).toBe(true);
   });
 });
+
+describe("inline-style per-instance combos (e.g. currentColor icon rings)", () => {
+  const ICON_CSS = ".icon { border: 1px solid currentColor; border-radius: 999px; }";
+  const ICON_HTML =
+    `<section><div class="row">` +
+    `<div class="icon" style="color: #ff0000;"><svg viewBox="0 0 1 1"><path d="M0 0"/></svg></div>` +
+    `<div class="icon" style="color: #00ff00; opacity: 0;"><svg viewBox="0 0 1 1"><path d="M0 0"/></svg></div>` +
+    `</div></section>`;
+
+  it("captures safelisted inline colors as combos and ignores animation scaffolding", () => {
+    const skeleton = htmlToSkeletonPlan({ metadata, sourceCode: ICON_HTML })!;
+    const plan = buildResolvedStylingFromSkeleton({
+      metadata,
+      mode: "fullAssist",
+      skeleton,
+      cssText: ICON_CSS
+    });
+    const combos = plan.styleDefinitions.filter((d) => d.combo);
+    expect(combos).toHaveLength(2);
+    expect(combos.map((c) => c.properties.color).sort()).toEqual(["#00ff00", "#ff0000"]);
+    // opacity (animation scaffolding) is not a safelisted inline style
+    expect(combos.some((c) => "opacity" in c.properties)).toBe(false);
+    // the base icon class keeps its currentColor ring
+    const base = plan.styleDefinitions.find((d) => d.className.endsWith("_icon") && !d.combo);
+    expect(base?.properties.border).toBe("1px solid currentColor");
+  });
+});
