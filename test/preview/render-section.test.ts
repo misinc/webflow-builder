@@ -3,7 +3,6 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "vitest";
 import { htmlToSkeletonPlan } from "@wfb/backend-core/planner/html-planner.js";
-import { buildFallbackStylingFromSkeleton } from "@wfb/backend-core/planner/style-fallback.js";
 import { buildResolvedStylingFromSkeleton } from "@wfb/backend-core/planner/resolved-styling.js";
 import { renderSectionPreviewDocument } from "@wfb/backend-core/preview/render-preview.js";
 import type { StylingPlan } from "@wfb/shared/contracts.js";
@@ -29,7 +28,7 @@ function columnsOf(plan: StylingPlan): string {
 }
 
 describe("preview harness: section -> client-first HTML+CSS", () => {
-  it("renders BEFORE (guessed) and AFTER (resolved) previews", () => {
+  it("renders the resolved client-first preview", () => {
     const sourceCode = readFileSync(SECTION_HTML, "utf8");
     const cssText = existsSync(CSS_FILE) ? readFileSync(CSS_FILE, "utf8") : "";
 
@@ -49,51 +48,29 @@ describe("preview harness: section -> client-first HTML+CSS", () => {
       return;
     }
 
-    // BEFORE: current guessing pipeline
-    const before = buildFallbackStylingFromSkeleton({
-      metadata,
-      mode: "skeletonThenStyle",
-      sectionContext: {
-        sourceCode,
-        relevantStylesheets: cssText ? [{ path: CSS_FILE, content: cssText }] : [],
-        componentName: metadata.sectionName
-      } as never,
-      sharedStyleContext: { classes: [], variables: [] } as never,
-      skeleton
-    });
-
-    // AFTER: deterministic resolver
-    const after = buildResolvedStylingFromSkeleton({
+    const styling = buildResolvedStylingFromSkeleton({
       metadata,
       mode: "skeletonThenStyle",
       skeleton,
       cssText
     });
 
+    const doc = renderSectionPreviewDocument({
+      title: `${metadata.sectionName} — preview`,
+      skeleton,
+      styling
+    });
+
     const outDir = join(repoRoot, "preview-output");
     mkdirSync(outDir, { recursive: true });
+    const outPath = join(outDir, `${OUT_NAME}.html`);
+    writeFileSync(outPath, doc, "utf8");
 
-    const beforeDoc = renderSectionPreviewDocument({
-      title: `${metadata.sectionName} — BEFORE (guessed)`,
-      skeleton,
-      styling: before
-    });
-    const afterDoc = renderSectionPreviewDocument({
-      title: `${metadata.sectionName} — AFTER (resolved)`,
-      skeleton,
-      styling: after
-    });
-
-    writeFileSync(join(outDir, `${OUT_NAME}-before.html`), beforeDoc, "utf8");
-    writeFileSync(join(outDir, `${OUT_NAME}-after.html`), afterDoc, "utf8");
-
-    console.log(`\n[preview] wrote ${OUT_NAME}-before.html and ${OUT_NAME}-after.html`);
-    console.log(`[preview] BEFORE columns: ${columnsOf(before)}`);
-    console.log(`[preview] AFTER  columns: ${columnsOf(after)}`);
-    console.log(`[preview] AFTER style classes (${after.styleDefinitions.length}):`);
-    for (const def of after.styleDefinitions) {
-      console.log(`  .${def.className}: ${Object.keys(def.properties).length} props`);
-    }
+    console.log(`\n[preview] wrote ${outPath}`);
+    console.log(`[preview] columns: ${columnsOf(styling)}`);
+    console.log(
+      `[preview] ${styling.styleDefinitions.length} style classes, ${styling.variableBindings.length} variable bindings`
+    );
     console.log("");
   });
 });

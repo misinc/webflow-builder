@@ -198,26 +198,15 @@ function generatedClassNames(input: {
     (child) =>
       !(child.type === "embed" && child.classNames.some((name) => name.startsWith("icon-embed")))
   );
-  const sourceClassText = sourceClassNames.join(" ");
-
-  if (/\bsolv-mosaic-grid\b|\bmosaic-grid\b/.test(sourceClassText)) {
-    return [`${sectionKey}_grid`];
-  }
-  if (/\bsolv-mosaic-lead\b|\bmosaic-lead\b|\bfeature\b/.test(sourceClassText)) {
-    return [`${sectionKey}_feature`];
-  }
-  if (/\bsolv-mini-stack\b|\bmini-stack\b|\bpill-list\b|\bpills\b/.test(sourceClassText)) {
-    return [`${sectionKey}_pill_list`];
-  }
-  if (/\bsolv-mosaic-cards\b|\bmosaic-cards\b/.test(sourceClassText)) {
-    return [`${sectionKey}_card_list`];
-  }
-  if (/\bsolv-mosaic-card__title\b|\bcard__title\b|\bcard-title\b/.test(sourceClassText)) {
-    return [`${sectionKey}_card_title`];
-  }
-  if (/\bsolv-mosaic-card\b|\bmosaic-card\b/.test(sourceClassText)) {
-    return [`${sectionKey}_card`];
-  }
+  // Client-first names are inferred from element structure below (see the
+  // tag/children heuristics), not from site-specific source-class patterns.
+  const isDecorativeEmbed = (node: BuildNode): boolean =>
+    node.type === "embed" && node.classNames.some((name) => name.startsWith("icon-embed"));
+  const wrapsCard = (node: BuildNode): boolean =>
+    node.classNames.some((name) => name.endsWith("_card")) ||
+    (node.children ?? []).some((child) =>
+      child.classNames.some((name) => name.endsWith("_card"))
+    );
 
   if (tag === "section" || tag === "header" || tag === "footer" || tag === "main") {
     return [`section_${sectionKey}`];
@@ -273,10 +262,13 @@ function generatedClassNames(input: {
       cardChildren.length > 1 ||
       childClassNames.filter((className) => className.endsWith("_card")).length > 1
     ) {
-      if (linkChildren.length > 1 && linkChildren.every((child) => child.children.length === 0)) {
+      if (
+        linkChildren.length > 1 &&
+        linkChildren.every((child) => (child.children ?? []).every(isDecorativeEmbed))
+      ) {
         return [`${sectionKey}_pill_list`];
       }
-      if (childClassNames.filter((className) => className.endsWith("_card")).length > 1) {
+      if (children.filter(wrapsCard).length > 1) {
         return [`${sectionKey}_card_list`];
       }
       return [`${sectionKey}_list`];
@@ -293,6 +285,10 @@ function generatedClassNames(input: {
       childClassNames.some((className) => className.endsWith("_pill_list"))
     ) {
       return [`${sectionKey}_feature`];
+    }
+    if (childTags.has("h3") && !childTags.has("p") && children.some(isDecorativeEmbed)) {
+      // An icon + heading row (no body copy) reads as a card title.
+      return [`${sectionKey}_card_title`];
     }
     if (childTags.has("h3") && childTags.has("p")) {
       return [`${sectionKey}_item`];
