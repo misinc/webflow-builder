@@ -113,18 +113,23 @@ describe("css-resolver variable bindings", () => {
     expect(bindings.some((binding) => binding.property === "background")).toBe(false);
   });
 
-  it("excludes CSS custom-property definitions (--x) — not valid Webflow style props", () => {
-    const withVars = parseCompiledCss(".card { --accent: #a62025; color: #111; padding: 8px; }");
+  it("excludes custom-property (--x) and vendor-prefixed (-webkit-*) props", () => {
+    const withVars = parseCompiledCss(
+      ".card { --accent: #a62025; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); color: #111; }"
+    );
     const decls = resolveClasses(["card"], withVars);
     expect(decls.color).toBe("#111");
-    expect(decls.padding).toBe("8px");
+    // vendor-prefixed dropped, standard property kept (Webflow adds its own prefix)
+    expect(decls["-webkit-backdrop-filter"]).toBeUndefined();
+    expect(decls["backdrop-filter"]).toBe("blur(10px)");
     expect(decls["--accent"]).toBeUndefined();
 
     const { properties } = resolveDeclarationsWithBindings(
-      { "--accent": "#a62025", color: "#111" },
+      { "--accent": "#a62025", "-webkit-backdrop-filter": "blur(10px)", color: "#111" },
       withVars.variables
     );
     expect(properties["--accent"]).toBeUndefined();
+    expect(properties["-webkit-backdrop-filter"]).toBeUndefined();
     expect(properties.color).toBe("#111");
   });
 });

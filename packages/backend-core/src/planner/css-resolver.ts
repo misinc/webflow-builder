@@ -212,7 +212,10 @@ export function resolveDeclarations(
 ): Record<string, string> {
   const resolved: Record<string, string> = {};
   for (const [prop, rawValue] of Object.entries(raw)) {
-    if (prop.startsWith("--")) {
+    // Skip custom-property definitions (--x) and vendor-prefixed properties
+    // (-webkit-*, -moz-*, …). Webflow rejects both as invalid style properties
+    // and applies its own vendor prefixes for the standard property.
+    if (prop.startsWith("-")) {
       continue;
     }
     const value = resolveValue(rawValue, variables).trim();
@@ -301,9 +304,11 @@ export function resolveDeclarationsWithBindings(
   const properties: Record<string, string> = {};
   const bindings: ResolvedDeclarations["bindings"] = [];
   for (const [prop, rawValue] of Object.entries(raw)) {
-    // A CSS custom-property definition (--x: ...) is not a valid Webflow style
-    // property — skip it. Its usage via var(--x) is resolved/bound separately.
-    if (prop.startsWith("--")) {
+    // Custom-property definitions (--x) and vendor-prefixed properties
+    // (-webkit-*, …) are not valid Webflow style properties — skip them. A
+    // custom prop's usage via var(--x) is resolved/bound separately, and Webflow
+    // applies its own vendor prefixes for the standard property.
+    if (prop.startsWith("-")) {
       continue;
     }
     const property = prop.toLowerCase();
