@@ -112,4 +112,19 @@ describe("css-resolver variable bindings", () => {
     // a literal (non-var) value produces no binding
     expect(bindings.some((binding) => binding.property === "background")).toBe(false);
   });
+
+  it("excludes CSS custom-property definitions (--x) — not valid Webflow style props", () => {
+    const withVars = parseCompiledCss(".card { --accent: #a62025; color: #111; padding: 8px; }");
+    const decls = resolveClasses(["card"], withVars);
+    expect(decls.color).toBe("#111");
+    expect(decls.padding).toBe("8px");
+    expect(decls["--accent"]).toBeUndefined();
+
+    const { properties } = resolveDeclarationsWithBindings(
+      { "--accent": "#a62025", color: "#111" },
+      withVars.variables
+    );
+    expect(properties["--accent"]).toBeUndefined();
+    expect(properties.color).toBe("#111");
+  });
 });

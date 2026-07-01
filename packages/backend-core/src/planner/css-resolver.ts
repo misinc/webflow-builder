@@ -142,6 +142,9 @@ export function resolveDeclarations(
 ): Record<string, string> {
   const resolved: Record<string, string> = {};
   for (const [prop, rawValue] of Object.entries(raw)) {
+    if (prop.startsWith("--")) {
+      continue;
+    }
     const value = resolveValue(rawValue, variables).trim();
     if (value) {
       resolved[prop.toLowerCase()] = value;
@@ -228,6 +231,11 @@ export function resolveDeclarationsWithBindings(
   const properties: Record<string, string> = {};
   const bindings: ResolvedDeclarations["bindings"] = [];
   for (const [prop, rawValue] of Object.entries(raw)) {
+    // A CSS custom-property definition (--x: ...) is not a valid Webflow style
+    // property — skip it. Its usage via var(--x) is resolved/bound separately.
+    if (prop.startsWith("--")) {
+      continue;
+    }
     const property = prop.toLowerCase();
     const pure = PURE_VAR_VALUE.exec(rawValue.trim());
     if (pure) {
