@@ -211,9 +211,6 @@ function generatedClassNames(input: {
   if (tag === "section" || tag === "header" || tag === "footer" || tag === "main") {
     return [`section_${sectionKey}`];
   }
-  if (tag === "article") {
-    return [`${sectionKey}_card`];
-  }
   if (tag === "ul" || tag === "ol") {
     return [`${sectionKey}_list`];
   }
@@ -248,7 +245,7 @@ function generatedClassNames(input: {
       )
     ];
   }
-  if (tag === "div") {
+  if (tag === "div" || tag === "article") {
     if (textContent && children.length === 0) {
       return [
         sharedOrFallback(
@@ -300,6 +297,10 @@ function generatedClassNames(input: {
       children[0]?.classNames.some((className) => className.endsWith("_card"))
     ) {
       return [`${sectionKey}_item`];
+    }
+    if (tag === "article") {
+      // A content-block <article> that matched no structural pattern is a card.
+      return [`${sectionKey}_card`];
     }
     if (path.length <= 2) {
       return [`${sectionKey}_component`];
