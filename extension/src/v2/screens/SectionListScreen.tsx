@@ -1,10 +1,7 @@
-import { useState } from "react";
 import {
   Home,
   RefreshCw,
   GripVertical,
-  MoreVertical,
-  RotateCcw,
   ChevronRight,
   Clock,
   Sparkles,
@@ -227,16 +224,14 @@ export function SectionListScreen() {
               <SectionRow
                 key={section.id}
                 section={section}
-                onOpen={() => {
-                  selectSection(section.id);
+                onClick={() => {
+                  // Completed sections go back to the skeleton screen and rebuild
+                  // from scratch; others just continue where they are.
                   if (section.status === "complete") {
-                    navigate("section-complete");
-                    return;
+                    reinsertSection(section.id);
+                  } else {
+                    selectSection(section.id);
                   }
-                  navigate("generating-skeleton");
-                }}
-                onReinsert={() => {
-                  reinsertSection(section.id);
                   navigate("generating-skeleton");
                 }}
               />
@@ -290,8 +285,7 @@ export function SectionListScreen() {
 
 function SectionRow({
   section,
-  onOpen,
-  onReinsert
+  onClick
 }: {
   section: {
     id: string;
@@ -300,16 +294,15 @@ function SectionRow({
     elements: number | null;
     status: SectionStatus | "in-progress";
   };
-  onOpen: () => void;
-  onReinsert: () => void;
+  onClick: () => void;
 }) {
-  const [menuOpen, setMenuOpen] = useState(false);
   const isActive = section.status === "in-progress";
-  const isComplete = section.status === "complete";
 
   return (
-    <div
-      className={`relative w-full flex items-center gap-3 px-3 py-3 rounded-md border ${
+    <button
+      type="button"
+      onClick={onClick}
+      className={`w-full flex items-center gap-3 px-3 py-3 rounded-md border text-left cursor-pointer ${
         isActive
           ? "bg-wb-accent/10 border-wb-accent/30"
           : "border-transparent hover:bg-wb-surface-1 hover:border-white/[0.09]"
@@ -318,11 +311,7 @@ function SectionRow({
       <div className="w-[18px] text-wb-text-disabled flex justify-center flex-shrink-0">
         <GripVertical size={14} />
       </div>
-      <button
-        type="button"
-        onClick={isComplete ? undefined : onOpen}
-        className={`flex-1 min-w-0 text-left ${isComplete ? "cursor-default" : "cursor-pointer"}`}
-      >
+      <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 text-[13px] font-medium text-wb-text-primary mb-0.5">
           <StatusDot status={section.status} />
           {section.title}
@@ -332,50 +321,11 @@ function SectionRow({
           {section.file}
           {section.elements ? ` · ${section.elements} elements` : ""}
         </div>
-      </button>
-      <div className={`flex-shrink-0 ${isActive ? "text-wb-accent" : "text-wb-text-tertiary"}`}>
-        {isComplete ? (
-          <button
-            type="button"
-            onClick={() => setMenuOpen((open) => !open)}
-            aria-label="Section actions"
-            aria-haspopup="menu"
-            className="w-6 h-6 rounded inline-flex items-center justify-center hover:bg-white/[0.06] hover:text-wb-text-primary transition-colors"
-          >
-            <MoreVertical size={16} />
-          </button>
-        ) : (
-          <ChevronRight size={16} />
-        )}
       </div>
-
-      {isComplete && menuOpen ? (
-        <>
-          <div
-            className="fixed inset-0 z-10"
-            onClick={() => setMenuOpen(false)}
-            aria-hidden="true"
-          />
-          <div
-            role="menu"
-            className="absolute right-2 top-[calc(100%-6px)] z-20 min-w-[180px] rounded-md border border-white/[0.12] bg-wb-surface-1 shadow-lg py-1"
-          >
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                setMenuOpen(false);
-                onReinsert();
-              }}
-              className="w-full flex items-center gap-2 px-3 py-2 text-[12.5px] text-wb-text-primary hover:bg-white/[0.06] text-left transition-colors"
-            >
-              <RotateCcw size={13} />
-              Re-insert section
-            </button>
-          </div>
-        </>
-      ) : null}
-    </div>
+      <div className={`flex-shrink-0 ${isActive ? "text-wb-accent" : "text-wb-text-tertiary"}`}>
+        <ChevronRight size={16} />
+      </div>
+    </button>
   );
 }
 
