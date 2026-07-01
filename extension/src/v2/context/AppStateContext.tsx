@@ -293,6 +293,7 @@ interface AppStateContextValue {
   lastCompletedSection: SectionOutcomeSummary | null;
   activeSectionError: string | null;
   selectSection: (sectionId: string) => void;
+  reinsertSection: (sectionId: string) => void;
   startSectionBuild: (
     sectionId?: string,
     options?: {
@@ -1804,6 +1805,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       activeSectionError:
         (selectedSectionId ? sectionErrorsById[selectedSectionId] : null) ?? error,
       selectSection: (sectionId: string) => setSelectedSectionId(sectionId),
+      // Re-insert a completed section: select it and clear cached run state so
+      // the skeleton is regenerated from scratch on the next screen.
+      reinsertSection: (sectionId: string) => resetSectionRunState(sectionId),
       startSectionBuild,
       regenerateSkeleton,
       beginSkeletonEdit,
