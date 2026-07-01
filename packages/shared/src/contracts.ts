@@ -179,7 +179,11 @@ export const classAssignmentSchema = z.object({
 export const styleDefinitionSchema = z.object({
   className: z.string().min(1),
   properties: z.record(z.string(), z.string()),
-  shared: z.boolean().default(false)
+  shared: z.boolean().default(false),
+  /** A per-instance combo/variant class (e.g. a card accent) applied on top of a
+   *  shared base class. Carries only the differing declarations; created with its
+   *  full (visual) styles at skeleton time so Webflow doesn't drop it as empty. */
+  combo: z.boolean().optional()
 });
 
 export const variableBindingSchema = z.object({

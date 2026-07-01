@@ -55,6 +55,29 @@ function isDarkInkLiteral(color: string): boolean {
   return luminance !== null && luminance < 0.5;
 }
 
+// Positioning/stacking scaffolding is inert once we drop the base's absolute
+// positioning — never carry it onto a combo class.
+const SCAFFOLD_KEYS = ["position", "top", "right", "bottom", "left", "inset", "z-index"];
+
+/**
+ * Split a node's source classes into base classes and BEM `--modifier` classes
+ * (a modifier is `X--suffix` where `X` is also one of the node's classes). The
+ * modifier carries the per-instance override (e.g. a card's accent color).
+ */
+function splitBaseAndModifiers(sourceClasses: string[]): { base: string[]; modifiers: string[] } {
+  const modifiers = sourceClasses.filter((candidate) =>
+    sourceClasses.some((other) => other !== candidate && candidate.startsWith(`${other}--`))
+  );
+  return {
+    base: sourceClasses.filter((name) => !modifiers.includes(name)),
+    modifiers
+  };
+}
+
+function classSlug(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
 /**
  * Pick the client-first class a node's resolved CSS should attach to: prefer a
  * section-scoped functional class; fall back to a reusable base class so
@@ -101,6 +124,7 @@ export function buildResolvedStylingFromSkeleton(input: {
 }): StylingPlan {
   const parsed = parseCompiledCss(input.cssText);
   const styleDefinitions = new Map<string, Record<string, string>>();
+  const comboClasses = new Set<string>();
   const variableBindings: Array<{
     nodeId: string;
     property: string;
@@ -109,15 +133,17 @@ export function buildResolvedStylingFromSkeleton(input: {
   }> = [];
 
   walk(input.skeleton.elementTree, new Set<string>(), (node, ancestors) => {
-    const raw = collectRawDeclarations(node, ancestors, parsed);
+    const { base, modifiers } = splitBaseAndModifiers(node.sourceClassNames ?? []);
+    const target = targetClassFor(node);
+
+    // BASE → the shared target class. Resolve from base classes only so per-
+    // instance modifiers don't leak into the shared class.
+    const raw = collectRawDeclarations({ ...node, sourceClassNames: base }, ancestors, parsed);
     const resolved = resolveDeclarationsWithBindings(raw, parsed.variables);
     // Strip scroll-animation positioning scaffolding so decked/absolute items
     // flow instead of piling up (see normalizeResolvedLayout).
     const properties = normalizeResolvedLayout(resolved.properties);
     const bindings = resolved.bindings.filter((binding) => properties[binding.property] !== undefined);
-    if (Object.keys(properties).length === 0) {
-      return;
-    }
     // Headings often hardcode a one-off dark ink (a Figma-export artifact) instead
     // of the design text token. Normalize them to the site's inherited text color
     // (usually a var), so headings match the rest of the type system. Intentional
@@ -138,20 +164,48 @@ export function buildResolvedStylingFromSkeleton(input: {
         });
       }
     }
-    const target = targetClassFor(node);
     // First node to claim a class wins — avoids merging semantically different
     // elements (e.g. a <section> and its <header>) onto one class.
-    if (!target || isReservedStyleGuideClassName(target) || styleDefinitions.has(target)) {
-      return;
+    if (
+      target &&
+      !isReservedStyleGuideClassName(target) &&
+      !styleDefinitions.has(target) &&
+      Object.keys(properties).length > 0
+    ) {
+      styleDefinitions.set(target, properties);
+      for (const binding of bindings) {
+        variableBindings.push({ nodeId: node.id, ...binding });
+      }
     }
-    styleDefinitions.set(target, properties);
-    for (const binding of bindings) {
-      variableBindings.push({
-        nodeId: node.id,
-        property: binding.property,
-        variableName: binding.variableName,
-        value: binding.value
-      });
+
+    // COMBO → a per-instance modifier class (e.g. this card's accent) applied on
+    // top of the shared base class. Resolved from the modifier classes alone.
+    if (target && modifiers.length > 0) {
+      const modifierRaw: Record<string, string> = {};
+      for (const modifier of modifiers) {
+        Object.assign(modifierRaw, parsed.classes.get(modifier) ?? {});
+      }
+      const comboResolved = resolveDeclarationsWithBindings(modifierRaw, parsed.variables);
+      const comboProps = normalizeResolvedLayout(comboResolved.properties);
+      for (const key of SCAFFOLD_KEYS) {
+        delete comboProps[key];
+      }
+      if (Object.keys(comboProps).length > 0) {
+        const suffix = classSlug(modifiers[0].split("--").pop() ?? "") || String(comboClasses.size + 1);
+        const comboClass = `${target}_v${suffix}`;
+        if (!styleDefinitions.has(comboClass)) {
+          styleDefinitions.set(comboClass, comboProps);
+          comboClasses.add(comboClass);
+        }
+        if (!node.classNames.includes(comboClass)) {
+          node.classNames.push(comboClass);
+        }
+        for (const binding of comboResolved.bindings) {
+          if (comboProps[binding.property] !== undefined) {
+            variableBindings.push({ nodeId: node.id, ...binding });
+          }
+        }
+      }
     }
   });
 
@@ -164,7 +218,12 @@ export function buildResolvedStylingFromSkeleton(input: {
       const properties = styleDefinitions.get(className) ?? {};
       const { layout, visual } = splitLayoutVisual(properties);
       // Layout first (skeleton gate), then visual (styling gate) — order only.
-      return { className, properties: { ...layout, ...visual }, shared: false };
+      return {
+        className,
+        properties: { ...layout, ...visual },
+        shared: false,
+        combo: comboClasses.has(className)
+      };
     }),
     variableBindings,
     reusableClasses: [],

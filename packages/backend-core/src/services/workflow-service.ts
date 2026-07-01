@@ -912,8 +912,14 @@ export class WorkflowService {
     const layoutStyleDefinitions = resolvedStyling.styleDefinitions
       .map((definition) => ({
         className: definition.className,
-        properties: splitLayoutVisual(definition.properties).layout,
-        shared: definition.shared
+        // Combo classes carry only a visual override (e.g. an accent) and no
+        // layout — keep their full properties so Webflow doesn't drop them as
+        // empty when the skeleton creates them.
+        properties: definition.combo
+          ? definition.properties
+          : splitLayoutVisual(definition.properties).layout,
+        shared: definition.shared,
+        combo: definition.combo
       }))
       .filter((definition) => Object.keys(definition.properties).length > 0);
     const skeletonWithLayout: SkeletonPlan = {
