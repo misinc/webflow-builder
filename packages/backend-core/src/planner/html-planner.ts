@@ -208,7 +208,13 @@ function generatedClassNames(input: {
       child.classNames.some((name) => name.endsWith("_card"))
     );
 
-  if (tag === "section" || tag === "header" || tag === "footer" || tag === "main") {
+  // Only the section ROOT gets section_{key}. Nested semantic wrappers
+  // (header/footer/main/nav/aside/figure/article) route through the structural
+  // heuristics below like a <div>, so they don't collide with the section class.
+  if (
+    path.length <= 1 &&
+    (tag === "section" || tag === "header" || tag === "footer" || tag === "main")
+  ) {
     return [`section_${sectionKey}`];
   }
   if (tag === "ul" || tag === "ol") {
@@ -245,7 +251,17 @@ function generatedClassNames(input: {
       )
     ];
   }
-  if (tag === "div" || tag === "article") {
+  if (
+    tag === "div" ||
+    tag === "article" ||
+    tag === "section" ||
+    tag === "header" ||
+    tag === "footer" ||
+    tag === "main" ||
+    tag === "nav" ||
+    tag === "aside" ||
+    tag === "figure"
+  ) {
     if (textContent && children.length === 0) {
       return [
         sharedOrFallback(
