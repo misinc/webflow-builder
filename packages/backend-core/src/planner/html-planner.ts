@@ -390,6 +390,22 @@ function wrapSectionWithClientFirstScaffold(root: BuildNode, sectionKey: string)
   if (root.tag !== "section" || root.children.some((child) => child.classNames.includes("padding-global"))) {
     return root;
   }
+  const componentClass = `${sectionKey}_component`;
+  // If the section already has a single top-level container that the namer called
+  // `_component`, use it directly instead of injecting a duplicate wrapper — a
+  // second `_component` would double up (e.g. two nested grids fighting over width).
+  const componentChildren =
+    root.children.length === 1 && root.children[0].classNames.includes(componentClass)
+      ? root.children
+      : [
+          {
+            id: `${root.id}-component`,
+            type: "group" as const,
+            tag: "div",
+            classNames: [componentClass],
+            children: root.children
+          }
+        ];
   return {
     ...root,
     children: [
@@ -410,15 +426,7 @@ function wrapSectionWithClientFirstScaffold(root: BuildNode, sectionKey: string)
                 type: "box",
                 tag: "div",
                 classNames: ["padding-section-medium"],
-                children: [
-                  {
-                    id: `${root.id}-component`,
-                    type: "group",
-                    tag: "div",
-                    classNames: [`${sectionKey}_component`],
-                    children: root.children
-                  }
-                ]
+                children: componentChildren
               }
             ]
           }
@@ -536,10 +544,20 @@ function buildNodeFromElement(input: {
   }
 
   // Mixed content: an element with BOTH direct text and child elements (e.g. a
-  // pill link with an icon + label). Webflow can't hold direct text on a
-  // container that has children, so move the text into a trailing text child.
+  // pill link with an icon + label, or a CTA button with a label + arrow icon).
+  // Webflow can't hold direct text on a container that has children, so move the
+  // text into a text child — placed before or after the element children to match
+  // the source order (label-then-icon vs icon-then-label).
   if (node.textContent && node.textContent.trim().length > 0 && node.children.length > 0) {
-    node.children.push({
+    const firstElementIndex = input.element.childNodes.findIndex(
+      (child) => child.nodeType === NodeType.ELEMENT_NODE
+    );
+    const leadingTextIndex = input.element.childNodes.findIndex(
+      (child) => child.nodeType === NodeType.TEXT_NODE && (child as TextNode).text.trim().length > 0
+    );
+    const textIsLeading =
+      leadingTextIndex >= 0 && (firstElementIndex < 0 || leadingTextIndex < firstElementIndex);
+    const textNode: BuildNode = {
       id: `${node.id}-text`,
       type: "text",
       // Use a <p> — the same node shape as the card body text, which reliably
@@ -548,7 +566,12 @@ function buildNodeFromElement(input: {
       classNames: [],
       textContent: node.textContent,
       children: []
-    });
+    };
+    if (textIsLeading) {
+      node.children.unshift(textNode);
+    } else {
+      node.children.push(textNode);
+    }
     node.textContent = undefined;
   }
 
