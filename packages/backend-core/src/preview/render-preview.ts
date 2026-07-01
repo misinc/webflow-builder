@@ -1,9 +1,6 @@
-import type {
-  BuildNode,
-  SkeletonPlan,
-  StyleDefinition,
-  StylingPlan
-} from "@wfb/shared/contracts.js";
+import type { BuildNode, SkeletonPlan, StylingPlan } from "@wfb/shared/contracts.js";
+
+type StyleDefinition = StylingPlan["styleDefinitions"][number];
 
 const VOID_TAGS = new Set([
   "img",

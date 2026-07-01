@@ -522,7 +522,7 @@ describe("HTML repo support", () => {
     expect(normalized.treeText).not.toContain("md:py-[120px]");
   });
 
-  it("styles an approved HTML skeleton with deterministic fallback classes", async () => {
+  it("styles an approved HTML skeleton from the source compiled CSS", async () => {
     const repository = new MemoryAppRepository();
     const blobStore = new MemoryBlobStore();
     const repo = await repository.createRepo({
@@ -647,18 +647,19 @@ describe("HTML repo support", () => {
       sharedStyleContext
     });
 
+    // Resolver only defines classes that actually have CSS in the source, so
+    // the set is exactly what the compiled stylesheet backs.
     expect(styling.styleDefinitions.map((definition) => definition.className)).toEqual(
       expect.arrayContaining([
         "section_solutions",
-        "solutions_component",
         "solutions_grid",
         "solutions_feature",
+        "solutions_feature_heading",
         "solutions_pill_list",
-        "solutions_pill",
         "solutions_card_list",
         "solutions_card",
         "solutions_card_title",
-        "solutions_card_heading"
+        "solutions_card_text"
       ])
     );
     expect(styling.styleDefinitions.length).toBeGreaterThan(8);
@@ -683,7 +684,7 @@ describe("HTML repo support", () => {
         ?.properties["min-height"]
     ).toBe("212px");
     expect(
-      styling.styleDefinitions.find((definition) => definition.className === "solutions_pill")
+      styling.styleDefinitions.find((definition) => definition.className === "solutions_link")
         ?.properties.width
     ).toBeUndefined();
     expect(
@@ -700,7 +701,7 @@ describe("HTML repo support", () => {
     ).toContain("linear-gradient");
     expect(styling.warnings).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ code: "styling-html-fallback" })
+        expect.objectContaining({ code: "deterministic-styling-primary" })
       ])
     );
 

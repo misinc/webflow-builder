@@ -49,10 +49,8 @@ import { HeuristicBuildPlanner } from "../planner/heuristic-planner.js";
 import { htmlToSkeletonPlan } from "../planner/html-planner.js";
 import { PlanningProvider, providerWarning } from "../planner/planning-provider.js";
 import { serializeSectionContext } from "../planner/section-serializer.js";
-import {
-  buildFallbackStylingFromSkeleton,
-  shouldFallbackStylingPlan
-} from "../planner/style-fallback.js";
+import { shouldFallbackStylingPlan } from "../planner/style-fallback.js";
+import { buildResolvedStylingFromSkeleton } from "../planner/resolved-styling.js";
 import { AppRepository } from "../repositories/app-repository.js";
 import { dedupe } from "@wfb/shared/client-first.js";
 import { nowIso, stableId } from "../utils.js";
@@ -1261,16 +1259,17 @@ export class WorkflowService {
     };
 
     const deterministicPrimary = stylingSkeleton
-      ? buildFallbackStylingFromSkeleton({
+      ? buildResolvedStylingFromSkeleton({
           metadata: context.metadata,
           mode: request.mode,
-          sectionContext: context.sectionContext,
-          sharedStyleContext: context.sharedStyleContext,
           skeleton: stylingSkeleton,
+          cssText: context.sectionContext.relevantStylesheets
+            .map((sheet) => sheet.content)
+            .join("\n"),
           inheritedWarnings: [
             providerWarning(
               "deterministic-styling-primary",
-              "Styling was derived deterministically from the latest skeleton and repo source before provider refinement.",
+              "Styling was resolved deterministically from the source compiled CSS before provider refinement.",
               "info"
             )
           ]
