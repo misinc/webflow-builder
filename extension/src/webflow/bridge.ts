@@ -89,6 +89,7 @@ export interface WebflowDesignerBridge {
     source: string,
     fallback: "placeholder" | "warning-only"
   ): Promise<{ resolved: boolean }>;
+  setNodeAttribute?(nodeId: string, name: string, value: string): Promise<void>;
   deleteNodes(nodeIds: string[]): Promise<void>;
   deleteStyles(styleIds: string[]): Promise<void>;
 }
@@ -141,6 +142,7 @@ interface WebflowElement {
   setAltText?(text: string): Promise<null>;
   setTag?(tag: string): Promise<void>;
   setAttribute?(name: string, value: string): Promise<void>;
+  setCustomAttribute?(name: string, value: string): Promise<void>;
   setTextContent?(content: string): Promise<void>;
   setStyles?(styles: WebflowStyle[]): Promise<null>;
   getStyles?(): Promise<WebflowStyle[]>;
@@ -1040,6 +1042,18 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
     await style.setProperty(property, variable);
   }
 
+  async setNodeAttribute(nodeId: string, name: string, value: string): Promise<void> {
+    const element = this.elementsById.get(nodeId);
+    if (!element) {
+      return;
+    }
+    if (element.setCustomAttribute) {
+      await element.setCustomAttribute(name, value);
+    } else if (element.setAttribute) {
+      await element.setAttribute(name, value);
+    }
+  }
+
   async bindAsset(
     nodeId: string,
     source: string,
@@ -1228,6 +1242,7 @@ class MockWebflowDesignerBridge implements WebflowDesignerBridge {
   }
 
   async setNodeTextContent(): Promise<void> {}
+  async setNodeAttribute(): Promise<void> {}
 
   async configureNode(): Promise<void> {}
 

@@ -91,6 +91,22 @@ async function withDesignerRetry<T>(
     : new Error(`${label} failed after ${maxAttempts} attempts.`);
 }
 
+// Derive a human-readable icon name from the source classes (e.g. Lucide's
+// "lucide-globe" -> "globe") so the placeholder tells the user which icon to add.
+function iconNameFromClasses(sourceClassNames?: string[]): string {
+  const classes = sourceClassNames ?? [];
+  for (const className of classes) {
+    const match = /^(?:lucide|icon|feather|fa|bi|mdi|hero|tabler|ph)-(.+)$/i.exec(className);
+    if (match) {
+      return match[1];
+    }
+  }
+  const specific = classes.find(
+    (className) => className.includes("-") && !/^(icon|svg|embed)$/i.test(className)
+  );
+  return specific ?? classes[0] ?? "icon";
+}
+
 async function buildNodeTree(params: {
   bridge: WebflowDesignerBridge;
   node: BuildNode;
@@ -113,6 +129,15 @@ async function buildNodeTree(params: {
   if (classNames.length > 0) {
     await withDesignerRetry("applyClasses", params.signal, () =>
       params.bridge.applyClasses(created.id, classNames)
+    );
+  }
+  const setNodeAttribute = params.bridge.setNodeAttribute?.bind(params.bridge);
+  if (params.node.type === "embed" && setNodeAttribute) {
+    // Inline SVG can't be injected via the Designer API — leave a labeled
+    // icon-embed placeholder tagged with the icon name for manual insertion.
+    throwIfAborted(params.signal);
+    await withDesignerRetry("setNodeAttribute", params.signal, () =>
+      setNodeAttribute(created.id, "data-icon", iconNameFromClasses(params.node.sourceClassNames))
     );
   }
   if (typeof params.node.textContent === "string" && params.node.textContent.trim().length > 0) {
