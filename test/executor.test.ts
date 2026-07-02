@@ -29,6 +29,10 @@ class FailingBridge implements WebflowDesignerBridge {
     return [];
   }
 
+  async dedupeSelectionStyles(): Promise<{ scanned: number; updatedElements: number; swappedClasses: string[] }> {
+    return { scanned: 0, updatedElements: 0, swappedClasses: [] };
+  }
+
   async inspectSharedStyles() {
     return {
       siteId: "site-1",

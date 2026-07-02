@@ -51,6 +51,16 @@ export interface WebflowDesignerBridge {
   inspectSharedStyles(siteId: string): Promise<SharedStyleContext>;
   /** All project styles as name → real style id (for clipboard-paste class reuse). */
   listStyleIds(): Promise<Array<{ name: string; id: string }>>;
+  /**
+   * Walk the currently selected element's subtree and swap any duplicated
+   * "name N" class (created by pasting when "name" already exists) back to the
+   * project's base class. Returns what was changed.
+   */
+  dedupeSelectionStyles(): Promise<{
+    scanned: number;
+    updatedElements: number;
+    swappedClasses: string[];
+  }>;
   createNode(input: CreateNodeInput): Promise<{ id: string }>;
   createComponentInstance(input: CreateComponentInstanceInput): Promise<{ id: string }>;
   openComponentCanvas(componentId: string): Promise<void>;
@@ -148,6 +158,7 @@ interface WebflowElement {
   setTextContent?(content: string): Promise<void>;
   setStyles?(styles: WebflowStyle[]): Promise<null>;
   getStyles?(): Promise<WebflowStyle[]>;
+  getChildren?(): Promise<WebflowElement[]>;
   remove?(): Promise<null>;
 }
 
@@ -776,6 +787,67 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
     return entries.filter((entry): entry is { name: string; id: string } => entry !== null);
   }
 
+  async dedupeSelectionStyles(): Promise<{
+    scanned: number;
+    updatedElements: number;
+    swappedClasses: string[];
+  }> {
+    const root = await this.api.getSelectedElement();
+    if (!root) {
+      throw new Error("Select the pasted section on the canvas first.");
+    }
+
+    // Project styles by name, so "padding-global 2" can be swapped to the real
+    // "padding-global". Only styles whose base name actually exists are touched.
+    const allStyles = await this.api.getAllStyles();
+    const stylesByName = new Map<string, WebflowStyle>();
+    await Promise.all(
+      allStyles.map(async (style) => {
+        const name = await style.getName().catch(() => null);
+        if (name) {
+          stylesByName.set(name, style);
+        }
+      })
+    );
+
+    const DUPLICATE_NAME = /^(.+?) (\d+)$/;
+    const swappedClasses = new Set<string>();
+    let scanned = 0;
+    let updatedElements = 0;
+
+    const visit = async (element: WebflowElement): Promise<void> => {
+      scanned += 1;
+      const styles = await element.getStyles?.().catch(() => null);
+      if (styles && styles.length > 0) {
+        let changed = false;
+        const mapped: WebflowStyle[] = [];
+        for (const style of styles) {
+          const name = await style.getName().catch(() => null);
+          const match = name ? DUPLICATE_NAME.exec(name) : null;
+          const base = match ? stylesByName.get(match[1]) : undefined;
+          if (name && base && base.id !== style.id) {
+            mapped.push(base);
+            swappedClasses.add(name);
+            changed = true;
+          } else {
+            mapped.push(style);
+          }
+        }
+        if (changed) {
+          await element.setStyles?.(mapped);
+          updatedElements += 1;
+        }
+      }
+      const children = (await element.getChildren?.().catch(() => [])) ?? [];
+      for (const child of children) {
+        await visit(child);
+      }
+    };
+
+    await visit(root);
+    return { scanned, updatedElements, swappedClasses: [...swappedClasses].sort() };
+  }
+
   async inspectSharedStyles(siteId: string): Promise<SharedStyleContext> {
     const [styles, collection] = await Promise.all([
       this.api.getAllStyles(),
@@ -1224,6 +1296,14 @@ class MockWebflowDesignerBridge implements WebflowDesignerBridge {
 
   async listStyleIds(): Promise<Array<{ name: string; id: string }>> {
     return [];
+  }
+
+  async dedupeSelectionStyles(): Promise<{
+    scanned: number;
+    updatedElements: number;
+    swappedClasses: string[];
+  }> {
+    return { scanned: 0, updatedElements: 0, swappedClasses: [] };
   }
 
   async inspectSharedStyles(siteId: string): Promise<SharedStyleContext> {

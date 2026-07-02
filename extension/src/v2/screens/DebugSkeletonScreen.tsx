@@ -61,6 +61,8 @@ export function DebugSkeletonScreen() {
   const [cssText, setCssText] = useState("");
   const [webflowCopyLabel, setWebflowCopyLabel] = useState("Copy for Webflow");
   const [projectStyles, setProjectStyles] = useState<Array<{ name: string; id: string }>>([]);
+  const [dedupeLabel, setDedupeLabel] = useState("Fix pasted classes");
+  const [inspectedClipboard, setInspectedClipboard] = useState("");
   const [lastGeneratedInput, setLastGeneratedInput] = useState<{
     code: string;
     inputType: DebugSkeletonRequest["inputType"];
@@ -304,6 +306,28 @@ export function DebugSkeletonScreen() {
     }
   };
 
+  const dedupePastedClasses = async () => {
+    setIsMutating(true);
+    setLoadingLabel("Fixing pasted classes");
+    setError(null);
+    try {
+      const result = await bridge.dedupeSelectionStyles();
+      setDedupeLabel(
+        result.swappedClasses.length > 0
+          ? `Fixed ${result.swappedClasses.length} class${result.swappedClasses.length === 1 ? "" : "es"}`
+          : "No duplicates found"
+      );
+      window.setTimeout(() => setDedupeLabel("Fix pasted classes"), 2600);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to fix duplicated classes in the selection."
+      );
+    } finally {
+      setIsMutating(false);
+      setLoadingLabel(null);
+    }
+  };
+
   return (
     <Panel
       onClose={() => navigate("welcome")}
@@ -367,6 +391,16 @@ export function DebugSkeletonScreen() {
           >
             <Clipboard size={12} />
             {webflowCopyLabel}
+          </Button>
+          <Button
+            variant="ghost"
+            disabled={isMutating}
+            onClick={() => {
+              void dedupePastedClasses();
+            }}
+            title="After pasting: select the pasted section on the canvas, then click to swap duplicated 'name 2' classes back to your project's existing classes."
+          >
+            {dedupeLabel}
           </Button>
           <Button
             variant="primary"
@@ -510,6 +544,25 @@ export function DebugSkeletonScreen() {
               spellCheck={false}
               className="w-full h-full resize-none bg-transparent p-4 font-mono text-[11.5px] text-wb-text-secondary leading-relaxed outline-none"
               placeholder="Paste the site's compiled CSS here to resolve full styles (colors, spacing, combo classes) into the Webflow paste payload."
+            />
+          </div>
+          <SplitHeader title="Clipboard inspector (paste a Designer copy here)" />
+          <div className="h-24 flex-shrink-0 overflow-hidden bg-black/[0.18] border-t border-white/[0.06]">
+            <textarea
+              value={inspectedClipboard}
+              onChange={() => {
+                /* read-only apart from paste capture */
+              }}
+              onPaste={(event) => {
+                event.preventDefault();
+                const json = event.clipboardData.getData("application/json");
+                setInspectedClipboard(
+                  json || "(no application/json flavor on the clipboard — copy an element inside the Webflow Designer first)"
+                );
+              }}
+              spellCheck={false}
+              className="w-full h-full resize-none bg-transparent p-4 font-mono text-[11.5px] text-wb-text-secondary leading-relaxed outline-none"
+              placeholder="Copy any element in the Designer (Cmd+C), click here, then Cmd+V — Webflow's own paste payload appears for inspection. Select-all + copy to share it."
             />
           </div>
         </div>
