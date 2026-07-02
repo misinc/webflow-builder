@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState, type ReactNode } from "react";
-import { ChevronDown, ChevronRight, Copy, RefreshCw } from "lucide-react";
+import { ChevronDown, ChevronRight, Clipboard, Copy, RefreshCw } from "lucide-react";
 import { Panel } from "../components/Panel";
 import { Button } from "../components/Button";
 import { Stepper, buildStepper } from "../components/Stepper";
@@ -15,6 +15,7 @@ import {
 } from "../../skeleton/tree.js";
 import { getWebflowBridge } from "../../webflow/bridge.js";
 import type { BuildNode, DebugSkeletonRequest, SharedStyleContext, SkeletonPlan } from "@wfb/shared/contracts.js";
+import { buildWebflowClipboardPayload } from "@wfb/shared/webflow-clipboard.js";
 
 const backend = new BackendClient();
 const bridge = getWebflowBridge();
@@ -57,11 +58,14 @@ export function DebugSkeletonScreen() {
   const [insertedRootNodeId, setInsertedRootNodeId] = useState<string | null>(null);
   const [copyLabel, setCopyLabel] = useState("Copy skeleton");
   const [fixtureLabel, setFixtureLabel] = useState("Copy fixture");
+  const [cssText, setCssText] = useState("");
+  const [webflowCopyLabel, setWebflowCopyLabel] = useState("Copy for Webflow");
   const [lastGeneratedInput, setLastGeneratedInput] = useState<{
     code: string;
     inputType: DebugSkeletonRequest["inputType"];
     sectionName: string;
     includeContent: boolean;
+    cssText: string;
   } | null>(null);
   const insertedNodeIdsRef = useRef<string[]>([]);
   const activeAbortControllerRef = useRef<AbortController | null>(null);
@@ -82,6 +86,7 @@ export function DebugSkeletonScreen() {
   const hasInsertedSkeleton = Boolean(insertedRootNodeId);
   const normalizedSectionName = sectionName.trim() || "Debug section";
   const normalizedCode = code.trim();
+  const normalizedCssText = cssText.trim();
   const hasDraftChanges =
     Boolean(displaySkeleton) &&
     (
@@ -89,7 +94,8 @@ export function DebugSkeletonScreen() {
       lastGeneratedInput.code !== normalizedCode ||
       lastGeneratedInput.inputType !== inputType ||
       lastGeneratedInput.sectionName !== normalizedSectionName ||
-      lastGeneratedInput.includeContent !== includeContent
+      lastGeneratedInput.includeContent !== includeContent ||
+      lastGeneratedInput.cssText !== normalizedCssText
     );
   const canGenerate = !isMutating && Boolean(normalizedCode);
   const generateLabel = displaySkeleton
@@ -123,7 +129,8 @@ export function DebugSkeletonScreen() {
             sectionName: normalizedSectionName,
             pageName: "Debug playground",
             includeContent,
-            sharedStyleContext
+            sharedStyleContext,
+            cssText: normalizedCssText || undefined
           },
           controller.signal
         )
@@ -134,7 +141,8 @@ export function DebugSkeletonScreen() {
         code: normalizedCode,
         inputType,
         sectionName: normalizedSectionName,
-        includeContent
+        includeContent,
+        cssText: normalizedCssText
       });
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") {
@@ -250,6 +258,44 @@ export function DebugSkeletonScreen() {
     }
   };
 
+  const copyForWebflow = () => {
+    if (!displaySkeleton) {
+      setError("Generate a skeleton before copying for Webflow.");
+      return;
+    }
+    if (hasDraftChanges) {
+      setError("Generate a new skeleton for the latest inputs before copying.");
+      return;
+    }
+    try {
+      const payload = buildWebflowClipboardPayload({
+        elementTree: displaySkeleton.elementTree,
+        styleDefinitions: displaySkeleton.styleDefinitions ?? []
+      });
+      const json = JSON.stringify(payload);
+      // Webflow's Designer reads the paste as the `application/json` clipboard
+      // flavor — only settable from a real copy event, not navigator.clipboard.
+      const onCopy = (event: ClipboardEvent) => {
+        event.preventDefault();
+        event.clipboardData?.setData("application/json", json);
+        event.clipboardData?.setData("text/plain", json);
+      };
+      document.addEventListener("copy", onCopy);
+      try {
+        const copied = document.execCommand("copy");
+        if (!copied) {
+          throw new Error("The browser blocked the clipboard write. Click the button again.");
+        }
+      } finally {
+        document.removeEventListener("copy", onCopy);
+      }
+      setWebflowCopyLabel("Copied — paste in Designer");
+      window.setTimeout(() => setWebflowCopyLabel("Copy for Webflow"), 2600);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to copy the Webflow payload.");
+    }
+  };
+
   return (
     <Panel
       onClose={() => navigate("welcome")}
@@ -300,6 +346,19 @@ export function DebugSkeletonScreen() {
           >
             <Copy size={12} />
             {fixtureLabel}
+          </Button>
+          <Button
+            variant="ghost"
+            disabled={!displaySkeleton || isMutating || hasDraftChanges}
+            onClick={copyForWebflow}
+            title={
+              (displaySkeleton?.styleDefinitions?.length ?? 0) > 0
+                ? "Copies a Webflow paste payload (structure + styles + SVG embeds). Paste on the Designer canvas."
+                : "Copies structure only — paste compiled CSS above and regenerate to include styles."
+            }
+          >
+            <Clipboard size={12} />
+            {webflowCopyLabel}
           </Button>
           <Button
             variant="primary"
@@ -420,7 +479,7 @@ export function DebugSkeletonScreen() {
               Insert content too
             </label>
           </div>
-          <div className="flex-1 overflow-hidden bg-black/[0.18]">
+          <div className="flex-[3] min-h-0 overflow-hidden bg-black/[0.18]">
             <textarea
               value={code}
               onChange={(event) => {
@@ -430,6 +489,19 @@ export function DebugSkeletonScreen() {
               spellCheck={false}
               className="w-full h-full resize-none bg-transparent p-4 font-mono text-[11.5px] text-wb-text-secondary leading-relaxed outline-none"
               placeholder="Paste a section in HTML or TSX here."
+            />
+          </div>
+          <SplitHeader title="Compiled CSS (optional · enables styled Copy for Webflow)" />
+          <div className="flex-[2] min-h-0 overflow-hidden bg-black/[0.18] border-t border-white/[0.06]">
+            <textarea
+              value={cssText}
+              onChange={(event) => {
+                setCssText(event.target.value);
+                setError(null);
+              }}
+              spellCheck={false}
+              className="w-full h-full resize-none bg-transparent p-4 font-mono text-[11.5px] text-wb-text-secondary leading-relaxed outline-none"
+              placeholder="Paste the site's compiled CSS here to resolve full styles (colors, spacing, combo classes) into the Webflow paste payload."
             />
           </div>
         </div>

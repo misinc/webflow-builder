@@ -520,7 +520,9 @@ export const debugSkeletonRequestSchema = z.object({
   sectionName: z.string().min(1).default("Debug section"),
   pageName: z.string().min(1).default("Debug playground"),
   includeContent: z.boolean().default(true),
-  sharedStyleContext: sharedStyleContextSchema.optional()
+  sharedStyleContext: sharedStyleContextSchema.optional(),
+  /** Compiled CSS to resolve full styling against (enables Copy for Webflow). */
+  cssText: z.string().optional()
 });
 
 export const debugSkeletonJobStartSchema = z.object({

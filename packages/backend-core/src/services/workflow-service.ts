@@ -1025,7 +1025,19 @@ export class WorkflowService {
         sharedStyleContext: providerInput.sharedStyleContext
       });
       if (htmlSkeleton) {
-        return htmlSkeleton;
+        if (!request.cssText?.trim()) {
+          return htmlSkeleton;
+        }
+        // With the compiled CSS we can resolve FULL styling (layout + visual,
+        // combo classes applied to the tree) so the playground can serialize a
+        // complete Webflow clipboard payload.
+        const styling = buildResolvedStylingFromSkeleton({
+          metadata: providerInput.metadata,
+          mode: "fullAssist",
+          skeleton: htmlSkeleton,
+          cssText: request.cssText
+        });
+        return { ...htmlSkeleton, styleDefinitions: styling.styleDefinitions };
       }
     }
     const skeleton = skeletonPlanSchema.parse(
