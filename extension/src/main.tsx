@@ -6,7 +6,7 @@ import "./v2/index.css";
 
 // Bump on every bundle rebuild so you can confirm which bundle Webflow loaded
 // (open the Designer dev console). Backend fixes deploy separately via git.
-const BUNDLE_VERSION = "2026-07-02e · Payload fidelity: UUID ids + base-combo children linkage";
+const BUNDLE_VERSION = "2026-07-02f · Clearer copied-state: check icon + Cmd+V hint in status line";
 // eslint-disable-next-line no-console
 console.log(`%c[Webflow Builder] bundle ${BUNDLE_VERSION}`, "color:#00d09c;font-weight:bold");
 

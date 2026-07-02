@@ -62,6 +62,7 @@ export function DebugSkeletonScreen() {
   const [webflowCopyLabel, setWebflowCopyLabel] = useState("Copy for Webflow");
   const [projectStyles, setProjectStyles] = useState<Array<{ name: string; id: string }>>([]);
   const [dedupeLabel, setDedupeLabel] = useState("Fix pasted classes");
+  const [copyHint, setCopyHint] = useState<string | null>(null);
   const [inspectedClipboard, setInspectedClipboard] = useState("");
   const [lastGeneratedInput, setLastGeneratedInput] = useState<{
     code: string;
@@ -299,8 +300,10 @@ export function DebugSkeletonScreen() {
       } finally {
         document.removeEventListener("copy", onCopy);
       }
-      setWebflowCopyLabel("Copied — paste in Designer");
+      setWebflowCopyLabel("Copied");
+      setCopyHint("On the canvas: click where the section should go, then press Cmd+V (Ctrl+V on Windows).");
       window.setTimeout(() => setWebflowCopyLabel("Copy for Webflow"), 2600);
+      window.setTimeout(() => setCopyHint(null), 8000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to copy the Webflow payload.");
     }
@@ -337,8 +340,10 @@ export function DebugSkeletonScreen() {
             Back to welcome
           </Button>
           <div className="flex-1" />
-          <span className="text-[11px] text-wb-text-tertiary mr-2">
-            {hasInsertedSkeleton
+          <span className={`text-[11px] mr-2 ${copyHint ? "text-wb-text-primary" : "text-wb-text-tertiary"}`}>
+            {copyHint
+              ? copyHint
+              : hasInsertedSkeleton
               ? "Skeleton inserted into Webflow"
               : isInserting
               ? "Inserting skeleton…"
@@ -404,7 +409,7 @@ export function DebugSkeletonScreen() {
                 : "Copies structure only — paste compiled CSS above and regenerate to include styles."
             }
           >
-            <Clipboard size={12} />
+            {webflowCopyLabel === "Copied" ? <Check size={12} /> : <Clipboard size={12} />}
             {webflowCopyLabel}
           </Button>
         </>
