@@ -62,6 +62,7 @@ export function DebugSkeletonScreen() {
   const [webflowCopyLabel, setWebflowCopyLabel] = useState("Copy for Webflow");
   const [projectStyles, setProjectStyles] = useState<Array<{ name: string; id: string }>>([]);
   const [dedupeLabel, setDedupeLabel] = useState("Fix pasted classes");
+  const [bindTokensLabel, setBindTokensLabel] = useState("Bind tokens");
   const [copyHint, setCopyHint] = useState<string | null>(null);
   const [inspectedClipboard, setInspectedClipboard] = useState("");
   const [lastGeneratedInput, setLastGeneratedInput] = useState<{
@@ -331,6 +332,30 @@ export function DebugSkeletonScreen() {
     }
   };
 
+  const bindTokens = async () => {
+    setIsMutating(true);
+    setLoadingLabel("Binding tokens");
+    setError(null);
+    try {
+      const result = await bridge.bindTokensInSelection();
+      setBindTokensLabel(
+        result.boundProperties > 0
+          ? `Bound ${result.boundProperties} propert${result.boundProperties === 1 ? "y" : "ies"}`
+          : "No matching tokens"
+      );
+      setCopyHint(
+        result.bindings.length > 0 ? `Tokens: ${result.bindings.slice(0, 4).join(" · ")}${result.bindings.length > 4 ? " · …" : ""}` : null
+      );
+      window.setTimeout(() => setBindTokensLabel("Bind tokens"), 2600);
+      window.setTimeout(() => setCopyHint(null), 8000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to bind tokens in the selection.");
+    } finally {
+      setIsMutating(false);
+      setLoadingLabel(null);
+    }
+  };
+
   return (
     <Panel
       onClose={() => navigate("welcome")}
@@ -398,6 +423,16 @@ export function DebugSkeletonScreen() {
             title="After pasting: select the pasted section on the canvas, then click to swap duplicated 'name 2' classes back to your project's existing classes."
           >
             {dedupeLabel}
+          </Button>
+          <Button
+            variant="ghost"
+            disabled={isMutating}
+            onClick={() => {
+              void bindTokens();
+            }}
+            title="After pasting: select the pasted section, then click to relink color values to your project variables (pasted styles arrive as literals — Webflow strips variable references on copy)."
+          >
+            {bindTokensLabel}
           </Button>
           <Button
             variant="primary"

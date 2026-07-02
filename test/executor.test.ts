@@ -33,6 +33,10 @@ class FailingBridge implements WebflowDesignerBridge {
     return { scanned: 0, updatedElements: 0, swappedClasses: [] };
   }
 
+  async bindTokensInSelection(): Promise<{ stylesScanned: number; boundProperties: number; bindings: string[] }> {
+    return { stylesScanned: 0, boundProperties: 0, bindings: [] };
+  }
+
   async inspectSharedStyles() {
     return {
       siteId: "site-1",

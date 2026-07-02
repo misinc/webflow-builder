@@ -61,6 +61,17 @@ export interface WebflowDesignerBridge {
     updatedElements: number;
     swappedClasses: string[];
   }>;
+  /**
+   * Walk the selected element's subtree and rebind color properties whose
+   * literal value matches a project variable to that variable. (The clipboard
+   * cannot carry variable references — Webflow flattens them to literals even
+   * in its own copies — so tokens are re-linked after the paste.)
+   */
+  bindTokensInSelection(): Promise<{
+    stylesScanned: number;
+    boundProperties: number;
+    bindings: string[];
+  }>;
   createNode(input: CreateNodeInput): Promise<{ id: string }>;
   createComponentInstance(input: CreateComponentInstanceInput): Promise<{ id: string }>;
   openComponentCanvas(componentId: string): Promise<void>;
@@ -241,6 +252,31 @@ declare global {
     webflow?: WebflowApi;
     Webflow?: WebflowApi;
   }
+}
+
+/**
+ * Normalize a color literal for value-equality matching against variable
+ * values: lowercase hex, #abc expanded to #aabbcc, rgb()/opaque rgba() → hex.
+ * Non-color-looking strings pass through lowercased so named colors still match.
+ */
+export function normalizeColorValue(value: string): string | null {
+  const trimmed = value.trim().toLowerCase();
+  if (!trimmed) {
+    return null;
+  }
+  const shortHex = /^#([0-9a-f]{3})$/.exec(trimmed);
+  if (shortHex) {
+    return `#${shortHex[1].split("").map((c) => c + c).join("")}`;
+  }
+  if (/^#[0-9a-f]{6}$/.test(trimmed)) {
+    return trimmed;
+  }
+  const rgb = /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*(1|1\.0+)\s*)?\)$/.exec(trimmed);
+  if (rgb) {
+    const toHex = (part: string) => Number(part).toString(16).padStart(2, "0");
+    return `#${toHex(rgb[1])}${toHex(rgb[2])}${toHex(rgb[3])}`;
+  }
+  return trimmed;
 }
 
 function normalizeElementId(id: ElementIdValue | null | undefined): string | null {
@@ -848,6 +884,85 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
     return { scanned, updatedElements, swappedClasses: [...swappedClasses].sort() };
   }
 
+  async bindTokensInSelection(): Promise<{
+    stylesScanned: number;
+    boundProperties: number;
+    bindings: string[];
+  }> {
+    const root = await this.api.getSelectedElement();
+    if (!root) {
+      throw new Error("Select the pasted section on the canvas first.");
+    }
+    const collection = await this.api.getDefaultVariableCollection();
+    if (!collection) {
+      throw new Error("This site has no variable collection to bind against.");
+    }
+
+    // Project variables keyed by normalized value — the paste flattens variable
+    // references to literals, so value equality is how we find their token.
+    const variablesByValue = new Map<string, { variable: WebflowVariable; name: string }>();
+    for (const variable of await collection.getAllVariables()) {
+      const [name, value] = await Promise.all([
+        variable.getName().catch(() => null),
+        variable.get ? variable.get().catch(() => undefined) : Promise.resolve(undefined)
+      ]);
+      const normalized =
+        typeof value === "string" || typeof value === "number"
+          ? normalizeColorValue(String(value))
+          : null;
+      if (name && normalized && !variablesByValue.has(normalized)) {
+        variablesByValue.set(normalized, { variable, name });
+      }
+    }
+
+    const isColorProperty = (property: string): boolean =>
+      property === "color" ||
+      property.endsWith("-color") ||
+      property === "fill" ||
+      property === "stroke";
+
+    const processedStyleIds = new Set<string>();
+    const bindings: string[] = [];
+    let boundProperties = 0;
+
+    const visit = async (element: WebflowElement): Promise<void> => {
+      const styles = await element.getStyles?.().catch(() => null);
+      for (const style of styles ?? []) {
+        if (!style.getProperties || !style.setProperty || processedStyleIds.has(style.id)) {
+          continue;
+        }
+        processedStyleIds.add(style.id);
+        const properties = await style.getProperties().catch(() => null);
+        if (!properties) {
+          continue;
+        }
+        const styleName = await style.getName().catch(() => null);
+        for (const [property, rawValue] of Object.entries(properties)) {
+          // Only plain string literals are rebound — a value that is already a
+          // variable reference comes back as an object and is skipped.
+          if (!isColorProperty(property) || typeof rawValue !== "string") {
+            continue;
+          }
+          const normalized = normalizeColorValue(rawValue);
+          const match = normalized ? variablesByValue.get(normalized) : undefined;
+          if (!match) {
+            continue;
+          }
+          await style.setProperty(property, match.variable);
+          boundProperties += 1;
+          bindings.push(`${styleName ?? style.id}.${property} → ${match.name}`);
+        }
+      }
+      const children = (await element.getChildren?.().catch(() => [])) ?? [];
+      for (const child of children) {
+        await visit(child);
+      }
+    };
+
+    await visit(root);
+    return { stylesScanned: processedStyleIds.size, boundProperties, bindings };
+  }
+
   async inspectSharedStyles(siteId: string): Promise<SharedStyleContext> {
     const [styles, collection] = await Promise.all([
       this.api.getAllStyles(),
@@ -1304,6 +1419,14 @@ class MockWebflowDesignerBridge implements WebflowDesignerBridge {
     swappedClasses: string[];
   }> {
     return { scanned: 0, updatedElements: 0, swappedClasses: [] };
+  }
+
+  async bindTokensInSelection(): Promise<{
+    stylesScanned: number;
+    boundProperties: number;
+    bindings: string[];
+  }> {
+    return { stylesScanned: 0, boundProperties: 0, bindings: [] };
   }
 
   async inspectSharedStyles(siteId: string): Promise<SharedStyleContext> {
