@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState, type ReactNode } from "react";
-import { ChevronDown, ChevronRight, Clipboard, Copy, RefreshCw } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, Clipboard, Copy, FileJson, RefreshCw } from "lucide-react";
 import { Panel } from "../components/Panel";
 import { Button } from "../components/Button";
 import { Stepper, buildStepper } from "../components/Stepper";
@@ -352,45 +352,37 @@ export function DebugSkeletonScreen() {
           </span>
           <Button
             variant="ghost"
-            disabled={!canGenerate}
-            onClick={() => {
-              void generateSkeleton();
-            }}
-          >
-            {generateLabel}
-          </Button>
-          <Button
-            variant="ghost"
+            size="sm"
             disabled={!displaySkeleton || isMutating || hasDraftChanges}
             onClick={() => {
               void copySkeleton();
             }}
+            aria-label="Copy skeleton JSON"
+            title={copyLabel === "Copy skeleton" ? "Copy skeleton JSON" : copyLabel}
           >
-            <Copy size={12} />
-            {copyLabel}
+            {copyLabel === "Copy skeleton" ? <Copy size={12} /> : <Check size={12} />}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={!displaySkeleton || isMutating || hasDraftChanges}
+            onClick={() => {
+              void copyFixture();
+            }}
+            aria-label="Copy test fixture JSON"
+            title={fixtureLabel === "Copy fixture" ? "Copy test fixture JSON" : fixtureLabel}
+          >
+            {fixtureLabel === "Copy fixture" ? <FileJson size={12} /> : <Check size={12} />}
           </Button>
           <Button
             variant="ghost"
             disabled={!displaySkeleton || isMutating || hasDraftChanges}
             onClick={() => {
-              void copyFixture();
+              void insertSkeleton();
             }}
+            title="Fallback path: build node-by-node via the Designer API instead of pasting."
           >
-            <Copy size={12} />
-            {fixtureLabel}
-          </Button>
-          <Button
-            variant="ghost"
-            disabled={!displaySkeleton || isMutating || hasDraftChanges}
-            onClick={copyForWebflow}
-            title={
-              (displaySkeleton?.styleDefinitions?.length ?? 0) > 0
-                ? "Copies a Webflow paste payload (structure + styles + SVG embeds). Paste on the Designer canvas."
-                : "Copies structure only — paste compiled CSS above and regenerate to include styles."
-            }
-          >
-            <Clipboard size={12} />
-            {webflowCopyLabel}
+            {hasInsertedSkeleton ? "Insert again" : "Insert via API"}
           </Button>
           <Button
             variant="ghost"
@@ -405,11 +397,15 @@ export function DebugSkeletonScreen() {
           <Button
             variant="primary"
             disabled={!displaySkeleton || isMutating || hasDraftChanges}
-            onClick={() => {
-              void insertSkeleton();
-            }}
+            onClick={copyForWebflow}
+            title={
+              (displaySkeleton?.styleDefinitions?.length ?? 0) > 0
+                ? "Copies a Webflow paste payload (structure + styles + SVG embeds). Paste on the Designer canvas."
+                : "Copies structure only — paste compiled CSS above and regenerate to include styles."
+            }
           >
-            {hasInsertedSkeleton ? "Insert again" : "Insert into Webflow"}
+            <Clipboard size={12} />
+            {webflowCopyLabel}
           </Button>
         </>
       }
