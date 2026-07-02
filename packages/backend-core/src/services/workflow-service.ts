@@ -51,7 +51,7 @@ import { PlanningProvider, providerWarning } from "../planner/planning-provider.
 import { serializeSectionContext } from "../planner/section-serializer.js";
 import { shouldFallbackStylingPlan } from "../planner/style-fallback.js";
 import { buildResolvedStylingFromSkeleton } from "../planner/resolved-styling.js";
-import { splitLayoutVisual } from "../planner/css-resolver.js";
+import { parseCompiledCss, splitLayoutVisual } from "../planner/css-resolver.js";
 import { AppRepository } from "../repositories/app-repository.js";
 import { dedupe } from "@wfb/shared/client-first.js";
 import { nowIso, stableId } from "../utils.js";
@@ -1027,6 +1027,22 @@ export class WorkflowService {
       if (htmlSkeleton) {
         if (!request.cssText?.trim()) {
           return htmlSkeleton;
+        }
+        // Catch the easy mistake: pasting DevTools "Computed" styles (bare
+        // property:value pairs, no selectors) instead of the compiled stylesheet.
+        if (parseCompiledCss(request.cssText).classes.size === 0) {
+          return {
+            ...htmlSkeleton,
+            warnings: [
+              ...htmlSkeleton.warnings,
+              {
+                code: "css-no-class-rules",
+                message:
+                  "The pasted CSS contains no class rules, so no styles were resolved. Paste the site's compiled stylesheet FILE (e.g. assets/index-*.css with selectors like `.card { … }`) — not DevTools computed styles.",
+                level: "warning"
+              }
+            ]
+          };
         }
         // With the compiled CSS we can resolve FULL styling (layout + visual,
         // combo classes applied to the tree) so the playground can serialize a
