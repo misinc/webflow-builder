@@ -31,10 +31,12 @@ export function SectionListScreen() {
     confirmSiteStylePlan,
     completeCurrentPage,
     componentBannerDismissed,
+    componentForSection,
     componentOpportunities,
     currentSections,
     designerContext,
     dismissComponentBanner,
+    insertComponentInstance,
     isMutating,
     loadingLabel,
     refreshComponentOpportunities,
@@ -224,6 +226,18 @@ export function SectionListScreen() {
               <SectionRow
                 key={section.id}
                 section={section}
+                componentAvailable={
+                  section.status === "pending" || section.status === "in-progress"
+                    ? componentForSection(section)
+                    : null
+                }
+                onInsertInstance={
+                  isMutating
+                    ? undefined
+                    : () => {
+                        void insertComponentInstance(section.id);
+                      }
+                }
                 onClick={() => {
                   // Completed sections go back to the skeleton screen and rebuild
                   // from scratch; others just continue where they are.
@@ -285,6 +299,8 @@ export function SectionListScreen() {
 
 function SectionRow({
   section,
+  componentAvailable,
+  onInsertInstance,
   onClick
 }: {
   section: {
@@ -294,6 +310,8 @@ function SectionRow({
     elements: number | null;
     status: SectionStatus | "in-progress";
   };
+  componentAvailable?: { id: string; name: string } | null;
+  onInsertInstance?: () => void;
   onClick: () => void;
 }) {
   const isActive = section.status === "in-progress";
@@ -322,6 +340,33 @@ function SectionRow({
           {section.elements ? ` · ${section.elements} elements` : ""}
         </div>
       </div>
+      {componentAvailable && onInsertInstance ? (
+        <span
+          role="button"
+          tabIndex={0}
+          onClick={(event) => {
+            event.stopPropagation();
+            onInsertInstance();
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.stopPropagation();
+              event.preventDefault();
+              onInsertInstance();
+            }
+          }}
+          title={`The component "${componentAvailable.name}" already exists for this section — insert an instance instead of rebuilding.`}
+          className="flex-shrink-0 h-6.5 px-2.5 text-[11.5px] font-medium rounded border inline-flex items-center justify-center gap-1 transition-colors"
+          style={{
+            borderColor: "rgba(180,108,255,0.32)",
+            color: "#cf9bff",
+            background: "rgba(180,108,255,0.06)"
+          }}
+        >
+          <Sparkles size={11} fill="currentColor" strokeWidth={0} />
+          Insert instance
+        </span>
+      ) : null}
       <div className={`flex-shrink-0 ${isActive ? "text-wb-accent" : "text-wb-text-tertiary"}`}>
         <ChevronRight size={16} />
       </div>

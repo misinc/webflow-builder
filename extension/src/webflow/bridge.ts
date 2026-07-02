@@ -73,6 +73,14 @@ export interface WebflowDesignerBridge {
     bindings: string[];
   }>;
   createNode(input: CreateNodeInput): Promise<{ id: string }>;
+  /** All site components as { id, name } (for reuse detection by name). */
+  listComponents(): Promise<Array<{ id: string; name: string }>>;
+  /** Register the currently selected element as a Component (paste-path builds). */
+  registerComponentFromSelection(input: {
+    name: string;
+    group?: string;
+    description?: string;
+  }): Promise<RegisteredComponent>;
   createComponentInstance(input: CreateComponentInstanceInput): Promise<{ id: string }>;
   openComponentCanvas(componentId: string): Promise<void>;
   exitComponentCanvas(): Promise<void>;
@@ -1239,6 +1247,41 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
     };
   }
 
+  async listComponents(): Promise<Array<{ id: string; name: string }>> {
+    const components = this.api.getAllComponents
+      ? await this.api.getAllComponents().catch(() => [])
+      : [];
+    const entries = await Promise.all(
+      components.map(async (component) => {
+        const name = await component.getName().catch(() => null);
+        return name ? { id: component.id, name } : null;
+      })
+    );
+    return entries.filter((entry): entry is { id: string; name: string } => entry !== null);
+  }
+
+  async registerComponentFromSelection(input: {
+    name: string;
+    group?: string;
+    description?: string;
+  }): Promise<RegisteredComponent> {
+    if (!this.api.registerComponent) {
+      throw new Error("This version of the Webflow Designer API cannot create components.");
+    }
+    const selected = await this.getSelectedElement();
+    if (!selected) {
+      throw new Error("Select the built section on the canvas first.");
+    }
+    const component = await this.api.registerComponent(
+      { name: input.name, group: input.group, description: input.description, replace: false },
+      selected
+    );
+    return {
+      id: component.id,
+      name: (await component.getName().catch(() => input.name)) ?? input.name
+    };
+  }
+
   async registerComponentFromNode(
     nodeId: string,
     input: {
@@ -1551,6 +1594,18 @@ class MockWebflowDesignerBridge implements WebflowDesignerBridge {
     _input: CreateComponentInstanceInput
   ): Promise<{ id: string }> {
     return { id: `mock-component-instance-${++this.nodeCount}` };
+  }
+
+  async listComponents(): Promise<Array<{ id: string; name: string }>> {
+    return [];
+  }
+
+  async registerComponentFromSelection(input: {
+    name: string;
+    group?: string;
+    description?: string;
+  }): Promise<RegisteredComponent> {
+    return { id: `mock-component-${++this.nodeCount}`, name: input.name };
   }
 
   async openComponentCanvas(): Promise<void> {}

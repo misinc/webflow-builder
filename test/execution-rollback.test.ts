@@ -69,6 +69,14 @@ class TrackingBridge implements WebflowDesignerBridge {
     return { id: "node-1" };
   }
 
+  async listComponents(): Promise<Array<{ id: string; name: string }>> {
+    return [];
+  }
+
+  async registerComponentFromSelection(input: { name: string }): Promise<{ id: string; name: string }> {
+    return { id: "stub-component", name: input.name };
+  }
+
   async createComponentInstance() {
     return { id: "component-instance-1" };
   }

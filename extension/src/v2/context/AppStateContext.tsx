@@ -230,6 +230,7 @@ interface CurrentSectionRow {
   title: string;
   file: string;
   sourceCode: string | null;
+  componentName: string | null;
   elements: number | null;
   status: "pending" | "in-progress" | "complete" | "skipped" | "error";
 }
@@ -290,6 +291,15 @@ interface AppStateContextValue {
   currentSections: CurrentSectionRow[];
   selectedSectionId: string | null;
   selectedSection: CurrentSectionRow | null;
+  /** The component opportunity the selected section matches, if any. */
+  selectedSectionOpportunity: ComponentOpportunity | null;
+  /** When true and an opportunity matches, approval also registers the built section as a Component. */
+  createComponentOnApprove: boolean;
+  setCreateComponentOnApprove: (value: boolean) => void;
+  /** An existing site Component matching a section's opportunity (→ offer instance insert). */
+  componentForSection: (section: CurrentSectionRow) => { id: string; name: string } | null;
+  /** Insert an instance of the section's existing Component and approve the section. */
+  insertComponentInstance: (sectionId: string) => Promise<boolean>;
   lastCompletedSection: SectionOutcomeSummary | null;
   activeSectionError: string | null;
   selectSection: (sectionId: string) => void;
@@ -784,6 +794,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         title: item.sectionName,
         file: section?.sourceFile ?? activeQueue.repoPage?.sourceFile ?? "Unknown file",
         sourceCode: section?.sourceCode ?? null,
+        componentName: section?.componentName ?? null,
         elements: null,
         status: localError ? "error" : statusToScreenStatus(item.status)
       } satisfies CurrentSectionRow;
@@ -792,6 +803,60 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   const selectedSection =
     currentSections.find((section) => section.id === selectedSectionId) ?? null;
+
+  const [siteComponents, setSiteComponents] = useState<Array<{ id: string; name: string }>>([]);
+  const [createComponentOnApprove, setCreateComponentOnApprove] = useState(true);
+
+  const selectedSectionOpportunity = useMemo(
+    () =>
+      selectedSection?.componentName
+        ? componentOpportunities.find(
+            (opportunity) => opportunity.componentName === selectedSection.componentName
+          ) ?? null
+        : null,
+    [componentOpportunities, selectedSection]
+  );
+
+  // Default the checkbox back on whenever a different section is selected.
+  useEffect(() => {
+    setCreateComponentOnApprove(true);
+  }, [selectedSectionId]);
+
+  // The site's existing components, for "this opportunity already has a
+  // component → insert an instance instead of rebuilding".
+  useEffect(() => {
+    if (!designerContext?.siteId) {
+      return;
+    }
+    let cancelled = false;
+    void bridge
+      .listComponents()
+      .then((components) => {
+        if (!cancelled) {
+          setSiteComponents(components);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [designerContext?.siteId]);
+
+  const componentForSection = useCallback(
+    (row: CurrentSectionRow): { id: string; name: string } | null => {
+      if (!row.componentName) {
+        return null;
+      }
+      const opportunity = componentOpportunities.find(
+        (candidate) => candidate.componentName === row.componentName
+      );
+      if (!opportunity) {
+        return null;
+      }
+      return siteComponents.find((component) => component.name === opportunity.name) ?? null;
+    },
+    [componentOpportunities, siteComponents]
+  );
   const selectedWorkflowItem =
     activeQueue?.items.find((item) => item.repoSectionId === selectedSectionId) ?? null;
   const selectedSectionRecord = selectedSectionId
@@ -1512,6 +1577,32 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             file: selectedSection.file
           });
         }
+        // Component opportunity + checkbox: register the built section as a
+        // reusable Component so later pages can insert instances instead of
+        // rebuilding. Non-fatal — the approval has already succeeded.
+        if (
+          createComponentOnApprove &&
+          selectedSectionOpportunity &&
+          !siteComponents.some((component) => component.name === selectedSectionOpportunity.name)
+        ) {
+          try {
+            const registration = { name: selectedSectionOpportunity.name };
+            // API-insert builds track the root node; paste builds use the
+            // user's current canvas selection (they just ran Clean up paste).
+            const registered = currentTargetNodeId
+              ? await bridge
+                  .registerComponentFromNode(currentTargetNodeId, registration)
+                  .catch(() => bridge.registerComponentFromSelection(registration))
+              : await bridge.registerComponentFromSelection(registration);
+            setSiteComponents((current) => [...current, registered]);
+          } catch (componentError) {
+            setError(
+              componentError instanceof Error
+                ? `Section approved, but component creation failed: ${componentError.message}`
+                : "Section approved, but component creation failed."
+            );
+          }
+        }
         resetSectionRunState(nextSectionIdFromQueue(nextQueue));
         await refreshComponentOpportunities();
         return true;
@@ -1521,6 +1612,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       return false;
     }
   }, [
+    createComponentOnApprove,
+    currentTargetNodeId,
     designerContext?.pageId,
     designerContext?.siteId,
     refreshComponentOpportunities,
@@ -1528,9 +1621,61 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     selectedRepoId,
     selectedSection,
     selectedSectionId,
+    selectedSectionOpportunity,
     session?.userId,
+    siteComponents,
     withMutation
   ]);
+
+  const insertComponentInstance = useCallback(
+    async (sectionId: string): Promise<boolean> => {
+      const row = currentSections.find((section) => section.id === sectionId) ?? null;
+      const component = row ? componentForSection(row) : null;
+      if (!row || !component) {
+        setError("No existing component matches this section.");
+        return false;
+      }
+      if (!selectedRepoId || !session?.userId || !designerContext?.siteId || !designerContext.pageId) {
+        setError("Designer context is not ready.");
+        return false;
+      }
+      try {
+        return await withMutation("Inserting component instance", async () => {
+          const pageId = designerContext.pageId!;
+          await bridge.createComponentInstance({
+            componentId: component.id,
+            parentId: null
+          });
+          const nextQueue = await backend.approveSection({
+            repoId: selectedRepoId,
+            webflowSiteId: designerContext.siteId!,
+            webflowPageId: pageId,
+            sectionId,
+            requestedBy: session.userId
+          });
+          setQueueByPageId((current) => ({ ...current, [pageId]: nextQueue }));
+          setLastCompletedSection({ id: row.id, title: row.title, file: row.file });
+          resetSectionRunState(nextSectionIdFromQueue(nextQueue));
+          return true;
+        });
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Failed to insert the component instance."
+        );
+        return false;
+      }
+    },
+    [
+      componentForSection,
+      currentSections,
+      designerContext?.pageId,
+      designerContext?.siteId,
+      resetSectionRunState,
+      selectedRepoId,
+      session?.userId,
+      withMutation
+    ]
+  );
 
   const skipCurrentSection = useCallback(async () => {
     if (!selectedSectionId || !selectedRepoId || !session?.userId || !designerContext?.siteId || !designerContext.pageId) {
@@ -1801,6 +1946,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       currentSections,
       selectedSectionId,
       selectedSection,
+      selectedSectionOpportunity,
+      createComponentOnApprove,
+      setCreateComponentOnApprove,
+      componentForSection,
+      insertComponentInstance,
       lastCompletedSection,
       activeSectionError:
         (selectedSectionId ? sectionErrorsById[selectedSectionId] : null) ?? error,
@@ -1927,6 +2077,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       selectedRepoId,
       selectedSection,
       selectedSectionId,
+      selectedSectionOpportunity,
+      createComponentOnApprove,
+      componentForSection,
+      insertComponentInstance,
       session,
       siteStylePlan,
       skeleton,

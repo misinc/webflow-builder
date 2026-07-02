@@ -25,11 +25,14 @@ export function ApplyingStylesScreen() {
     applyCurrentSection,
     approveCurrentSection,
     cancelActiveWorkflow,
+    createComponentOnApprove,
     error,
     isMutating,
     loadingLabel,
     rollbackCurrentExecution,
     selectedSection,
+    selectedSectionOpportunity,
+    setCreateComponentOnApprove,
     skeleton,
     styling,
     verification
@@ -146,9 +149,24 @@ export function ApplyingStylesScreen() {
               Retry styling
             </Button>
           ) : null}
-          <span className="text-[11px] text-wb-text-tertiary mr-2">
-            {loadingLabel ?? (verification ? (verification.readyForApproval ? "Ready for approval" : "Can retry or approve visually") : "Applying styles…")}
-          </span>
+          {selectedSectionOpportunity ? (
+            <label
+              className="inline-flex items-center gap-2 text-[11.5px] text-wb-text-secondary whitespace-nowrap mr-2"
+              title={`This section is used on ${selectedSectionOpportunity.files} pages — approving will also register it as a Webflow Component so other pages can insert instances instead of rebuilding.`}
+            >
+              <input
+                type="checkbox"
+                checked={createComponentOnApprove}
+                onChange={(event) => setCreateComponentOnApprove(event.target.checked)}
+                className="h-3.5 w-3.5 rounded border border-white/[0.16] bg-wb-input accent-[var(--wb-accent)]"
+              />
+              Create component · {selectedSectionOpportunity.files} pages
+            </label>
+          ) : (
+            <span className="text-[11px] text-wb-text-tertiary mr-2">
+              {loadingLabel ?? (verification ? (verification.readyForApproval ? "Ready for approval" : "Can retry or approve visually") : "Applying styles…")}
+            </span>
+          )}
           <Button
             variant="primary"
             disabled={!canApproveSection || isMutating}
