@@ -25,6 +25,10 @@ class FailingBridge implements WebflowDesignerBridge {
     } satisfies DesignerContext;
   }
 
+  async listStyleIds(): Promise<Array<{ name: string; id: string }>> {
+    return [];
+  }
+
   async inspectSharedStyles() {
     return {
       siteId: "site-1",

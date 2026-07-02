@@ -122,4 +122,26 @@ describe("webflow clipboard serializer", () => {
     const again = buildWebflowClipboardPayload({ elementTree: tree, styleDefinitions });
     expect(JSON.stringify(again)).toBe(JSON.stringify(payload));
   });
+
+  it("references existing project styles by their REAL id (no 'name 2' dupes)", () => {
+    const withProject = buildWebflowClipboardPayload({
+      elementTree: tree,
+      styleDefinitions,
+      existingStyles: [
+        { className: "heading-style-h2", styleId: "aaaabbbbccccddddeeeeffff" },
+        // exists in project AND we resolved styles for it — project wins, no restyle
+        { className: "section_services", styleId: "111122223333444455556666" }
+      ]
+    });
+    const projectStyles = new Map(withProject.payload.styles.map((s) => [s.name, s]));
+    expect(projectStyles.get("heading-style-h2")!._id).toBe("aaaabbbbccccddddeeeeffff");
+    expect(projectStyles.get("section_services")!._id).toBe("111122223333444455556666");
+    // never restyle an existing project class
+    expect(projectStyles.get("section_services")!.styleLess).toBe("");
+    // new classes still ship their resolved styles
+    expect(projectStyles.get("services_card")!.styleLess).toContain("display: grid;");
+    // nodes reference the real id
+    const heading = withProject.payload.nodes.find((n) => n.type === "Heading")!;
+    expect(heading.classes).toContain("aaaabbbbccccddddeeeeffff");
+  });
 });

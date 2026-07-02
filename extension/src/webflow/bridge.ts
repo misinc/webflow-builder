@@ -49,6 +49,8 @@ export interface WebflowDesignerBridge {
   switchToPage(pageId: string): Promise<void>;
   createPage(input: CreatePageInput): Promise<WebflowSitePage>;
   inspectSharedStyles(siteId: string): Promise<SharedStyleContext>;
+  /** All project styles as name → real style id (for clipboard-paste class reuse). */
+  listStyleIds(): Promise<Array<{ name: string; id: string }>>;
   createNode(input: CreateNodeInput): Promise<{ id: string }>;
   createComponentInstance(input: CreateComponentInstanceInput): Promise<{ id: string }>;
   openComponentCanvas(componentId: string): Promise<void>;
@@ -763,6 +765,17 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
     };
   }
 
+  async listStyleIds(): Promise<Array<{ name: string; id: string }>> {
+    const styles = await this.api.getAllStyles();
+    const entries = await Promise.all(
+      styles.map(async (style) => {
+        const name = await style.getName().catch(() => null);
+        return name && typeof style.id === "string" ? { name, id: style.id } : null;
+      })
+    );
+    return entries.filter((entry): entry is { name: string; id: string } => entry !== null);
+  }
+
   async inspectSharedStyles(siteId: string): Promise<SharedStyleContext> {
     const [styles, collection] = await Promise.all([
       this.api.getAllStyles(),
@@ -1207,6 +1220,10 @@ class MockWebflowDesignerBridge implements WebflowDesignerBridge {
       this.listeners.forEach((listener) => listener());
     }
     return page;
+  }
+
+  async listStyleIds(): Promise<Array<{ name: string; id: string }>> {
+    return [];
   }
 
   async inspectSharedStyles(siteId: string): Promise<SharedStyleContext> {

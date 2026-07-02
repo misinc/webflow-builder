@@ -29,6 +29,14 @@ export interface WebflowClipboardStyleInput {
 export interface WebflowClipboardInput {
   elementTree: BuildNode;
   styleDefinitions: WebflowClipboardStyleInput[];
+  /**
+   * The destination project's real styles (name → style id), read via the
+   * Designer API. Classes that already exist are referenced by their REAL id so
+   * Webflow reuses them on paste instead of duplicating as "name 2" — the same
+   * reconciliation Relume's Chrome extension performs. Without this, name
+   * collisions duplicate.
+   */
+  existingStyles?: Array<{ className: string; styleId: string }>;
 }
 
 interface XscpNode {
@@ -168,13 +176,18 @@ export function buildWebflowClipboardPayload(input: WebflowClipboardInput): Xscp
   const nodes: XscpNode[] = [];
   const styleIdByName = new Map<string, string>();
   const usedClassNames = new Set<string>();
+  const projectStyleIdByName = new Map(
+    (input.existingStyles ?? []).map((style) => [style.className, style.styleId])
+  );
 
   const styleIdFor = (className: string): string => {
     const existing = styleIdByName.get(className);
     if (existing) {
       return existing;
     }
-    const id = stableHexId(`style:${className}`);
+    // A class that already exists in the destination project is referenced by
+    // its real id so Webflow reuses it instead of creating "name 2".
+    const id = projectStyleIdByName.get(className) ?? stableHexId(`style:${className}`);
     styleIdByName.set(className, id);
     return id;
   };
@@ -218,10 +231,13 @@ export function buildWebflowClipboardPayload(input: WebflowClipboardInput): Xscp
   const definitionByName = new Map(
     input.styleDefinitions.map((definition) => [definition.className, definition])
   );
-  // Every class referenced by a node needs a style entry. Classes without our own
-  // definition get empty styleLess — Webflow reuses the project's class by name.
+  // Every class referenced by a node needs a style entry. Classes that already
+  // exist in the project carry their real id and EMPTY styleLess — pasting never
+  // restyles an existing class, it just references it. Unknown classes without a
+  // definition also paste empty (created bare, name preserved).
   const styles: XscpStyle[] = [...usedClassNames].map((name) => {
     const definition = definitionByName.get(name);
+    const existsInProject = projectStyleIdByName.has(name);
     return {
       _id: styleIdFor(name),
       fake: false,
@@ -229,7 +245,8 @@ export function buildWebflowClipboardPayload(input: WebflowClipboardInput): Xscp
       name,
       namespace: "",
       comb: definition?.combo ? "&" : "",
-      styleLess: definition ? stylePropertiesToStyleLess(definition.properties) : "",
+      styleLess:
+        !existsInProject && definition ? stylePropertiesToStyleLess(definition.properties) : "",
       variants: {},
       children: []
     };

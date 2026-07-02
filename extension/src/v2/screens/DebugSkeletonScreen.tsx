@@ -60,6 +60,7 @@ export function DebugSkeletonScreen() {
   const [fixtureLabel, setFixtureLabel] = useState("Copy fixture");
   const [cssText, setCssText] = useState("");
   const [webflowCopyLabel, setWebflowCopyLabel] = useState("Copy for Webflow");
+  const [projectStyles, setProjectStyles] = useState<Array<{ name: string; id: string }>>([]);
   const [lastGeneratedInput, setLastGeneratedInput] = useState<{
     code: string;
     inputType: DebugSkeletonRequest["inputType"];
@@ -121,6 +122,9 @@ export function DebugSkeletonScreen() {
       if (context?.siteId) {
         sharedStyleContext = await bridge.inspectSharedStyles(context.siteId).catch(() => undefined);
       }
+      // Prefetched so Copy for Webflow can reference the project's REAL style ids
+      // synchronously (existing classes get reused on paste instead of "name 2").
+      setProjectStyles(await bridge.listStyleIds().catch(() => []));
       const nextSkeleton = normalizeSkeletonPlan(
         await backend.generateDebugSkeleton(
           {
@@ -270,7 +274,11 @@ export function DebugSkeletonScreen() {
     try {
       const payload = buildWebflowClipboardPayload({
         elementTree: displaySkeleton.elementTree,
-        styleDefinitions: displaySkeleton.styleDefinitions ?? []
+        styleDefinitions: displaySkeleton.styleDefinitions ?? [],
+        existingStyles: projectStyles.map((style) => ({
+          className: style.name,
+          styleId: style.id
+        }))
       });
       const json = JSON.stringify(payload);
       // Webflow's Designer reads the paste as the `application/json` clipboard
