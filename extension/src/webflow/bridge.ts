@@ -279,6 +279,69 @@ export function normalizeColorValue(value: string): string | null {
   return trimmed;
 }
 
+export type TokenKind = "color" | "size" | "fontFamily" | "other";
+
+/** Values too generic to safely token-match ("0px" would bind every border). */
+const TRIVIAL_TOKEN_VALUES = new Set([
+  "0", "0px", "0rem", "0em", "0%", "1", "auto", "none", "normal",
+  "inherit", "initial", "unset", "transparent", "100%", "50%"
+]);
+
+/**
+ * Normalize a variable's raw value (or a style literal) for value matching,
+ * classifying it so tokens only bind to compatible properties. Size variables
+ * from the Designer API may arrive as { unit, value } objects.
+ */
+export function normalizeTokenLiteral(
+  raw: unknown
+): { normalized: string; kind: TokenKind } | null {
+  if (raw && typeof raw === "object" && "unit" in raw && "value" in raw) {
+    const sized = raw as { unit: unknown; value: unknown };
+    return { normalized: `${String(sized.value)}${String(sized.unit)}`.toLowerCase(), kind: "size" };
+  }
+  if (typeof raw !== "string" && typeof raw !== "number") {
+    return null;
+  }
+  const text = String(raw).trim();
+  if (!text) {
+    return null;
+  }
+  if (/^#|^rgba?\(/i.test(text)) {
+    const color = normalizeColorValue(text);
+    return color ? { normalized: color, kind: "color" } : null;
+  }
+  if (/^-?[\d.]+(px|rem|em|vw|vh|%|ch|svh|dvh)$/i.test(text)) {
+    return { normalized: text.toLowerCase(), kind: "size" };
+  }
+  if (/^-?[\d.]+$/.test(text)) {
+    return { normalized: text, kind: "other" };
+  }
+  return { normalized: text.toLowerCase(), kind: "fontFamily" };
+}
+
+/** Which properties a token of the given kind may bind to. */
+export function tokenKindMatchesProperty(kind: TokenKind, property: string): boolean {
+  if (kind === "color") {
+    return (
+      property === "color" || property.endsWith("-color") ||
+      property === "fill" || property === "stroke"
+    );
+  }
+  if (kind === "size") {
+    return (
+      /^(font-size|letter-spacing|line-height|gap|row-gap|column-gap|width|height|top|right|bottom|left)$/.test(property) ||
+      property.startsWith("padding") || property.startsWith("margin") ||
+      property.startsWith("min-") || property.startsWith("max-") ||
+      property.endsWith("-radius") || property === "border-radius" ||
+      property.endsWith("-width")
+    );
+  }
+  if (kind === "fontFamily") {
+    return property === "font-family";
+  }
+  return /^(line-height|font-weight|opacity)$/.test(property);
+}
+
 function normalizeElementId(id: ElementIdValue | null | undefined): string | null {
   if (!id) {
     return null;
@@ -884,6 +947,50 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
     return { scanned, updatedElements, swappedClasses: [...swappedClasses].sort() };
   }
 
+  private tokenValueMap: Map<string, { variable: WebflowVariable; name: string; kind: TokenKind }> | null =
+    null;
+
+  /**
+   * The project's variables keyed by normalized value, cached for the session
+   * (variables rarely change mid-migration; the first cleanup click warms it).
+   * The variable's declared type wins over the value-inferred kind when present.
+   */
+  private async getTokenValueMap(): Promise<
+    Map<string, { variable: WebflowVariable; name: string; kind: TokenKind }>
+  > {
+    if (this.tokenValueMap) {
+      return this.tokenValueMap;
+    }
+    const map = new Map<string, { variable: WebflowVariable; name: string; kind: TokenKind }>();
+    const collection = await this.api.getDefaultVariableCollection();
+    for (const variable of (await collection?.getAllVariables()) ?? []) {
+      const [name, value] = await Promise.all([
+        variable.getName().catch(() => null),
+        variable.get ? variable.get().catch(() => undefined) : Promise.resolve(undefined)
+      ]);
+      const literal = normalizeTokenLiteral(value);
+      if (!name || !literal) {
+        continue;
+      }
+      const declared = variable.type?.toLowerCase().replace(/[^a-z]/g, "");
+      const kind: TokenKind =
+        declared === "color"
+          ? "color"
+          : declared === "size"
+            ? "size"
+            : declared === "fontfamily"
+              ? "fontFamily"
+              : declared === "number" || declared === "percentage"
+                ? "other"
+                : literal.kind;
+      if (!map.has(literal.normalized)) {
+        map.set(literal.normalized, { variable, name, kind });
+      }
+    }
+    this.tokenValueMap = map;
+    return map;
+  }
+
   async bindTokensInSelection(): Promise<{
     stylesScanned: number;
     boundProperties: number;
@@ -893,33 +1000,10 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
     if (!root) {
       throw new Error("Select the pasted section on the canvas first.");
     }
-    const collection = await this.api.getDefaultVariableCollection();
-    if (!collection) {
-      throw new Error("This site has no variable collection to bind against.");
+    const variablesByValue = await this.getTokenValueMap();
+    if (variablesByValue.size === 0) {
+      throw new Error("This site has no variables with bindable values.");
     }
-
-    // Project variables keyed by normalized value — the paste flattens variable
-    // references to literals, so value equality is how we find their token.
-    const variablesByValue = new Map<string, { variable: WebflowVariable; name: string }>();
-    for (const variable of await collection.getAllVariables()) {
-      const [name, value] = await Promise.all([
-        variable.getName().catch(() => null),
-        variable.get ? variable.get().catch(() => undefined) : Promise.resolve(undefined)
-      ]);
-      const normalized =
-        typeof value === "string" || typeof value === "number"
-          ? normalizeColorValue(String(value))
-          : null;
-      if (name && normalized && !variablesByValue.has(normalized)) {
-        variablesByValue.set(normalized, { variable, name });
-      }
-    }
-
-    const isColorProperty = (property: string): boolean =>
-      property === "color" ||
-      property.endsWith("-color") ||
-      property === "fill" ||
-      property === "stroke";
 
     const processedStyleIds = new Set<string>();
     const bindings: string[] = [];
@@ -940,12 +1024,15 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
         for (const [property, rawValue] of Object.entries(properties)) {
           // Only plain string literals are rebound — a value that is already a
           // variable reference comes back as an object and is skipped.
-          if (!isColorProperty(property) || typeof rawValue !== "string") {
+          if (typeof rawValue !== "string") {
             continue;
           }
-          const normalized = normalizeColorValue(rawValue);
-          const match = normalized ? variablesByValue.get(normalized) : undefined;
-          if (!match) {
+          const literal = normalizeTokenLiteral(rawValue);
+          if (!literal || TRIVIAL_TOKEN_VALUES.has(literal.normalized)) {
+            continue;
+          }
+          const match = variablesByValue.get(literal.normalized);
+          if (!match || !tokenKindMatchesProperty(match.kind, property)) {
             continue;
           }
           await style.setProperty(property, match.variable);

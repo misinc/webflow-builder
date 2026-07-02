@@ -61,8 +61,7 @@ export function DebugSkeletonScreen() {
   const [cssText, setCssText] = useState("");
   const [webflowCopyLabel, setWebflowCopyLabel] = useState("Copy for Webflow");
   const [projectStyles, setProjectStyles] = useState<Array<{ name: string; id: string }>>([]);
-  const [dedupeLabel, setDedupeLabel] = useState("Fix pasted classes");
-  const [bindTokensLabel, setBindTokensLabel] = useState("Bind tokens");
+  const [dedupeLabel, setDedupeLabel] = useState("Clean up paste");
   const [copyHint, setCopyHint] = useState<string | null>(null);
   const [inspectedClipboard, setInspectedClipboard] = useState("");
   const [lastGeneratedInput, setLastGeneratedInput] = useState<{
@@ -310,46 +309,27 @@ export function DebugSkeletonScreen() {
     }
   };
 
-  const dedupePastedClasses = async () => {
+  const cleanupPastedSection = async () => {
     setIsMutating(true);
-    setLoadingLabel("Fixing pasted classes");
+    setLoadingLabel("Cleaning up paste");
     setError(null);
     try {
-      const result = await bridge.dedupeSelectionStyles();
+      // Order matters: swap duplicated classes back to the project's base
+      // classes first, THEN bind tokens against the final classes.
+      const deduped = await bridge.dedupeSelectionStyles();
+      const bound = await bridge.bindTokensInSelection();
       setDedupeLabel(
-        result.swappedClasses.length > 0
-          ? `Fixed ${result.swappedClasses.length} class${result.swappedClasses.length === 1 ? "" : "es"}`
-          : "No duplicates found"
-      );
-      window.setTimeout(() => setDedupeLabel("Fix pasted classes"), 2600);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to fix duplicated classes in the selection."
-      );
-    } finally {
-      setIsMutating(false);
-      setLoadingLabel(null);
-    }
-  };
-
-  const bindTokens = async () => {
-    setIsMutating(true);
-    setLoadingLabel("Binding tokens");
-    setError(null);
-    try {
-      const result = await bridge.bindTokensInSelection();
-      setBindTokensLabel(
-        result.boundProperties > 0
-          ? `Bound ${result.boundProperties} propert${result.boundProperties === 1 ? "y" : "ies"}`
-          : "No matching tokens"
+        `${deduped.swappedClasses.length} class${deduped.swappedClasses.length === 1 ? "" : "es"} · ${bound.boundProperties} token${bound.boundProperties === 1 ? "" : "s"}`
       );
       setCopyHint(
-        result.bindings.length > 0 ? `Tokens: ${result.bindings.slice(0, 4).join(" · ")}${result.bindings.length > 4 ? " · …" : ""}` : null
+        bound.bindings.length > 0
+          ? `Tokens: ${bound.bindings.slice(0, 4).join(" · ")}${bound.bindings.length > 4 ? " · …" : ""}`
+          : null
       );
-      window.setTimeout(() => setBindTokensLabel("Bind tokens"), 2600);
+      window.setTimeout(() => setDedupeLabel("Clean up paste"), 3200);
       window.setTimeout(() => setCopyHint(null), 8000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to bind tokens in the selection.");
+      setError(err instanceof Error ? err.message : "Failed to clean up the pasted section.");
     } finally {
       setIsMutating(false);
       setLoadingLabel(null);
@@ -418,21 +398,11 @@ export function DebugSkeletonScreen() {
             variant="ghost"
             disabled={isMutating}
             onClick={() => {
-              void dedupePastedClasses();
+              void cleanupPastedSection();
             }}
-            title="After pasting: select the pasted section on the canvas, then click to swap duplicated 'name 2' classes back to your project's existing classes."
+            title="After pasting: select the pasted section on the canvas, then click. Swaps duplicated 'name 2' classes back to your existing classes, then relinks color/size/font values to your project variables (pasted styles always arrive as literals)."
           >
             {dedupeLabel}
-          </Button>
-          <Button
-            variant="ghost"
-            disabled={isMutating}
-            onClick={() => {
-              void bindTokens();
-            }}
-            title="After pasting: select the pasted section, then click to relink color values to your project variables (pasted styles arrive as literals — Webflow strips variable references on copy)."
-          >
-            {bindTokensLabel}
           </Button>
           <Button
             variant="primary"
