@@ -70,7 +70,27 @@ describe("webflow clipboard serializer", () => {
   it("produces a well-formed XscpData envelope", () => {
     expect(payload.type).toBe("@webflow/XscpData");
     expect(payload.meta.unlinkedSymbolCount).toBe(0);
+    expect(payload.meta.richTextComponentsStripped).toBe(false);
     expect(Array.isArray(payload.payload.assets)).toBe(true);
+  });
+
+  it("emits UUID-shaped ids like real Designer payloads", () => {
+    const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+    for (const node of nodes) {
+      expect(node._id).toMatch(UUID);
+    }
+    for (const style of styles) {
+      expect(style._id).toMatch(UUID);
+    }
+  });
+
+  it("links a base style to its combos via style.children", () => {
+    const base = styleByName.get("services_card")!;
+    const combo = styleByName.get("services_card_v2")!;
+    expect(base.children).toContain(combo._id);
+    expect(combo.children).toEqual([]);
+    expect(base.origin).toBeNull();
+    expect(base.selector).toBeNull();
   });
 
   it("keeps referential integrity (every child/class id exists)", () => {

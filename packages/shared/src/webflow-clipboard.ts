@@ -59,7 +59,10 @@ interface XscpStyle {
   comb: "" | "&";
   styleLess: string;
   variants: Record<string, unknown>;
+  /** For a base class: the style ids of combo classes applied on top of it. */
   children: string[];
+  origin: null;
+  selector: null;
 }
 
 export interface XscpData {
@@ -76,14 +79,17 @@ export interface XscpData {
     dynBindRemovedCount: number;
     dynListBindRemovedCount: number;
     paginationRemovedCount: number;
+    universalBindingsRemovedCount: number;
     unlinkedSymbolCount: number;
+    codeComponentsRemovedCount: number;
+    richTextComponentsStripped: boolean;
   };
 }
 
 /**
- * Deterministic 24-hex-char id (Webflow uses Mongo-style ids). FNV-1a over the
- * seed, expanded to 24 chars — stable across runs so repeat pastes of the same
- * section produce identical style ids.
+ * Deterministic UUID-shaped id (matches the format in real Designer copy
+ * payloads, e.g. "427898cf-0a73-a315-e37a-b551abe161da"). FNV-1a-derived over
+ * the seed — stable across runs so repeat pastes produce identical ids.
  */
 function stableHexId(seed: string): string {
   let h1 = 0x811c9dc5;
@@ -94,11 +100,13 @@ function stableHexId(seed: string): string {
     h2 = Math.imul(h2 ^ ((c << 5) | (c >>> 3)), 0x85ebca6b) >>> 0;
   }
   const h3 = Math.imul(h1 ^ h2, 0xc2b2ae35) >>> 0;
-  return (
+  const h4 = Math.imul(h1 + h3, 0x27d4eb2f) >>> 0;
+  const hex =
     h1.toString(16).padStart(8, "0") +
     h2.toString(16).padStart(8, "0") +
-    h3.toString(16).padStart(8, "0")
-  );
+    h3.toString(16).padStart(8, "0") +
+    h4.toString(16).padStart(8, "0");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
 }
 
 function stylePropertiesToStyleLess(properties: Record<string, string>): string {
@@ -179,6 +187,11 @@ export function buildWebflowClipboardPayload(input: WebflowClipboardInput): Xscp
   const projectStyleIdByName = new Map(
     (input.existingStyles ?? []).map((style) => [style.className, style.styleId])
   );
+  const definitionByName = new Map(
+    input.styleDefinitions.map((definition) => [definition.className, definition])
+  );
+  // Real Designer payloads link a base class to its combos via style.children.
+  const comboIdsByBaseName = new Map<string, Set<string>>();
 
   const styleIdFor = (className: string): string => {
     const existing = styleIdByName.get(className);
@@ -217,6 +230,16 @@ export function buildWebflowClipboardPayload(input: WebflowClipboardInput): Xscp
     }
 
     node.classNames.forEach((name) => usedClassNames.add(name));
+    const baseName = node.classNames.find((name) => !definitionByName.get(name)?.combo);
+    if (baseName) {
+      for (const name of node.classNames) {
+        if (definitionByName.get(name)?.combo) {
+          const set = comboIdsByBaseName.get(baseName) ?? new Set<string>();
+          set.add(styleIdFor(name));
+          comboIdsByBaseName.set(baseName, set);
+        }
+      }
+    }
     nodes.push({
       _id: id,
       ...shape,
@@ -228,9 +251,6 @@ export function buildWebflowClipboardPayload(input: WebflowClipboardInput): Xscp
 
   walk(input.elementTree, "0");
 
-  const definitionByName = new Map(
-    input.styleDefinitions.map((definition) => [definition.className, definition])
-  );
   // Every class referenced by a node needs a style entry. Classes that already
   // exist in the project carry their real id and EMPTY styleLess — pasting never
   // restyles an existing class, it just references it. Unknown classes without a
@@ -248,7 +268,9 @@ export function buildWebflowClipboardPayload(input: WebflowClipboardInput): Xscp
       styleLess:
         !existsInProject && definition ? stylePropertiesToStyleLess(definition.properties) : "",
       variants: {},
-      children: []
+      children: [...(comboIdsByBaseName.get(name) ?? [])].sort(),
+      origin: null,
+      selector: null
     };
   });
 
@@ -266,7 +288,10 @@ export function buildWebflowClipboardPayload(input: WebflowClipboardInput): Xscp
       dynBindRemovedCount: 0,
       dynListBindRemovedCount: 0,
       paginationRemovedCount: 0,
-      unlinkedSymbolCount: 0
+      universalBindingsRemovedCount: 0,
+      unlinkedSymbolCount: 0,
+      codeComponentsRemovedCount: 0,
+      richTextComponentsStripped: false
     }
   };
 }
