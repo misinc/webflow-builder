@@ -509,6 +509,9 @@ export const workflowClipboardRequestSchema = z.object({
   webflowPageId: z.string().min(1),
   /** Omit to build a payload for the WHOLE mapped page (all queued sections). */
   sectionId: z.string().min(1).optional(),
+  /** Page mode: sections to leave out (e.g. ones whose Webflow Component already
+   *  exists — those are inserted as linked instances instead of pasted copies). */
+  excludeSectionIds: z.array(z.string().min(1)).default([]),
   requestedBy: z.string().min(1)
 });
 

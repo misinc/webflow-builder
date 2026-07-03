@@ -6,7 +6,7 @@ import "./v2/index.css";
 
 // Bump on every bundle rebuild so you can confirm which bundle Webflow loaded
 // (open the Designer dev console). Backend fixes deploy separately via git.
-const BUNDLE_VERSION = "2026-07-02k · Clipboard inspector dumps ALL flavors (component-reference hunt)";
+const BUNDLE_VERSION = "2026-07-02l · Page copy skips componentized sections (use Insert instance)";
 // eslint-disable-next-line no-console
 console.log(`%c[Webflow Builder] bundle ${BUNDLE_VERSION}`, "color:#00d09c;font-weight:bold");
 

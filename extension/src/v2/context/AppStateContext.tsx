@@ -302,7 +302,10 @@ interface AppStateContextValue {
   /** Insert an instance of the section's existing Component and approve the section. */
   insertComponentInstance: (sectionId: string) => Promise<boolean>;
   /** Webflow paste payload for one section, or the whole page when sectionId is omitted. */
-  buildClipboardPayload: (sectionId?: string) => Promise<WorkflowClipboardResponse | null>;
+  buildClipboardPayload: (
+    sectionId?: string,
+    excludeSectionIds?: string[]
+  ) => Promise<WorkflowClipboardResponse | null>;
   /** Approve every remaining section of the page (after a whole-page paste). */
   approveAllRemainingSections: () => Promise<boolean>;
   lastCompletedSection: SectionOutcomeSummary | null;
@@ -1633,7 +1636,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   ]);
 
   const buildClipboardPayload = useCallback(
-    async (sectionId?: string): Promise<WorkflowClipboardResponse | null> => {
+    async (
+      sectionId?: string,
+      excludeSectionIds?: string[]
+    ): Promise<WorkflowClipboardResponse | null> => {
       if (!selectedRepoId || !session?.userId || !designerContext?.siteId || !designerContext.pageId) {
         setError("Designer context is not ready.");
         return null;
@@ -1647,6 +1653,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
               webflowSiteId: designerContext.siteId!,
               webflowPageId: designerContext.pageId!,
               sectionId,
+              excludeSectionIds: excludeSectionIds ?? [],
               requestedBy: session.userId
             })
         );

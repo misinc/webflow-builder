@@ -77,10 +77,21 @@ export function SectionListScreen() {
     // A slow payload fetch can outlive the click's user-activation window, in
     // which case the clipboard write is blocked — we keep the payload and the
     // second click copies it synchronously.
+    // Sections whose Webflow Component already exists are left OUT of the page
+    // payload — pasting would create a flattened duplicate; they get linked
+    // instances via their "Insert instance" chip instead.
+    const componentizedSections = currentSections.filter(
+      (section) =>
+        (section.status === "pending" || section.status === "in-progress") &&
+        componentForSection(section)
+    );
     let payload = pendingPayload;
     let sectionCount: number | null = null;
     if (!payload) {
-      const result = await buildClipboardPayload();
+      const result = await buildClipboardPayload(
+        undefined,
+        componentizedSections.map((section) => section.id)
+      );
       if (!result) {
         return;
       }
@@ -93,7 +104,9 @@ export function SectionListScreen() {
       setHasCopiedPage(true);
       setCopyPageLabel(sectionCount ? `Copied ${sectionCount} sections` : "Copied");
       setPasteHint(
-        "On the canvas: select the page body, press Cmd+V, then select the pasted wrapper and click Clean up paste."
+        componentizedSections.length > 0
+          ? `Paste on the canvas, then Clean up paste. Skipped ${componentizedSections.length} section${componentizedSections.length === 1 ? "" : "s"} with existing components — use their Insert instance chips.`
+          : "On the canvas: select the page body, press Cmd+V, then select the pasted wrapper and click Clean up paste."
       );
       window.setTimeout(() => setCopyPageLabel("Copy page for Webflow"), 3200);
       window.setTimeout(() => setPasteHint(null), 12000);

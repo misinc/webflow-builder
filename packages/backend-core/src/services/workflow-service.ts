@@ -978,13 +978,15 @@ export class WorkflowService {
       request.requestedBy
     );
     const targetItems = queue.items.filter((item) =>
-      request.sectionId ? item.repoSectionId === request.sectionId : item.status !== "skipped"
+      request.sectionId
+        ? item.repoSectionId === request.sectionId
+        : item.status !== "skipped" && !request.excludeSectionIds.includes(item.repoSectionId)
     );
     if (targetItems.length === 0) {
       throw new Error(
         request.sectionId
           ? "That section is not in this page's workflow queue."
-          : "No sections found to copy for this page."
+          : "No sections left to copy — the remaining sections already have components (use Insert instance)."
       );
     }
 
