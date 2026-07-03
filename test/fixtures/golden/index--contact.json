@@ -71,7 +71,7 @@
      "text": false
     },
     "classes": [
-     "20590ea2-7470-3a64-2c12-80fe15173e60"
+     "5184bd93-105a-c9dd-d057-182630c10ff7"
     ],
     "children": [
      "6395f2f0-8398-f119-855c-2d3d88413743",
@@ -289,10 +289,10 @@
     "selector": null
    },
    {
-    "_id": "20590ea2-7470-3a64-2c12-80fe15173e60",
+    "_id": "5184bd93-105a-c9dd-d057-182630c10ff7",
     "fake": false,
     "type": "class",
-    "name": "contact_content",
+    "name": "contact_heading-wrapper",
     "namespace": "",
     "comb": "",
     "styleLess": "align-content: stretch; display: flex; flex-direction: column; grid-row-gap: 20px; grid-column-gap: 20px; align-items: center;",
@@ -347,7 +347,7 @@
     "name": "contact_component",
     "namespace": "",
     "comb": "",
-    "styleLess": "align-content: stretch; display: flex; flex-direction: column; grid-row-gap: 48px; grid-column-gap: 48px; align-items: center; position: relative; width: 100%; max-width: 900px; flex-shrink: 0; padding-left: 3rem; padding-right: 3rem; text-align: center;",
+    "styleLess": "align-content: stretch; display: flex; flex-direction: column; grid-row-gap: 48px; grid-column-gap: 48px; align-items: center; position: relative; width: 100%; max-width: 900px; margin-left: auto; margin-right: auto; flex-shrink: 0; padding-left: 3rem; padding-right: 3rem; text-align: center;",
     "variants": {},
     "children": [],
     "origin": null,
@@ -399,7 +399,7 @@
     "name": "section_contact",
     "namespace": "",
     "comb": "",
-    "styleLess": "align-content: stretch; display: flex; flex-direction: column; align-items: center; position: relative; width: 100%; padding-top: 140px; padding-bottom: 140px; flex-shrink: 0; background: radial-gradient(circle at 50% 0%,rgba(255,153,2,.14),transparent 38%),linear-gradient(180deg,#fff4d7 0%,#ffefcf 58%,#fff8ea 100%);",
+    "styleLess": "position: relative; width: 100%; padding-top: 140px; padding-bottom: 140px; flex-shrink: 0; background: radial-gradient(circle at 50% 0%,rgba(255,153,2,.14),transparent 38%),linear-gradient(180deg,#fff4d7 0%,#ffefcf 58%,#fff8ea 100%);",
     "variants": {},
     "children": [
      "5e14cbcd-6bb1-3e0d-47e4-60c094689ce3"

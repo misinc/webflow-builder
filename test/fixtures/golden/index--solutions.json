@@ -31,7 +31,7 @@
      "text": false
     },
     "classes": [
-     "32b32e1a-065a-02e3-67f9-8d8dcd44c0a9"
+     "295c4dfb-6acd-2452-5c6d-bdfdba74da88"
     ],
     "children": [
      "deaf996e-74c1-77a5-8e6b-6a078406097b"
@@ -1283,10 +1283,10 @@
     "selector": null
    },
    {
-    "_id": "32b32e1a-065a-02e3-67f9-8d8dcd44c0a9",
+    "_id": "295c4dfb-6acd-2452-5c6d-bdfdba74da88",
     "fake": false,
     "type": "class",
-    "name": "solutions_content",
+    "name": "solutions_heading-wrapper",
     "namespace": "",
     "comb": "",
     "styleLess": "align-content: stretch; display: flex; flex-direction: column; grid-row-gap: 16px; grid-column-gap: 16px; align-items: flex-start; position: relative; width: 100%; flex-shrink: 0;",
@@ -1315,7 +1315,7 @@
     "name": "solutions_feature_heading",
     "namespace": "",
     "comb": "",
-    "styleLess": "margin: 0; color: #6b4a1e; font-family: Manrope,sans-serif; font-weight: 300; letter-spacing: -.04em; font-size: clamp(2.2rem,3.4vw,3.8rem); line-height: .96;",
+    "styleLess": "margin: 0; color: #6b4a1e; font-family: Manrope,sans-serif; font-weight: 300; letter-spacing: -.04em; font-size: 48.96px; line-height: .96;",
     "variants": {},
     "children": [],
     "origin": null,
@@ -1419,7 +1419,7 @@
     "name": "solutions_card_heading",
     "namespace": "",
     "comb": "",
-    "styleLess": "margin: 0; color: #6b4a1e; font-family: Manrope,sans-serif; font-weight: 300; letter-spacing: -.04em; font-size: clamp(1.45rem,1.8vw,2rem); line-height: 1.08;",
+    "styleLess": "margin: 0; color: #6b4a1e; font-family: Manrope,sans-serif; font-weight: 300; letter-spacing: -.04em; font-size: 25.92px; line-height: 1.08;",
     "variants": {},
     "children": [],
     "origin": null,
@@ -1510,7 +1510,7 @@
     "name": "solutions_component",
     "namespace": "",
     "comb": "",
-    "styleLess": "align-content: stretch; display: flex; flex-direction: column; grid-row-gap: 64px; grid-column-gap: 64px; align-items: flex-start; position: relative; width: 100%; max-width: 1200px; flex-shrink: 0;",
+    "styleLess": "align-content: stretch; display: flex; flex-direction: column; grid-row-gap: 64px; grid-column-gap: 64px; align-items: flex-start; position: relative; width: 100%; max-width: 1200px; margin-left: auto; margin-right: auto; flex-shrink: 0;",
     "variants": {},
     "children": [],
     "origin": null,
@@ -1562,7 +1562,7 @@
     "name": "section_solutions",
     "namespace": "",
     "comb": "",
-    "styleLess": "padding: 88px 20px; align-content: stretch; display: flex; flex-direction: column; align-items: center; position: relative; width: 100%; flex-shrink: 0; background: #fffdf9;",
+    "styleLess": "padding: 88px 20px; position: relative; width: 100%; flex-shrink: 0; background: #fffdf9;",
     "variants": {},
     "children": [],
     "origin": null,

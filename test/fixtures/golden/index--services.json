@@ -16,7 +16,7 @@
     },
     "classes": [
      "4356e6ab-8d67-5e6e-3edb-26c9a999f44c",
-     "878cdde2-58fb-1191-feb9-7dcf22aa507f"
+     "0ddd1a04-14a1-ced7-0035-79af383a6edd"
     ],
     "children": [
      "99475fc9-84b6-f86c-0db3-db29f5a3f86e"
@@ -109,7 +109,7 @@
      "text": false
     },
     "classes": [
-     "a6759f8e-5d50-382b-3177-db2924cb8499"
+     "ec03bb82-1b2d-15dc-6089-fd761c309d88"
     ],
     "children": [
      "b8a1c9fa-57fe-bc15-8f19-dc7b1924f67b",
@@ -617,19 +617,19 @@
     "styleLess": "",
     "variants": {},
     "children": [
-     "878cdde2-58fb-1191-feb9-7dcf22aa507f"
+     "0ddd1a04-14a1-ced7-0035-79af383a6edd"
     ],
     "origin": null,
     "selector": null
    },
    {
-    "_id": "878cdde2-58fb-1191-feb9-7dcf22aa507f",
+    "_id": "0ddd1a04-14a1-ced7-0035-79af383a6edd",
     "fake": false,
     "type": "class",
-    "name": "heading-style-h2_v1al6l",
+    "name": "heading-style-h2_v1j74z",
     "namespace": "",
     "comb": "&",
-    "styleLess": "max-width: 11ch; font-family: \"Manrope\",ui-sans-serif,system-ui,sans-serif; font-weight: 300; font-size: clamp(2.4rem,4vw,4.4rem); line-height: .98; color: #6b4a1e;",
+    "styleLess": "max-width: 11ch; font-family: \"Manrope\",ui-sans-serif,system-ui,sans-serif; font-weight: 300; font-size: 57.6px; line-height: .98; color: #6b4a1e;",
     "variants": {},
     "children": [],
     "origin": null,
@@ -690,10 +690,10 @@
     "selector": null
    },
    {
-    "_id": "a6759f8e-5d50-382b-3177-db2924cb8499",
+    "_id": "ec03bb82-1b2d-15dc-6089-fd761c309d88",
     "fake": false,
     "type": "class",
-    "name": "services_content",
+    "name": "services_ssv-stacked-aside",
     "namespace": "",
     "comb": "",
     "styleLess": "display: grid; grid-row-gap: 18px; grid-column-gap: 18px; padding-right: 18px; position: sticky; top: 108px; max-width: 34rem;",
@@ -765,7 +765,7 @@
     "name": "services_card_heading",
     "namespace": "",
     "comb": "",
-    "styleLess": "margin: 0 0 12px; color: #6b4a1e; font-family: Manrope,sans-serif; font-weight: 300; letter-spacing: -.03em; font-size: clamp(1.8rem,2.3vw,2.5rem); line-height: 1.08;",
+    "styleLess": "margin: 0 0 12px; color: #6b4a1e; font-family: Manrope,sans-serif; font-weight: 300; letter-spacing: -.03em; font-size: 33.12px; line-height: 1.08;",
     "variants": {},
     "children": [],
     "origin": null,

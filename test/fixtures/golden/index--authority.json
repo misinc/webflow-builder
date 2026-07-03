@@ -25,7 +25,7 @@
    {
     "_id": "587d10d5-0ba8-875f-7a2c-2b92bdd0a3e9",
     "text": true,
-    "v": "30 Years of Innovation. Built for What's Next."
+    "v": "30 Years of Innovation.\nBuilt for What's Next."
    },
    {
     "_id": "6507d1ea-f40f-7a2a-d708-0ec08cee4d36",
@@ -36,7 +36,7 @@
     },
     "classes": [
      "4356e6ab-8d67-5e6e-3edb-26c9a999f44c",
-     "df9fc9ce-ee7a-7f4a-6664-815431ea013e"
+     "d5049e54-86ae-eb3c-a066-fe88c1efc064"
     ],
     "children": [
      "587d10d5-0ba8-875f-7a2c-2b92bdd0a3e9"
@@ -71,7 +71,7 @@
      "text": false
     },
     "classes": [
-     "ca4303f3-9c40-59e2-97bb-338591f75708"
+     "b1d4edea-aecc-ec4f-efd0-7d291765197d"
     ],
     "children": [
      "4b5ed6fa-3b64-fcea-23c1-95501da3cf96",
@@ -108,8 +108,7 @@
      "text": false
     },
     "classes": [
-     "ca4303f3-9c40-59e2-97bb-338591f75708",
-     "4cc01862-d051-ff17-2ee0-7139a2268c75"
+     "ca4303f3-9c40-59e2-97bb-338591f75708"
     ],
     "children": [
      "353a5ecc-115c-ec72-9adc-25567995783e"
@@ -124,8 +123,7 @@
      "text": false
     },
     "classes": [
-     "ca4303f3-9c40-59e2-97bb-338591f75708",
-     "5bfa8ca8-65c5-c061-9f0d-839d798e53ab"
+     "a1a2be73-5579-c84b-7eb9-8998fd2f5305"
     ],
     "children": [
      "f764f02c-ea6c-11a2-7ce1-3666ed311ace"
@@ -626,8 +624,7 @@
      "text": false
     },
     "classes": [
-     "ca4303f3-9c40-59e2-97bb-338591f75708",
-     "afada036-5f3e-6aea-0772-878c9e0e629e"
+     "151367cd-784f-f744-dfa9-0a5ddc2d83b6"
     ],
     "children": [
      "1fbc0482-91ac-e32a-49c4-25c850a1b196",
@@ -755,19 +752,19 @@
     "styleLess": "",
     "variants": {},
     "children": [
-     "df9fc9ce-ee7a-7f4a-6664-815431ea013e"
+     "d5049e54-86ae-eb3c-a066-fe88c1efc064"
     ],
     "origin": null,
     "selector": null
    },
    {
-    "_id": "df9fc9ce-ee7a-7f4a-6664-815431ea013e",
+    "_id": "d5049e54-86ae-eb3c-a066-fe88c1efc064",
     "fake": false,
     "type": "class",
-    "name": "heading-style-h2_vdgv7j",
+    "name": "heading-style-h2_vnawbf",
     "namespace": "",
     "comb": "&",
-    "styleLess": "width: 100%; max-width: 800px; margin: 0; color: #6b4a1e; font-family: Manrope,sans-serif; font-weight: 300; letter-spacing: -.04em; font-size: clamp(2.2rem,4.1vw,4rem); line-height: .98;",
+    "styleLess": "width: 100%; max-width: 800px; margin: 0; color: #6b4a1e; font-family: Manrope,sans-serif; font-weight: 300; letter-spacing: -.04em; font-size: 59.04px; line-height: .98; white-space: pre-line;",
     "variants": {},
     "children": [],
     "origin": null,
@@ -787,19 +784,15 @@
     "selector": null
    },
    {
-    "_id": "ca4303f3-9c40-59e2-97bb-338591f75708",
+    "_id": "b1d4edea-aecc-ec4f-efd0-7d291765197d",
     "fake": false,
     "type": "class",
-    "name": "authority_content",
+    "name": "authority_heading-wrapper",
     "namespace": "",
     "comb": "",
-    "styleLess": "display: flex; grid-row-gap: 16px; grid-column-gap: 16px; margin-bottom: 36px; max-width: 760px; align-content: stretch; flex-direction: column; align-items: center; position: relative; width: 100%; flex-shrink: 0; text-align: center;",
+    "styleLess": "display: flex; grid-row-gap: 16px; grid-column-gap: 16px; margin-bottom: 36px; max-width: 760px; align-content: stretch; flex-direction: column; align-items: center; position: relative; width: 100%; margin-left: auto; margin-right: auto; flex-shrink: 0; text-align: center;",
     "variants": {},
-    "children": [
-     "4cc01862-d051-ff17-2ee0-7139a2268c75",
-     "5bfa8ca8-65c5-c061-9f0d-839d798e53ab",
-     "afada036-5f3e-6aea-0772-878c9e0e629e"
-    ],
+    "children": [],
     "origin": null,
     "selector": null
    },
@@ -817,26 +810,26 @@
     "selector": null
    },
    {
-    "_id": "4cc01862-d051-ff17-2ee0-7139a2268c75",
+    "_id": "ca4303f3-9c40-59e2-97bb-338591f75708",
     "fake": false,
     "type": "class",
-    "name": "authority_content_v1mcez",
+    "name": "authority_content",
     "namespace": "",
-    "comb": "&",
-    "styleLess": "display: grid; grid-row-gap: 6px; grid-column-gap: 6px; height: 210px; justify-items: center; width: 210px; position: static; background: #fff8ed0f; border: 1px solid rgba(255,244,227,.14); border-radius: 999px;",
+    "comb": "",
+    "styleLess": "align-items: center; display: grid; grid-row-gap: 6px; grid-column-gap: 6px; height: 210px; justify-items: center; width: 210px; background: #fff8ed0f; border: 1px solid rgba(255,244,227,.14); border-radius: 999px;",
     "variants": {},
     "children": [],
     "origin": null,
     "selector": null
    },
    {
-    "_id": "5bfa8ca8-65c5-c061-9f0d-839d798e53ab",
+    "_id": "a1a2be73-5579-c84b-7eb9-8998fd2f5305",
     "fake": false,
     "type": "class",
-    "name": "authority_content_vpdix3",
+    "name": "authority_midnight-orbit",
     "namespace": "",
-    "comb": "&",
-    "styleLess": "display: grid; padding: 24px; place-items: center; position: static; aspect-ratio: 1; background: radial-gradient(circle,rgba(255,170,29,.14),transparent 58%),radial-gradient(circle,rgba(255,255,255,.05),transparent 68%); border: 1px solid rgba(255,244,227,.2); border-radius: 999px; animation: midnight-orbit-pulse 4.6s ease-out infinite; transform-origin: center;",
+    "comb": "",
+    "styleLess": "align-items: center; display: grid; padding: 24px; place-items: center; aspect-ratio: 1; background: radial-gradient(circle,rgba(255,170,29,.14),transparent 58%),radial-gradient(circle,rgba(255,255,255,.05),transparent 68%); border: 1px solid rgba(255,244,227,.2); border-radius: 999px; animation: midnight-orbit-pulse 4.6s ease-out infinite; transform-origin: center;",
     "variants": {},
     "children": [],
     "origin": null,
@@ -875,7 +868,7 @@
     "name": "authority_card_text",
     "namespace": "",
     "comb": "",
-    "styleLess": "margin: 0; color: #fff; font-family: Manrope,sans-serif; font-weight: 300; letter-spacing: -.04em; font-size: clamp(2.8rem,4vw,4rem); line-height: .92;",
+    "styleLess": "margin: 0; color: #fff; font-family: Manrope,sans-serif; font-weight: 300; letter-spacing: -.04em; font-size: 57.6px; line-height: .92;",
     "variants": {},
     "children": [],
     "origin": null,
@@ -934,13 +927,13 @@
     "selector": null
    },
    {
-    "_id": "afada036-5f3e-6aea-0772-878c9e0e629e",
+    "_id": "151367cd-784f-f744-dfa9-0a5ddc2d83b6",
     "fake": false,
     "type": "class",
-    "name": "authority_content_vqphly",
+    "name": "authority_midnight-shell",
     "namespace": "",
-    "comb": "&",
-    "styleLess": "display: grid; grid-row-gap: 30px; grid-column-gap: 30px; grid-template-columns: .85fr 1.15fr; position: static;",
+    "comb": "",
+    "styleLess": "align-items: center; display: grid; grid-row-gap: 30px; grid-column-gap: 30px; grid-template-columns: .85fr 1.15fr;",
     "variants": {},
     "children": [],
     "origin": null,
@@ -953,7 +946,7 @@
     "name": "authority_component",
     "namespace": "",
     "comb": "",
-    "styleLess": "align-content: stretch; display: flex; flex-direction: column; position: relative; width: 100%; max-width: 1200px; flex-shrink: 0;",
+    "styleLess": "align-content: stretch; display: flex; flex-direction: column; position: relative; width: 100%; max-width: 1200px; margin-left: auto; margin-right: auto; flex-shrink: 0;",
     "variants": {},
     "children": [],
     "origin": null,
@@ -1005,7 +998,7 @@
     "name": "section_authority",
     "namespace": "",
     "comb": "",
-    "styleLess": "padding: 88px 20px; align-content: stretch; display: flex; flex-direction: column; align-items: center; position: relative; width: 100%; flex-shrink: 0; background: #fffdf9;",
+    "styleLess": "padding: 88px 20px; position: relative; width: 100%; flex-shrink: 0; background: #fffdf9;",
     "variants": {},
     "children": [
      "2004714f-e3ed-0650-8fda-bb6b880ff426"

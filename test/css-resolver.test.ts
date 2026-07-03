@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   collectRawDeclarations,
   evaluateSimpleCalc,
+  evaluateSimpleClamp,
   normalizeResolvedLayout,
   parseCompiledCss,
   resolveClasses,
@@ -76,7 +77,9 @@ describe("css-resolver descendant/element rules", () => {
     const h2 = resolveDescendantRules({ tag: "h2" }, new Set(["header"]), parsed);
     expect(h2["font-weight"]).toBe("300");
     expect(h2.color).toBe("#6b4a1e");
-    expect(h2["font-size"]).toBe("clamp(2.2rem, 4vw, 4rem)");
+    // clamp() is evaluated at the 1440px reference (4vw = 57.6px) — Webflow
+    // drops clamp() on paste, so the literal must ride instead.
+    expect(h2["font-size"]).toBe("57.6px");
   });
 
   it("scopes rules to the right ancestor + tag", () => {
@@ -157,6 +160,28 @@ describe("css-resolver simple calc evaluation (Webflow drops calc on paste)", ()
     expect(evaluateSimpleCalc("calc(2rem * 3px)")).toBe("calc(2rem * 3px)");
     expect(evaluateSimpleCalc("calc(1rem / 0)")).toBe("calc(1rem / 0)");
     expect(evaluateSimpleCalc("1.5rem")).toBe("1.5rem");
+  });
+});
+
+describe("css-resolver clamp evaluation (Webflow drops clamp on paste)", () => {
+  it("evaluates fluid type at the 1440px reference viewport", () => {
+    // 4.8vw @1440 = 69.12px, inside [41.6, 76.8]
+    expect(evaluateSimpleClamp("clamp(2.6rem, 4.8vw, 4.8rem)")).toBe("69.12px");
+    // 10vw @1440 = 144px, capped at max 4rem = 64px
+    expect(evaluateSimpleClamp("clamp(2rem, 10vw, 4rem)")).toBe("64px");
+    // 0.5vw @1440 = 7.2px, floored at min 1rem = 16px
+    expect(evaluateSimpleClamp("clamp(1rem, 0.5vw, 2rem)")).toBe("16px");
+  });
+
+  it("passes non-length or malformed clamps through untouched", () => {
+    expect(evaluateSimpleClamp("clamp(1rem, 2%, 3rem)")).toBe("clamp(1rem, 2%, 3rem)");
+    expect(evaluateSimpleClamp("clamp(1rem, 2rem)")).toBe("clamp(1rem, 2rem)");
+    expect(evaluateSimpleClamp("1.5rem")).toBe("1.5rem");
+  });
+
+  it("resolves a heading's clamp font-size via class resolution", () => {
+    const parsed = parseCompiledCss(".big { font-size: clamp(2.6rem, 4.8vw, 4.8rem); }");
+    expect(resolveClasses(["big"], parsed)["font-size"]).toBe("69.12px");
   });
 });
 

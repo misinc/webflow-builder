@@ -31,7 +31,7 @@
      "text": false
     },
     "classes": [
-     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6"
+     "a7170407-6248-191f-ed27-55f8d43b9ad1"
     ],
     "children": [
      "00c01c15-549a-cef1-9cac-a134982cc367"
@@ -62,8 +62,7 @@
      "text": false
     },
     "classes": [
-     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6",
-     "45577068-9433-3d06-b8e0-cbc623a94672"
+     "3b5196e0-9ca5-8584-ee3d-fbb45b79c52c"
     ],
     "children": [
      "48799166-7412-5721-6e72-4eb37fb91797"
@@ -83,7 +82,7 @@
     },
     "classes": [
      "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
-     "18599019-c698-77a9-61fe-9770feee0527"
+     "fa7240db-9c45-26fd-a351-f9dee9229af7"
     ],
     "children": [
      "e7e87935-8712-3e90-0b3c-fb29b58aa742"
@@ -99,7 +98,7 @@
     },
     "classes": [
      "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6",
-     "9d28a133-0d77-ae05-ff90-da2efda3b1cf"
+     "0f47c25c-f33f-71ac-4c2a-60b06a107334"
     ],
     "children": [
      "a874b83e-ebb1-ebd9-8b7f-60d3f5e7351f"
@@ -114,8 +113,7 @@
      "text": false
     },
     "classes": [
-     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6",
-     "1ff3d6f3-3d55-e269-6b3d-8fe282db681b"
+     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6"
     ],
     "children": [
      "0c90e9f5-6283-7161-5aab-2ea4cc50f717"
@@ -135,7 +133,7 @@
     },
     "classes": [
      "4256e518-4ae0-abce-b41f-c64ea99819ba",
-     "bc263d77-2167-6fd6-6aa1-8955371ac374"
+     "254fc4b2-3614-6f57-600a-3c6921e5fcf5"
     ],
     "children": [
      "fc182a65-6d98-c388-ff79-84115e9d59aa"
@@ -155,7 +153,8 @@
     },
     "classes": [
      "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
-     "c78c032f-bc5b-c1a0-ef56-799b996a5716"
+     "fa7240db-9c45-26fd-a351-f9dee9229af7",
+     "ce22f646-4e52-6d06-9355-a440fbf5609a"
     ],
     "children": [
      "77a00b99-0147-fe08-e7c0-65055eedb702"
@@ -187,8 +186,7 @@
      "text": false
     },
     "classes": [
-     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6",
-     "3a7c09f5-9005-ace4-a132-ba850e7a1066"
+     "e088440b-f6c3-7241-8fec-895219fa1313"
     ],
     "children": [
      "7f43f0a1-65a7-a9c9-c05b-328820721787",
@@ -233,8 +231,7 @@
      "text": false
     },
     "classes": [
-     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6",
-     "45577068-9433-3d06-b8e0-cbc623a94672"
+     "3b5196e0-9ca5-8584-ee3d-fbb45b79c52c"
     ],
     "children": [
      "01ebd286-47d3-0b21-11d2-9193198b5397"
@@ -254,7 +251,7 @@
     },
     "classes": [
      "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
-     "18599019-c698-77a9-61fe-9770feee0527"
+     "fa7240db-9c45-26fd-a351-f9dee9229af7"
     ],
     "children": [
      "ecfafeb5-a38b-3350-7fbb-466915c13a82"
@@ -270,7 +267,7 @@
     },
     "classes": [
      "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6",
-     "9d28a133-0d77-ae05-ff90-da2efda3b1cf"
+     "0f47c25c-f33f-71ac-4c2a-60b06a107334"
     ],
     "children": [
      "f0144dfe-29fc-4799-1dba-2953368342df"
@@ -285,8 +282,7 @@
      "text": false
     },
     "classes": [
-     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6",
-     "1ff3d6f3-3d55-e269-6b3d-8fe282db681b"
+     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6"
     ],
     "children": [
      "c2326fa9-1f58-ad61-668e-436840d57b1f"
@@ -306,7 +302,7 @@
     },
     "classes": [
      "4256e518-4ae0-abce-b41f-c64ea99819ba",
-     "bc263d77-2167-6fd6-6aa1-8955371ac374"
+     "254fc4b2-3614-6f57-600a-3c6921e5fcf5"
     ],
     "children": [
      "dbaed6fd-6698-81c8-e860-13f9be24f52a"
@@ -326,7 +322,8 @@
     },
     "classes": [
      "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
-     "c78c032f-bc5b-c1a0-ef56-799b996a5716"
+     "fa7240db-9c45-26fd-a351-f9dee9229af7",
+     "ce22f646-4e52-6d06-9355-a440fbf5609a"
     ],
     "children": [
      "20f22221-ffc4-d148-60d3-c2bdd644cec2"
@@ -358,8 +355,7 @@
      "text": false
     },
     "classes": [
-     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6",
-     "3a7c09f5-9005-ace4-a132-ba850e7a1066"
+     "e088440b-f6c3-7241-8fec-895219fa1313"
     ],
     "children": [
      "a52448ad-2774-3049-835b-ff34fedcbd4f",
@@ -404,8 +400,7 @@
      "text": false
     },
     "classes": [
-     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6",
-     "45577068-9433-3d06-b8e0-cbc623a94672"
+     "3b5196e0-9ca5-8584-ee3d-fbb45b79c52c"
     ],
     "children": [
      "321db1be-7461-e2a1-61ca-476bae436187"
@@ -425,7 +420,7 @@
     },
     "classes": [
      "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
-     "18599019-c698-77a9-61fe-9770feee0527"
+     "fa7240db-9c45-26fd-a351-f9dee9229af7"
     ],
     "children": [
      "6dd7de4d-a5d2-9890-beeb-e1c116d51c92"
@@ -441,7 +436,7 @@
     },
     "classes": [
      "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6",
-     "9d28a133-0d77-ae05-ff90-da2efda3b1cf"
+     "0f47c25c-f33f-71ac-4c2a-60b06a107334"
     ],
     "children": [
      "3b6dec7e-7061-bed9-efd8-9e9374b0231f"
@@ -456,8 +451,7 @@
      "text": false
     },
     "classes": [
-     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6",
-     "1ff3d6f3-3d55-e269-6b3d-8fe282db681b"
+     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6"
     ],
     "children": [
      "fd0c4445-d79d-48e1-78a7-15f4a5f3e377"
@@ -477,7 +471,7 @@
     },
     "classes": [
      "4256e518-4ae0-abce-b41f-c64ea99819ba",
-     "bc263d77-2167-6fd6-6aa1-8955371ac374"
+     "254fc4b2-3614-6f57-600a-3c6921e5fcf5"
     ],
     "children": [
      "38c680c5-7c7b-b308-32eb-0f716bb30bea"
@@ -497,7 +491,8 @@
     },
     "classes": [
      "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
-     "c78c032f-bc5b-c1a0-ef56-799b996a5716"
+     "fa7240db-9c45-26fd-a351-f9dee9229af7",
+     "ce22f646-4e52-6d06-9355-a440fbf5609a"
     ],
     "children": [
      "118dca21-cef8-c588-c963-1bfd784fc982"
@@ -529,8 +524,7 @@
      "text": false
     },
     "classes": [
-     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6",
-     "3a7c09f5-9005-ace4-a132-ba850e7a1066"
+     "e088440b-f6c3-7241-8fec-895219fa1313"
     ],
     "children": [
      "eb586589-0905-e049-edc5-30c098d79a67",
@@ -559,8 +553,7 @@
      "text": false
     },
     "classes": [
-     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6",
-     "7a3876bb-43f5-2494-480b-f5bb45d83baa"
+     "421a49e4-7b53-53a0-5744-a81479ed1488"
     ],
     "children": [
      "08147fe9-cf18-f831-de1c-efb89ce0498f",
@@ -676,21 +669,15 @@
     "selector": null
    },
    {
-    "_id": "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6",
+    "_id": "a7170407-6248-191f-ed27-55f8d43b9ad1",
     "fake": false,
     "type": "class",
-    "name": "case-studies_content",
+    "name": "case-studies_heading-wrapper",
     "namespace": "",
     "comb": "",
     "styleLess": "align-content: stretch; display: flex; flex-direction: column; grid-row-gap: 16px; grid-column-gap: 16px; align-items: flex-start; position: relative; width: 100%; flex-shrink: 0;",
     "variants": {},
-    "children": [
-     "1ff3d6f3-3d55-e269-6b3d-8fe282db681b",
-     "3a7c09f5-9005-ace4-a132-ba850e7a1066",
-     "45577068-9433-3d06-b8e0-cbc623a94672",
-     "7a3876bb-43f5-2494-480b-f5bb45d83baa",
-     "9d28a133-0d77-ae05-ff90-da2efda3b1cf"
-    ],
+    "children": [],
     "origin": null,
     "selector": null
    },
@@ -708,13 +695,13 @@
     "selector": null
    },
    {
-    "_id": "45577068-9433-3d06-b8e0-cbc623a94672",
+    "_id": "3b5196e0-9ca5-8584-ee3d-fbb45b79c52c",
     "fake": false,
     "type": "class",
-    "name": "case-studies_content_vky5kg",
+    "name": "case-studies_image-wrapper",
     "namespace": "",
-    "comb": "&",
-    "styleLess": "height: 240px; overflow: hidden; background-color: oklch(96.7% .003 264.542);",
+    "comb": "",
+    "styleLess": "height: 240px; position: relative; overflow: hidden; background-color: oklch(96.7% .003 264.542);",
     "variants": {},
     "children": [],
     "origin": null,
@@ -730,19 +717,18 @@
     "styleLess": "",
     "variants": {},
     "children": [
-     "18599019-c698-77a9-61fe-9770feee0527",
-     "c78c032f-bc5b-c1a0-ef56-799b996a5716"
+     "ce22f646-4e52-6d06-9355-a440fbf5609a"
     ],
     "origin": null,
     "selector": null
    },
    {
-    "_id": "18599019-c698-77a9-61fe-9770feee0527",
+    "_id": "fa7240db-9c45-26fd-a351-f9dee9229af7",
     "fake": false,
     "type": "class",
-    "name": "text-size-medium_vx18pd",
+    "name": "case-studies_card_text",
     "namespace": "",
-    "comb": "&",
+    "comb": "",
     "styleLess": "position: relative; font-weight: 500; line-height: 1.4; flex-shrink: 0; color: #9b3139; font-size: 11px; letter-spacing: .5px; text-transform: uppercase;",
     "variants": {},
     "children": [],
@@ -750,26 +736,28 @@
     "selector": null
    },
    {
-    "_id": "9d28a133-0d77-ae05-ff90-da2efda3b1cf",
+    "_id": "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6",
     "fake": false,
     "type": "class",
-    "name": "case-studies_content_vxpye4",
+    "name": "case-studies_content",
     "namespace": "",
-    "comb": "&",
-    "styleLess": "align-items: center; padding-left: 10px; padding-right: 10px; padding-top: 4px; padding-bottom: 4px; border-radius: 500px; background-color: #ffaa1d1a;",
+    "comb": "",
+    "styleLess": "display: flex; align-items: center; grid-row-gap: 8px; grid-column-gap: 8px;",
     "variants": {},
-    "children": [],
+    "children": [
+     "0f47c25c-f33f-71ac-4c2a-60b06a107334"
+    ],
     "origin": null,
     "selector": null
    },
    {
-    "_id": "1ff3d6f3-3d55-e269-6b3d-8fe282db681b",
+    "_id": "0f47c25c-f33f-71ac-4c2a-60b06a107334",
     "fake": false,
     "type": "class",
-    "name": "case-studies_content_v1xbng",
+    "name": "case-studies_content_v4ubxr",
     "namespace": "",
     "comb": "&",
-    "styleLess": "align-items: center; grid-row-gap: 8px; grid-column-gap: 8px; position: static;",
+    "styleLess": "align-content: stretch; position: relative; padding-left: 10px; padding-right: 10px; padding-top: 4px; padding-bottom: 4px; border-radius: 500px; flex-shrink: 0; background-color: #ffaa1d1a;",
     "variants": {},
     "children": [],
     "origin": null,
@@ -784,19 +772,17 @@
     "comb": "",
     "styleLess": "",
     "variants": {},
-    "children": [
-     "bc263d77-2167-6fd6-6aa1-8955371ac374"
-    ],
+    "children": [],
     "origin": null,
     "selector": null
    },
    {
-    "_id": "bc263d77-2167-6fd6-6aa1-8955371ac374",
+    "_id": "254fc4b2-3614-6f57-600a-3c6921e5fcf5",
     "fake": false,
     "type": "class",
-    "name": "heading-style-h3_v11i5t",
+    "name": "case-studies_card_heading",
     "namespace": "",
-    "comb": "&",
+    "comb": "",
     "styleLess": "font-weight: 500; color: #6b4a1e; font-size: 22px; line-height: 1.3;",
     "variants": {},
     "children": [],
@@ -804,13 +790,13 @@
     "selector": null
    },
    {
-    "_id": "c78c032f-bc5b-c1a0-ef56-799b996a5716",
+    "_id": "ce22f646-4e52-6d06-9355-a440fbf5609a",
     "fake": false,
     "type": "class",
-    "name": "text-size-medium_v14k7f",
+    "name": "case-studies_card_text_v8aw84",
     "namespace": "",
     "comb": "&",
-    "styleLess": "font-weight: 300; color: #777; font-size: 15px; line-height: 1.6;",
+    "styleLess": "position: static; font-weight: 300; color: #777; font-size: 15px; line-height: 1.6;",
     "variants": {},
     "children": [],
     "origin": null,
@@ -830,26 +816,26 @@
     "selector": null
    },
    {
-    "_id": "3a7c09f5-9005-ace4-a132-ba850e7a1066",
+    "_id": "e088440b-f6c3-7241-8fec-895219fa1313",
     "fake": false,
     "type": "class",
-    "name": "case-studies_content_v5ryw7",
+    "name": "case-studies_card",
     "namespace": "",
-    "comb": "&",
-    "styleLess": "position: static; background-color: #fff; overflow: hidden; border-radius: 28px; cursor: pointer;",
+    "comb": "",
+    "styleLess": "display: flex; flex-direction: column; background-color: #fff; overflow: hidden; border-radius: 28px; cursor: pointer;",
     "variants": {},
     "children": [],
     "origin": null,
     "selector": null
    },
    {
-    "_id": "7a3876bb-43f5-2494-480b-f5bb45d83baa",
+    "_id": "421a49e4-7b53-53a0-5744-a81479ed1488",
     "fake": false,
     "type": "class",
-    "name": "case-studies_content_v197lk",
+    "name": "case-studies_card_list",
     "namespace": "",
-    "comb": "&",
-    "styleLess": "display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); grid-row-gap: 32px; grid-column-gap: 32px; position: static;",
+    "comb": "",
+    "styleLess": "display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); grid-row-gap: 32px; grid-column-gap: 32px; width: 100%;",
     "variants": {},
     "children": [],
     "origin": null,
@@ -862,7 +848,7 @@
     "name": "case-studies_component",
     "namespace": "",
     "comb": "",
-    "styleLess": "align-content: stretch; display: flex; flex-direction: column; grid-row-gap: 64px; grid-column-gap: 64px; align-items: flex-start; position: relative; width: 100%; max-width: 1200px; flex-shrink: 0; padding-left: 3rem; padding-right: 3rem;",
+    "styleLess": "align-content: stretch; display: flex; flex-direction: column; grid-row-gap: 64px; grid-column-gap: 64px; align-items: flex-start; position: relative; width: 100%; max-width: 1200px; margin-left: auto; margin-right: auto; flex-shrink: 0; padding-left: 3rem; padding-right: 3rem;",
     "variants": {},
     "children": [],
     "origin": null,
@@ -914,7 +900,7 @@
     "name": "section_case-studies",
     "namespace": "",
     "comb": "",
-    "styleLess": "align-content: stretch; display: flex; flex-direction: column; align-items: center; position: relative; width: 100%; padding-top: 120px; padding-bottom: 120px; flex-shrink: 0; background: #fff7ea;",
+    "styleLess": "position: relative; width: 100%; padding-top: 120px; padding-bottom: 120px; flex-shrink: 0; background: #fff7ea;",
     "variants": {},
     "children": [
      "4d66bf9e-b9f3-9c57-34f5-069d53ad8dd5"

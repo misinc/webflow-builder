@@ -71,7 +71,7 @@
      "text": false
     },
     "classes": [
-     "74e04e7d-612a-cdfd-974e-39801be43673"
+     "4227e278-8613-fda8-cb09-f610368b98f8"
     ],
     "children": [
      "d1c440d8-40c7-6ca4-141c-7dac6476263c",
@@ -304,10 +304,10 @@
     "selector": null
    },
    {
-    "_id": "74e04e7d-612a-cdfd-974e-39801be43673",
+    "_id": "4227e278-8613-fda8-cb09-f610368b98f8",
     "fake": false,
     "type": "class",
-    "name": "case-studies-cta_content",
+    "name": "case-studies-cta_heading-wrapper",
     "namespace": "",
     "comb": "",
     "styleLess": "align-content: stretch; display: flex; flex-direction: column; grid-row-gap: 20px; grid-column-gap: 20px; align-items: center;",
@@ -375,7 +375,7 @@
     "name": "case-studies-cta_component",
     "namespace": "",
     "comb": "",
-    "styleLess": "align-content: stretch; display: flex; flex-direction: column; grid-row-gap: 48px; grid-column-gap: 48px; align-items: center; position: relative; width: 100%; max-width: 900px; flex-shrink: 0; padding-left: 3rem; padding-right: 3rem; text-align: center;",
+    "styleLess": "align-content: stretch; display: flex; flex-direction: column; grid-row-gap: 48px; grid-column-gap: 48px; align-items: center; position: relative; width: 100%; max-width: 900px; margin-left: auto; margin-right: auto; flex-shrink: 0; padding-left: 3rem; padding-right: 3rem; text-align: center;",
     "variants": {},
     "children": [],
     "origin": null,
@@ -427,7 +427,7 @@
     "name": "section_case-studies-cta",
     "namespace": "",
     "comb": "",
-    "styleLess": "align-content: stretch; display: flex; flex-direction: column; align-items: center; position: relative; width: 100%; padding-top: 140px; padding-bottom: 140px; flex-shrink: 0;",
+    "styleLess": "position: relative; width: 100%; padding-top: 140px; padding-bottom: 140px; flex-shrink: 0;",
     "variants": {},
     "children": [
      "ab8ec64e-8466-9202-093d-1bbc1035add6"

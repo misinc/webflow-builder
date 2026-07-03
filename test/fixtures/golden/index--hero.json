@@ -22,7 +22,7 @@
      "text": false
     },
     "classes": [
-     "29ffd2b6-fccd-7aa2-97a2-642417aa3006"
+     "5d00dd68-7725-d008-f583-04e0928ea338"
     ],
     "children": [
      "ed4a0600-9cc8-9611-4bc5-61859aff186b"
@@ -37,8 +37,7 @@
      "text": false
     },
     "classes": [
-     "29ffd2b6-fccd-7aa2-97a2-642417aa3006",
-     "36bc15a2-6118-42de-a4b4-64acb4840e52"
+     "4b70da53-5267-327e-fb0b-a75193ad591c"
     ],
     "children": []
    },
@@ -51,15 +50,14 @@
      "text": false
     },
     "classes": [
-     "29ffd2b6-fccd-7aa2-97a2-642417aa3006",
-     "8aa4bf92-a9ad-dcb6-d95b-fe74518a651a"
+     "70babd6a-4c21-efa5-905e-d6dbfaf18fab"
     ],
     "children": []
    },
    {
     "_id": "f4c03157-6093-15ac-24df-41f771b6c552",
     "text": true,
-    "v": "Strategic Web Design & AI Solutions That Drive Business Growth"
+    "v": "Strategic Web Design &\nAI Solutions That Drive Business Growth"
    },
    {
     "_id": "f5d2d938-e85f-2229-12dc-8885526f70b3",
@@ -70,7 +68,7 @@
     },
     "classes": [
      "4456e83e-cfee-110e-4a0a-36f01f8bf372",
-     "74cacab1-c1aa-7a4a-89d5-3df76a73ced8"
+     "ad2910e0-f821-c8d4-59f0-1ac4887e8f1c"
     ],
     "children": [
      "f4c03157-6093-15ac-24df-41f771b6c552"
@@ -105,8 +103,7 @@
      "text": false
     },
     "classes": [
-     "29ffd2b6-fccd-7aa2-97a2-642417aa3006",
-     "f0bf16f0-1684-1913-e0dc-93ff5869c6e1"
+     "e71d923f-5700-d18f-ca70-a370424f8021"
     ],
     "children": [
      "f5d2d938-e85f-2229-12dc-8885526f70b3",
@@ -145,8 +142,8 @@
      "text": false
     },
     "classes": [
-     "29ffd2b6-fccd-7aa2-97a2-642417aa3006",
-     "15dad747-8cb0-ed40-9d4c-c573612c8426"
+     "70babd6a-4c21-efa5-905e-d6dbfaf18fab",
+     "cb492d6b-4f44-0002-7099-c4bdf4152d58"
     ],
     "children": []
    },
@@ -211,8 +208,7 @@
      "text": false
     },
     "classes": [
-     "29ffd2b6-fccd-7aa2-97a2-642417aa3006",
-     "fa348de3-96f2-2d5b-b64c-5618c1cd4415"
+     "29ffd2b6-fccd-7aa2-97a2-642417aa3006"
     ],
     "children": [
      "9418c4b3-babb-9fbd-9b71-5de67dd2cd17",
@@ -228,8 +224,7 @@
      "text": false
     },
     "classes": [
-     "29ffd2b6-fccd-7aa2-97a2-642417aa3006",
-     "8233b6f4-f509-ba19-ba97-c311c181fdeb"
+     "46766d14-2bf4-408d-cd53-6ead519d836f"
     ],
     "children": [
      "7e164ab0-3dc7-90d1-0652-2415eaff2d2b"
@@ -316,48 +311,43 @@
   ],
   "styles": [
    {
-    "_id": "29ffd2b6-fccd-7aa2-97a2-642417aa3006",
+    "_id": "5d00dd68-7725-d008-f583-04e0928ea338",
     "fake": false,
     "type": "class",
-    "name": "hero_content",
+    "name": "hero_video-layer",
     "namespace": "",
     "comb": "",
     "styleLess": "position: absolute; top: 0; right: 0; bottom: 0; left: 0; z-index: 0; overflow: hidden;",
     "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "4b70da53-5267-327e-fb0b-a75193ad591c",
+    "fake": false,
+    "type": "class",
+    "name": "hero_video-scrim",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "position: absolute; top: 0; right: 0; bottom: 0; left: 0; z-index: 1;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "70babd6a-4c21-efa5-905e-d6dbfaf18fab",
+    "fake": false,
+    "type": "class",
+    "name": "hero_layer",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "position: absolute; top: 0rem; right: 0rem; bottom: 0rem; left: 0rem; opacity: .03; pointer-events: none; z-index: 2;",
+    "variants": {},
     "children": [
-     "15dad747-8cb0-ed40-9d4c-c573612c8426",
-     "36bc15a2-6118-42de-a4b4-64acb4840e52",
-     "8233b6f4-f509-ba19-ba97-c311c181fdeb",
-     "8aa4bf92-a9ad-dcb6-d95b-fe74518a651a",
-     "f0bf16f0-1684-1913-e0dc-93ff5869c6e1",
-     "fa348de3-96f2-2d5b-b64c-5618c1cd4415"
+     "cb492d6b-4f44-0002-7099-c4bdf4152d58"
     ],
-    "origin": null,
-    "selector": null
-   },
-   {
-    "_id": "36bc15a2-6118-42de-a4b4-64acb4840e52",
-    "fake": false,
-    "type": "class",
-    "name": "hero_content_va19fd",
-    "namespace": "",
-    "comb": "&",
-    "styleLess": "z-index: 1;",
-    "variants": {},
-    "children": [],
-    "origin": null,
-    "selector": null
-   },
-   {
-    "_id": "8aa4bf92-a9ad-dcb6-d95b-fe74518a651a",
-    "fake": false,
-    "type": "class",
-    "name": "hero_content_vjupxh",
-    "namespace": "",
-    "comb": "&",
-    "styleLess": "top: 0rem; right: 0rem; bottom: 0rem; left: 0rem; opacity: .03; pointer-events: none; z-index: 2;",
-    "variants": {},
-    "children": [],
     "origin": null,
     "selector": null
    },
@@ -371,19 +361,19 @@
     "styleLess": "",
     "variants": {},
     "children": [
-     "74cacab1-c1aa-7a4a-89d5-3df76a73ced8"
+     "ad2910e0-f821-c8d4-59f0-1ac4887e8f1c"
     ],
     "origin": null,
     "selector": null
    },
    {
-    "_id": "74cacab1-c1aa-7a4a-89d5-3df76a73ced8",
+    "_id": "ad2910e0-f821-c8d4-59f0-1ac4887e8f1c",
     "fake": false,
     "type": "class",
-    "name": "heading-style-h1_v15s9r",
+    "name": "heading-style-h1_v1bik8",
     "namespace": "",
     "comb": "&",
-    "styleLess": "position: relative; width: 100%; max-width: 900px; line-height: 1.1; flex-shrink: 0; font-size: 72px; color: #2a2420;",
+    "styleLess": "position: relative; width: 100%; max-width: 900px; line-height: 1.1; flex-shrink: 0; font-size: 72px; white-space: pre-line; color: #2a2420;",
     "variants": {},
     "children": [],
     "origin": null,
@@ -418,13 +408,13 @@
     "selector": null
    },
    {
-    "_id": "f0bf16f0-1684-1913-e0dc-93ff5869c6e1",
+    "_id": "e71d923f-5700-d18f-ca70-a370424f8021",
     "fake": false,
     "type": "class",
-    "name": "hero_content_vu2vuq",
+    "name": "hero_heading-wrapper",
     "namespace": "",
-    "comb": "&",
-    "styleLess": "align-content: stretch; display: flex; flex-direction: column; grid-row-gap: 20px; grid-column-gap: 20px; align-items: flex-start; position: relative; width: 100%; top: auto; right: auto; bottom: auto; left: auto; font-weight: 300; flex-shrink: 0; color: #2a2420; z-index: 2;",
+    "comb": "",
+    "styleLess": "align-content: stretch; display: flex; flex-direction: column; grid-row-gap: 20px; grid-column-gap: 20px; align-items: flex-start; position: relative; width: 100%; font-weight: 300; flex-shrink: 0; color: #2a2420; z-index: 2;",
     "variants": {},
     "children": [],
     "origin": null,
@@ -444,13 +434,13 @@
     "selector": null
    },
    {
-    "_id": "15dad747-8cb0-ed40-9d4c-c573612c8426",
+    "_id": "cb492d6b-4f44-0002-7099-c4bdf4152d58",
     "fake": false,
     "type": "class",
-    "name": "hero_content_vdz251",
+    "name": "hero_layer_v16gmi",
     "namespace": "",
     "comb": "&",
-    "styleLess": "top: 0rem; right: 0rem; bottom: 0rem; left: 0rem; border-style: solid; border-width: 1px; pointer-events: none; border-radius: 500px; z-index: auto;",
+    "styleLess": "border-style: solid; border-width: 1px; border-radius: 500px; z-index: auto;",
     "variants": {},
     "children": [],
     "origin": null,
@@ -483,26 +473,26 @@
     "selector": null
    },
    {
-    "_id": "fa348de3-96f2-2d5b-b64c-5618c1cd4415",
+    "_id": "29ffd2b6-fccd-7aa2-97a2-642417aa3006",
     "fake": false,
     "type": "class",
-    "name": "hero_content_v1xwc9",
+    "name": "hero_content",
     "namespace": "",
-    "comb": "&",
-    "styleLess": "align-content: stretch; display: flex; flex-grow: 1; flex-shrink: 0; flex-basis: 0; flex-direction: column; grid-row-gap: 40px; grid-column-gap: 40px; align-items: flex-start; min-height: 1px; min-width: 0rem; position: relative; width: 100%; top: auto; right: auto; bottom: auto; left: auto; z-index: auto;",
+    "comb": "",
+    "styleLess": "align-content: stretch; display: flex; flex-grow: 1; flex-shrink: 0; flex-basis: 0; flex-direction: column; grid-row-gap: 40px; grid-column-gap: 40px; align-items: flex-start; min-height: 1px; min-width: 0rem; position: relative; width: 100%;",
     "variants": {},
     "children": [],
     "origin": null,
     "selector": null
    },
    {
-    "_id": "8233b6f4-f509-ba19-ba97-c311c181fdeb",
+    "_id": "46766d14-2bf4-408d-cd53-6ead519d836f",
     "fake": false,
     "type": "class",
-    "name": "hero_content_v6yhgs",
+    "name": "hero_container",
     "namespace": "",
-    "comb": "&",
-    "styleLess": "align-content: stretch; display: flex; align-items: flex-start; position: relative; width: 100%; max-width: 1200px; top: auto; right: auto; bottom: auto; left: auto; flex-shrink: 0; padding-left: 3rem; padding-right: 3rem; z-index: 10;",
+    "comb": "",
+    "styleLess": "align-content: stretch; display: flex; align-items: flex-start; position: relative; width: 100%; max-width: 1200px; margin-left: auto; margin-right: auto; flex-shrink: 0; padding-left: 3rem; padding-right: 3rem; z-index: 10;",
     "variants": {},
     "children": [],
     "origin": null,
@@ -567,7 +557,7 @@
     "name": "section_hero",
     "namespace": "",
     "comb": "",
-    "styleLess": "align-content: stretch; display: flex; flex-direction: column; align-items: center; padding-bottom: 120px; padding-top: 100px; position: relative; width: 100%; flex-shrink: 0; overflow: hidden;",
+    "styleLess": "padding-bottom: 120px; padding-top: 100px; position: relative; width: 100%; flex-shrink: 0; overflow: hidden;",
     "variants": {},
     "children": [],
     "origin": null,

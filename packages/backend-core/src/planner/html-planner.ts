@@ -168,6 +168,12 @@ function textFromNode(node: Node): string {
   }
   const element = node as HTMLElement;
   const tag = elementTag(element);
+  if (tag === "br") {
+    // Keep intentional line breaks as \n in the text value (a <br> Block would
+    // crash the canvas). resolved-styling pins white-space: pre-line on nodes
+    // whose text carries one, so the break renders on canvas and on publish.
+    return "\n";
+  }
   if (SKIPPED_TAGS.has(tag) || SVG_INTERNAL_TAGS.has(tag)) {
     return "";
   }
@@ -178,19 +184,22 @@ function textFromNode(node: Node): string {
 }
 
 function directTextFor(element: HTMLElement): string | undefined {
-  const text = normalizeWhitespace(
-    element.childNodes
-      .map((child) => {
-        if (child.nodeType === NodeType.TEXT_NODE) {
-          return (child as TextNode).text;
-        }
-        if (child.nodeType === NodeType.ELEMENT_NODE) {
-          return textFromNode(child);
-        }
-        return "";
-      })
-      .join(" ")
-  );
+  const text = element.childNodes
+    .map((child) => {
+      if (child.nodeType === NodeType.TEXT_NODE) {
+        return (child as TextNode).text;
+      }
+      if (child.nodeType === NodeType.ELEMENT_NODE) {
+        return textFromNode(child);
+      }
+      return "";
+    })
+    .join(" ")
+    // Collapse whitespace but keep \n from <br> as a real line break.
+    .replace(/[^\S\n]+/g, " ")
+    .replace(/ ?\n ?/g, "\n")
+    .replace(/\n{2,}/g, "\n")
+    .trim();
   return text || undefined;
 }
 
@@ -200,6 +209,115 @@ function outlineTextFor(element: HTMLElement): string | undefined {
     return undefined;
   }
   return text;
+}
+
+// Utility-class vocabulary (Tailwind-style). Used to tell apart framework
+// utility classes from the site's own semantic/BEM class names — a general
+// mechanism, not a site-specific list.
+const UTILITY_CLASS_KEYWORDS = new Set([
+  "flex",
+  "grid",
+  "block",
+  "inline",
+  "inline-block",
+  "inline-flex",
+  "inline-grid",
+  "contents",
+  "hidden",
+  "visible",
+  "invisible",
+  "collapse",
+  "relative",
+  "absolute",
+  "fixed",
+  "sticky",
+  "static",
+  "isolate",
+  "container",
+  "border",
+  "group",
+  "peer",
+  "truncate",
+  "uppercase",
+  "lowercase",
+  "capitalize",
+  "italic",
+  "underline",
+  "antialiased",
+  "transform",
+  "transition",
+  "grow",
+  "shrink",
+  "sr-only"
+]);
+const UTILITY_CLASS_PREFIX =
+  /^-?(?:m|p)(?:t|b|l|r|x|y|s|e)?-|^-?(?:w|h|z|gap|inset|top|bottom|left|right|space|order|col|row|grid|basis|flex|grow|shrink|self|place|object|overflow|overscroll|scroll|snap|text|font|leading|tracking|whitespace|break|align|list|bg|from|via|to|border|divide|outline|ring|shadow|opacity|mix-blend|filter|blur|brightness|contrast|drop-shadow|grayscale|hue-rotate|invert|saturate|sepia|backdrop|table|caption|transition|duration|ease|delay|animate|cursor|pointer-events|resize|select|fill|stroke|justify|items|content|rounded|aspect|columns|size|min|max|translate|rotate|scale|skew|origin|will-change|touch|appearance|decoration|underline-offset|indent|clip|float|clear|line-clamp|not|lucide)-/;
+
+function isUtilityClassName(name: string): boolean {
+  const lower = name.toLowerCase();
+  // Arbitrary values, variants, fractions, escapes — always utility syntax.
+  if (/[[\]:!/@&>*~=%.()#'"]/.test(lower)) {
+    return true;
+  }
+  if (UTILITY_CLASS_KEYWORDS.has(lower)) {
+    return true;
+  }
+  if (UTILITY_CLASS_PREFIX.test(lower)) {
+    return true;
+  }
+  // Trailing scale tokens (…-0, …-full, …-px, …-sm) read as utility values.
+  return /-(?:\d+(?:\.\d+)?|px|auto|full|screen|none|min|max|fit|xs|sm|md|lg|\d?xl)$/.test(lower);
+}
+
+/**
+ * A wrapper's name suffix derived from the source's own semantic class (BEM-ish
+ * names like `hero-video-scrim`) or a `data-name` attribute (Figma exports).
+ * Utility classes and classes repeated across the section (>2 elements — list
+ * items, cards) never qualify, so this only fires on singular named wrappers.
+ */
+function semanticSuffixFor(input: {
+  sectionKey: string;
+  sourceClassNames: string[];
+  dataName?: string;
+  classFrequency?: Map<string, number>;
+}): string | undefined {
+  const fromClass = input.sourceClassNames.find(
+    (name) =>
+      name.length >= 3 &&
+      /^[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*$/i.test(name) &&
+      !isUtilityClassName(name) &&
+      !isReservedStyleGuideClassName(name) &&
+      (input.classFrequency?.get(name) ?? 1) <= 2
+  );
+  const raw = fromClass ?? (input.dataName ? slugify(input.dataName) : undefined);
+  if (!raw) {
+    return undefined;
+  }
+  // Drop leading tokens the sectionKey already carries (hero-video-layer in
+  // section "case-studies-hero" → video-layer), keeping at least one token.
+  const keyTokens = new Set(input.sectionKey.split("-"));
+  const tokens = raw.toLowerCase().replace(/_/g, "-").split("-").filter(Boolean);
+  let start = 0;
+  while (start < tokens.length - 1 && keyTokens.has(tokens[start])) {
+    start += 1;
+  }
+  const suffix = tokens.slice(start).join("-");
+  // `_component` has scaffold semantics — never let a source name claim it.
+  if (!suffix || suffix.length < 3 || suffix === "component") {
+    return undefined;
+  }
+  return suffix;
+}
+
+/** Anything a reader would call content: text, images, icons, links. */
+function subtreeHasContent(node: BuildNode): boolean {
+  return (
+    Boolean(node.textContent && node.textContent.trim()) ||
+    node.type === "image" ||
+    node.type === "embed" ||
+    node.tag === "a" ||
+    node.children.some(subtreeHasContent)
+  );
 }
 
 function sharedOrFallback(
@@ -235,6 +353,10 @@ function generatedClassNames(input: {
   sharedStyleContext?: SharedStyleContext;
   /** How many structural siblings (incl. this element) share its parent. */
   siblingElementCount?: number;
+  /** The element's data-name attribute (Figma exports name wrappers this way). */
+  dataName?: string;
+  /** How many elements in the section carry each source class. */
+  classFrequency?: Map<string, number>;
 }): string[] {
   const { tag, sectionKey, path, sourceClassNames, textContent, children, sharedStyleContext } = input;
   const childTags = new Set(children.map((child) => child.tag));
@@ -329,8 +451,20 @@ function generatedClassNames(input: {
     if (children.length === 1 && !textContent && isDecorativeEmbed(children[0])) {
       return [`${sectionKey}_icon`];
     }
+    if (children.length > 0 && children.every((child) => child.type === "image")) {
+      return [`${sectionKey}_image-wrapper`];
+    }
+    // A link either sits directly in the row or rides inside a bare focus/anim
+    // wrapper div — both count when deciding whether this is a CTA/link row.
+    const wrapsBareLink = (node: BuildNode): boolean =>
+      node.tag === "a" ||
+      (node.tag === "div" &&
+        !node.textContent &&
+        node.children.length === 1 &&
+        node.children[0].tag === "a");
     if (
       linkChildren.length > 1 ||
+      children.filter(wrapsBareLink).length > 1 ||
       cardChildren.length > 1 ||
       childClassNames.filter((className) => className.endsWith("_card")).length > 1
     ) {
@@ -375,6 +509,22 @@ function generatedClassNames(input: {
     ) {
       return [`${sectionKey}_item`];
     }
+    if (
+      childClassNames.some((className) => className.endsWith("_image-wrapper")) &&
+      childClassNames.some(
+        (className) => className.endsWith("_item") || className.endsWith("_heading-wrapper")
+      )
+    ) {
+      // Image half + text half is the classic card shape.
+      return [`${sectionKey}_card`];
+    }
+    if (
+      children.length > 0 &&
+      children.some((child) => child.type === "heading") &&
+      children.every((child) => child.type === "heading" || child.type === "text")
+    ) {
+      return [`${sectionKey}_heading-wrapper`];
+    }
     if (tag === "article") {
       // A content-block <article> that matched no structural pattern is a card.
       return [`${sectionKey}_card`];
@@ -384,6 +534,16 @@ function generatedClassNames(input: {
       // depth-2 siblings (hero background layers, overlays) are NOT components —
       // the scaffold provides the synthetic _component around them.
       return [`${sectionKey}_component`];
+    }
+    // Before falling back to the `_content` catch-all, try to name the wrapper
+    // by its role: the source's own semantic class/data-name, or a decorative
+    // layer (no readable content in its subtree — video mats, scrims, patterns).
+    const semanticSuffix = semanticSuffixFor(input);
+    if (semanticSuffix) {
+      return [`${sectionKey}_${semanticSuffix}`];
+    }
+    if (!textContent && children.every((child) => !subtreeHasContent(child))) {
+      return [`${sectionKey}_layer`];
     }
     return [`${sectionKey}_content`];
   }
@@ -509,6 +669,7 @@ function buildNodeFromElement(input: {
   assetBindings: SkeletonPlan["assetBindings"];
   sourceClassNames: Set<string>;
   siblingElementCount?: number;
+  classFrequency?: Map<string, number>;
 }): BuildNode | null {
   const rawTag = elementTag(input.element);
   // Render <button> CTAs as links (<a>). A Webflow Button / Link Block element is
@@ -526,6 +687,10 @@ function buildNodeFromElement(input: {
       )
     );
     tag = "div";
+  }
+  if (tag === "br") {
+    // Not removed content — the break already rides in the parent's textContent.
+    return null;
   }
   if (SKIPPED_TAGS.has(tag)) {
     input.warnings.push(warning("html-removed-cruft", `Removed <${tag}> from the HTML skeleton.`));
@@ -618,7 +783,9 @@ function buildNodeFromElement(input: {
     textContent,
     children,
     sharedStyleContext: input.sharedStyleContext,
-    siblingElementCount: input.siblingElementCount
+    siblingElementCount: input.siblingElementCount,
+    dataName: input.element.getAttribute("data-name")?.trim() || undefined,
+    classFrequency: input.classFrequency
   });
   const node: BuildNode = decorateSemanticChildren({
     id,
@@ -741,6 +908,14 @@ export function htmlToBuildNode(input: {
   // at its first three words.
   const fullSectionKey = slugify(input.sectionName ?? input.sectionId) || "section";
   const sectionKey = fullSectionKey.split("-").slice(0, 3).join("-") || "section";
+  // How many elements in this section carry each class — semantic wrapper
+  // naming skips classes that repeat (list items, cards).
+  const classFrequency = new Map<string, number>();
+  for (const element of [rootElement, ...rootElement.querySelectorAll("*")]) {
+    for (const className of classNamesFor(element)) {
+      classFrequency.set(className, (classFrequency.get(className) ?? 0) + 1);
+    }
+  }
   const root = buildNodeFromElement({
     element: rootElement,
     sectionId: input.sectionId,
@@ -749,7 +924,8 @@ export function htmlToBuildNode(input: {
     sharedStyleContext: input.sharedStyleContext,
     warnings,
     assetBindings,
-    sourceClassNames
+    sourceClassNames,
+    classFrequency
   });
   if (!root) {
     return null;

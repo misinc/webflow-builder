@@ -64,8 +64,7 @@
      "text": false
     },
     "classes": [
-     "b64b3304-7a11-b60f-acd1-054724f72ec5",
-     "23406089-e58a-4252-bdd0-1157d80d8820"
+     "8e488f16-a37d-a6e1-da45-9223dccb6c77"
     ],
     "children": [
      "2a4db5ee-5f19-17db-c39f-9af9b821e769"
@@ -132,9 +131,8 @@
      "text": false
     },
     "classes": [
-     "b64b3304-7a11-b60f-acd1-054724f72ec5",
-     "3f4c060a-1a55-1a46-0446-83bc2e580d5a",
-     "70a8a53a-e097-473b-2f88-7835c7f54c61"
+     "27307fac-fc3a-eda8-1736-f2d4bd198580",
+     "90972d93-738a-021b-f7e9-472822991755"
     ],
     "children": []
    },
@@ -1873,8 +1871,7 @@
      "text": false
     },
     "classes": [
-     "b64b3304-7a11-b60f-acd1-054724f72ec5",
-     "23406089-e58a-4252-bdd0-1157d80d8820"
+     "8e488f16-a37d-a6e1-da45-9223dccb6c77"
     ],
     "children": [
      "ee14fa53-3d56-6c25-0919-5a6e8022ba6f"
@@ -1978,9 +1975,9 @@
      "text": false
     },
     "classes": [
-     "b64b3304-7a11-b60f-acd1-054724f72ec5",
-     "7a3354d6-0999-36a4-9873-dd9abcbf1290",
-     "ab739b02-a202-7873-23bc-e465c126f0e9"
+     "27307fac-fc3a-eda8-1736-f2d4bd198580",
+     "c37b3158-5419-925c-c300-77d4016f7314",
+     "d6532703-3e9f-019e-c7ac-b481c5cb793c"
     ],
     "children": []
    },
@@ -2074,13 +2071,9 @@
     "children": [
      "15f35ddc-c583-1d0d-e69d-79458266ca0f",
      "2172efee-94b0-9bd1-5e12-e30be7704eb7",
-     "23406089-e58a-4252-bdd0-1157d80d8820",
      "35722739-2960-f445-9fdc-10ac234f7a0b",
-     "3f4c060a-1a55-1a46-0446-83bc2e580d5a",
      "5832da8b-4b94-d23a-185a-1aa56ab413d0",
      "70a8a53a-e097-473b-2f88-7835c7f54c61",
-     "7a3354d6-0999-36a4-9873-dd9abcbf1290",
-     "ab739b02-a202-7873-23bc-e465c126f0e9",
      "c324a560-d794-e693-7ba3-3b4fbbdee521",
      "c645e3ce-bc1f-206c-d066-9c8ab45c5828",
      "d03ab8cb-6b44-1879-8234-40dae12e4c4b",
@@ -2131,13 +2124,13 @@
     "selector": null
    },
    {
-    "_id": "23406089-e58a-4252-bdd0-1157d80d8820",
+    "_id": "8e488f16-a37d-a6e1-da45-9223dccb6c77",
     "fake": false,
     "type": "class",
-    "name": "navbar_content_v171f1",
+    "name": "navbar_image-wrapper",
     "namespace": "",
-    "comb": "&",
-    "styleLess": "height: 50px; align-items: center; z-index: auto;",
+    "comb": "",
+    "styleLess": "height: 50px; position: relative; display: flex; align-items: center; flex-shrink: 0;",
     "variants": {},
     "children": [],
     "origin": null,
@@ -2185,13 +2178,30 @@
     "selector": null
    },
    {
-    "_id": "3f4c060a-1a55-1a46-0446-83bc2e580d5a",
+    "_id": "27307fac-fc3a-eda8-1736-f2d4bd198580",
     "fake": false,
     "type": "class",
-    "name": "navbar_content_v7mbj7",
+    "name": "navbar_layer",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "width: 100%;",
+    "variants": {},
+    "children": [
+     "90972d93-738a-021b-f7e9-472822991755",
+     "c37b3158-5419-925c-c300-77d4016f7314",
+     "d6532703-3e9f-019e-c7ac-b481c5cb793c"
+    ],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "90972d93-738a-021b-f7e9-472822991755",
+    "fake": false,
+    "type": "class",
+    "name": "navbar_layer_vedwue",
     "namespace": "",
     "comb": "&",
-    "styleLess": "position: static; z-index: auto;",
+    "styleLess": "background-color: #a62025;",
     "variants": {},
     "children": [],
     "origin": null,
@@ -2589,23 +2599,23 @@
     "selector": null
    },
    {
-    "_id": "7a3354d6-0999-36a4-9873-dd9abcbf1290",
+    "_id": "c37b3158-5419-925c-c300-77d4016f7314",
     "fake": false,
     "type": "class",
-    "name": "navbar_content_v1ssff",
+    "name": "navbar_layer_vl1u8k",
     "namespace": "",
     "comb": "&",
-    "styleLess": "height: 1px; position: static; z-index: auto;",
+    "styleLess": "height: 1px; flex-shrink: 0;",
     "variants": {},
     "children": [],
     "origin": null,
     "selector": null
    },
    {
-    "_id": "ab739b02-a202-7873-23bc-e465c126f0e9",
+    "_id": "d6532703-3e9f-019e-c7ac-b481c5cb793c",
     "fake": false,
     "type": "class",
-    "name": "navbar_content_v1idin",
+    "name": "navbar_layer_v7sb7i",
     "namespace": "",
     "comb": "&",
     "styleLess": "background-color: #a620251f;",

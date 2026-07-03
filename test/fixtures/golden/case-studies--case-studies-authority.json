@@ -25,7 +25,7 @@
    {
     "_id": "07692929-83ae-f441-182d-86889585bc7f",
     "text": true,
-    "v": "30 Years of Innovation. Built for What's Next."
+    "v": "30 Years of Innovation.\nBuilt for What's Next."
    },
    {
     "_id": "5d7fc6ca-3f2a-105c-93eb-610e971f98a8",
@@ -36,7 +36,7 @@
     },
     "classes": [
      "4356e6ab-8d67-5e6e-3edb-26c9a999f44c",
-     "a5c006bd-27fb-44ed-f8f7-1a908df4cc23"
+     "993d2d08-9bcb-13a1-9f13-d6fdccb453eb"
     ],
     "children": [
      "07692929-83ae-f441-182d-86889585bc7f"
@@ -56,7 +56,7 @@
     },
     "classes": [
      "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
-     "60b52225-9470-49da-3194-adcb602e7d10"
+     "500ab896-9e68-3754-b101-9f2a70d15c40"
     ],
     "children": [
      "9101b9b9-18b0-e401-a95b-771886ffd15f"
@@ -71,7 +71,7 @@
      "text": false
     },
     "classes": [
-     "42156a72-7732-527b-7176-b7dd0ca4d181"
+     "d2d7bac3-c635-38fa-0509-b3cd12217c70"
     ],
     "children": [
      "54f94d4e-cadf-435c-07f5-25ba6dff7678",
@@ -108,8 +108,7 @@
      "text": false
     },
     "classes": [
-     "42156a72-7732-527b-7176-b7dd0ca4d181",
-     "f2d132b3-a928-b667-a658-97e441b0ceb9"
+     "42156a72-7732-527b-7176-b7dd0ca4d181"
     ],
     "children": [
      "c2ef49d7-58ed-142c-0ce4-0ef716ea67d2"
@@ -124,8 +123,7 @@
      "text": false
     },
     "classes": [
-     "42156a72-7732-527b-7176-b7dd0ca4d181",
-     "be465f02-6b3b-36a5-74e4-6193d206225b"
+     "e97d36fb-857c-3a3c-c344-e733e96fc472"
     ],
     "children": [
      "56cd6d2f-5752-e1bc-ebca-046f67f1e602"
@@ -220,7 +218,7 @@
     "styleLess": "",
     "variants": {},
     "children": [
-     "60b52225-9470-49da-3194-adcb602e7d10",
+     "500ab896-9e68-3754-b101-9f2a70d15c40",
      "e23ee49d-5a50-27cf-6ab4-2bfafee6a8b9",
      "eb3b7561-1ed6-d9c9-d25e-eec8ba3e0687"
     ],
@@ -250,50 +248,47 @@
     "styleLess": "",
     "variants": {},
     "children": [
-     "a5c006bd-27fb-44ed-f8f7-1a908df4cc23"
+     "993d2d08-9bcb-13a1-9f13-d6fdccb453eb"
     ],
     "origin": null,
     "selector": null
    },
    {
-    "_id": "a5c006bd-27fb-44ed-f8f7-1a908df4cc23",
+    "_id": "993d2d08-9bcb-13a1-9f13-d6fdccb453eb",
     "fake": false,
     "type": "class",
-    "name": "heading-style-h2_vbodz0",
+    "name": "heading-style-h2_v1n88y",
     "namespace": "",
     "comb": "&",
-    "styleLess": "margin: 0; max-width: none; color: #fff4e3; font-family: Manrope,sans-serif; font-size: clamp(2.6rem,4.8vw,4.8rem); font-weight: 300; letter-spacing: -.05em; line-height: .96; white-space: nowrap;",
+    "styleLess": "margin: 0; max-width: none; color: #fff4e3; font-family: Manrope,sans-serif; font-size: 69.12px; font-weight: 300; letter-spacing: -.05em; line-height: .96; white-space: pre-line;",
     "variants": {},
     "children": [],
     "origin": null,
     "selector": null
    },
    {
-    "_id": "60b52225-9470-49da-3194-adcb602e7d10",
+    "_id": "500ab896-9e68-3754-b101-9f2a70d15c40",
     "fake": false,
     "type": "class",
-    "name": "text-size-medium_vyr2sc",
+    "name": "text-size-medium_v1j9k1",
     "namespace": "",
     "comb": "&",
-    "styleLess": "margin: 0; max-width: 36rem; color: #fff4e3; font-size: clamp(1rem,1.6vw,1.15rem); line-height: 1.7;",
+    "styleLess": "margin: 0; max-width: 36rem; color: #fff4e3; font-size: 18.4px; line-height: 1.7;",
     "variants": {},
     "children": [],
     "origin": null,
     "selector": null
    },
    {
-    "_id": "42156a72-7732-527b-7176-b7dd0ca4d181",
+    "_id": "d2d7bac3-c635-38fa-0509-b3cd12217c70",
     "fake": false,
     "type": "class",
-    "name": "case-studies-authority_content",
+    "name": "case-studies-authority_heading-wrapper",
     "namespace": "",
     "comb": "",
     "styleLess": "display: grid; grid-row-gap: 16px; grid-column-gap: 16px;",
     "variants": {},
-    "children": [
-     "be465f02-6b3b-36a5-74e4-6193d206225b",
-     "f2d132b3-a928-b667-a658-97e441b0ceb9"
-    ],
+    "children": [],
     "origin": null,
     "selector": null
    },
@@ -311,26 +306,26 @@
     "selector": null
    },
    {
-    "_id": "f2d132b3-a928-b667-a658-97e441b0ceb9",
+    "_id": "42156a72-7732-527b-7176-b7dd0ca4d181",
     "fake": false,
     "type": "class",
-    "name": "case-studies-authority_content_von97g",
+    "name": "case-studies-authority_content",
     "namespace": "",
-    "comb": "&",
-    "styleLess": "align-items: center; grid-row-gap: 6px; grid-column-gap: 6px; height: 210px; justify-items: center; width: 210px; background: #fff8ed0f; border: 1px solid rgba(255,244,227,.14); border-radius: 999px;",
+    "comb": "",
+    "styleLess": "align-items: center; display: grid; grid-row-gap: 6px; grid-column-gap: 6px; height: 210px; justify-items: center; width: 210px; background: #fff8ed0f; border: 1px solid rgba(255,244,227,.14); border-radius: 999px;",
     "variants": {},
     "children": [],
     "origin": null,
     "selector": null
    },
    {
-    "_id": "be465f02-6b3b-36a5-74e4-6193d206225b",
+    "_id": "e97d36fb-857c-3a3c-c344-e733e96fc472",
     "fake": false,
     "type": "class",
-    "name": "case-studies-authority_content_v9kixh",
+    "name": "case-studies-authority_aos-orbit",
     "namespace": "",
-    "comb": "&",
-    "styleLess": "align-items: center; justify-self: center; max-width: 460px; padding: 24px; place-items: center; width: 100%; aspect-ratio: 1; background: radial-gradient(circle,rgba(255,170,29,.14),transparent 58%),radial-gradient(circle,rgba(255,255,255,.05),transparent 68%); border: 1px solid rgba(255,244,227,.2); border-radius: 999px; animation: aos-orbit-pulse 4.6s ease-out infinite; transform-origin: center;",
+    "comb": "",
+    "styleLess": "align-items: center; display: grid; justify-self: center; max-width: 460px; padding: 24px; place-items: center; width: 100%; aspect-ratio: 1; background: radial-gradient(circle,rgba(255,170,29,.14),transparent 58%),radial-gradient(circle,rgba(255,255,255,.05),transparent 68%); border: 1px solid rgba(255,244,227,.2); border-radius: 999px; animation: aos-orbit-pulse 4.6s ease-out infinite; transform-origin: center;",
     "variants": {},
     "children": [],
     "origin": null,

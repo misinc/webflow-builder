@@ -278,6 +278,55 @@ export function evaluateSimpleCalc(value: string): string {
   });
 }
 
+// Reference desktop viewport for evaluating vw/vh in clamp() — Webflow's base
+// breakpoint is designed against ~1440px.
+const REFERENCE_VIEWPORT_WIDTH_PX = 1440;
+const REFERENCE_VIEWPORT_HEIGHT_PX = 900;
+
+function lengthTokenToPx(token: string): number | null {
+  const match = /^(-?[\d.]+)(px|rem|em|vw|vh)?$/.exec(token.trim());
+  if (!match) {
+    return null;
+  }
+  const amount = Number(match[1]);
+  if (!Number.isFinite(amount)) {
+    return null;
+  }
+  switch (match[2]) {
+    case "px":
+      return amount;
+    case "rem":
+    case "em":
+      return amount * 16;
+    case "vw":
+      return (amount * REFERENCE_VIEWPORT_WIDTH_PX) / 100;
+    case "vh":
+      return (amount * REFERENCE_VIEWPORT_HEIGHT_PX) / 100;
+    default:
+      return amount === 0 ? 0 : null;
+  }
+}
+
+/**
+ * Evaluate clamp(min, preferred, max) of plain lengths to a literal px value at
+ * the desktop reference viewport — Webflow's paste parser drops clamp() like it
+ * drops calc(), so fluid type would silently fall back to the base class size.
+ */
+export function evaluateSimpleClamp(value: string): string {
+  if (!/clamp\(/i.test(value)) {
+    return value;
+  }
+  return value.replace(/clamp\(([^()]*)\)/gi, (whole, inner: string) => {
+    const parts = inner.split(",").map((part) => lengthTokenToPx(part));
+    if (parts.length !== 3 || parts.some((part) => part === null)) {
+      return whole;
+    }
+    const [min, preferred, max] = parts as [number, number, number];
+    const result = Math.min(Math.max(preferred, min), max);
+    return `${Math.round(result * 100) / 100}px`;
+  });
+}
+
 
 /** Assign a resolved declaration, expanding the `inset` shorthand to physical
  *  offsets so positioning logic downstream sees uniform keys. */
@@ -307,7 +356,7 @@ export function resolveDeclarations(
     if (prop.startsWith("-")) {
       continue;
     }
-    const value = evaluateSimpleCalc(resolveValue(rawValue, variables).trim());
+    const value = evaluateSimpleClamp(evaluateSimpleCalc(resolveValue(rawValue, variables).trim()));
     if (value) {
       assignResolved(resolved, prop.toLowerCase(), value);
     }
@@ -410,7 +459,7 @@ export function resolveDeclarationsWithBindings(
         continue;
       }
     }
-    const value = evaluateSimpleCalc(resolveValue(rawValue, variables).trim());
+    const value = evaluateSimpleClamp(evaluateSimpleCalc(resolveValue(rawValue, variables).trim()));
     if (value) {
       assignResolved(properties, property, value);
     }

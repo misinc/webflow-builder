@@ -59,6 +59,34 @@ function isDarkInkLiteral(color: string): boolean {
 // positioning — never carry it onto a combo class.
 const SCAFFOLD_KEYS = ["position", "top", "right", "bottom", "left", "inset", "z-index"];
 
+// Child-layout properties on the SECTION ROOT act on the wrong children once
+// the client-first scaffold is inserted: padding-global/container-large become
+// the section's flex/grid items and (being width-less shared classes we must
+// not restyle) shrink to fit-content, so headings wrap in a narrow column.
+const SECTION_CHILD_LAYOUT_KEYS = [
+  "display",
+  "flex-direction",
+  "flex-flow",
+  "flex-wrap",
+  "align-items",
+  "align-content",
+  "justify-content",
+  "justify-items",
+  "place-items",
+  "place-content",
+  "gap",
+  "row-gap",
+  "column-gap",
+  "grid-row-gap",
+  "grid-column-gap",
+  "grid-template-columns",
+  "grid-template-rows",
+  "grid-template-areas",
+  "grid-auto-flow",
+  "grid-auto-columns",
+  "grid-auto-rows"
+];
+
 /**
  * Split a node's source classes into base classes and BEM `--modifier` classes
  * (a modifier is `X--suffix` where `X` is also one of the node's classes). The
@@ -174,6 +202,12 @@ export function buildResolvedStylingFromSkeleton(input: {
     // flow instead of piling up (see normalizeResolvedLayout).
     const properties = normalizeResolvedLayout(resolved.properties);
     const bindings = resolved.bindings.filter((binding) => properties[binding.property] !== undefined);
+    // Text carrying an intentional line break (<br> in the source) needs
+    // pre-line to render it — this also overrides a source `nowrap`, whose
+    // one-line intent the explicit break now expresses.
+    if (node.textContent?.includes("\n")) {
+      properties["white-space"] = "pre-line";
+    }
     // Headings often hardcode a one-off dark ink (a Figma-export artifact) instead
     // of the design text token. Normalize them to the site's inherited text color
     // (usually a var), so headings match the rest of the type system. Intentional
@@ -334,6 +368,67 @@ export function buildResolvedStylingFromSkeleton(input: {
       }
     }
   });
+
+  // The scaffold rewired the section's children, so the source section's own
+  // flex/grid layout must not ride onto section_* (see SECTION_CHILD_LAYOUT_KEYS).
+  // When that layout centered a max-width container, keep the centering by
+  // giving the container auto side margins instead.
+  const rootNode = input.skeleton.elementTree;
+  const rootClass = rootNode.classNames[0];
+  const rootProps = rootClass?.startsWith("section_")
+    ? styleDefinitions.get(rootClass)
+    : undefined;
+  const rootDisplay = rootProps?.["display"];
+  if (
+    rootProps &&
+    (rootDisplay === "flex" ||
+      rootDisplay === "inline-flex" ||
+      rootDisplay === "grid" ||
+      rootDisplay === "inline-grid")
+  ) {
+    const isFlex = rootDisplay === "flex" || rootDisplay === "inline-flex";
+    const direction = rootProps["flex-direction"] ?? "row";
+    const centeredChildren = isFlex
+      ? direction.startsWith("column")
+        ? rootProps["align-items"] === "center"
+        : rootProps["justify-content"] === "center"
+      : rootProps["justify-items"] === "center" || rootProps["justify-content"] === "center";
+    for (const key of SECTION_CHILD_LAYOUT_KEYS) {
+      delete rootProps[key];
+    }
+    if (centeredChildren) {
+      const findComponent = (node: BuildNode): BuildNode | undefined => {
+        if (node.classNames.some((name) => name.endsWith("_component"))) {
+          return node;
+        }
+        for (const child of node.children ?? []) {
+          const hit = findComponent(child);
+          if (hit) {
+            return hit;
+          }
+        }
+        return undefined;
+      };
+      const component = findComponent(rootNode);
+      for (const candidate of component ? [component, ...component.children] : []) {
+        const target = targetClassFor(candidate);
+        const definition = target ? styleDefinitions.get(target) : undefined;
+        if (
+          definition &&
+          definition["max-width"] &&
+          definition["max-width"] !== "none" &&
+          definition["position"] !== "absolute" &&
+          definition["position"] !== "fixed" &&
+          definition["margin-left"] === undefined &&
+          definition["margin-right"] === undefined &&
+          !(definition["margin"] ?? "").includes("auto")
+        ) {
+          definition["margin-left"] = "auto";
+          definition["margin-right"] = "auto";
+        }
+      }
+    }
+  }
 
   // Strip styled scoped classes from the nodes that contributed nothing to them.
   for (const [target, nodes] of styleLessNodesByTarget) {
