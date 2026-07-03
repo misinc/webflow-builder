@@ -86,12 +86,20 @@ function targetClassFor(node: BuildNode): string | null {
   if (scoped) {
     return scoped;
   }
-  // Only headings are safe to define on a shared base class (one heading level
-  // per section). Other base classes (text-size-*, container-*) are multi-role —
-  // merging different elements' CSS onto them corrupts, so we skip them.
-  return (
-    node.classNames.find((name) => isBuilderClassName(name) && /^heading-style-/.test(name)) ?? null
-  );
+  // No scoped class: fall back to the node's shared base class (heading-style-*,
+  // text-size-*, …). Shared bases are never DEFINED from one node's CSS — they
+  // are multi-role and belong to the project — so the caller attaches the
+  // node's resolved styles as a content-hashed combo on top instead.
+  return node.classNames.find((name) => isBuilderClassName(name) && isReusableBaseClass(name)) ?? null;
+}
+
+/** Short stable hash so combo names are deterministic across separate copies. */
+function contentHash(value: string): string {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < value.length; i += 1) {
+    hash = Math.imul(hash ^ value.charCodeAt(i), 0x01000193) >>> 0;
+  }
+  return hash.toString(36).slice(0, 5);
 }
 
 function walk(
@@ -122,7 +130,6 @@ export function buildResolvedStylingFromSkeleton(input: {
   const styleDefinitions = new Map<string, Record<string, string>>();
   const comboClasses = new Set<string>();
   const comboByKey = new Map<string, string>();
-  const comboCountByTarget = new Map<string, number>();
   const variableBindings: Array<{
     nodeId: string;
     property: string;
@@ -130,17 +137,17 @@ export function buildResolvedStylingFromSkeleton(input: {
     value: string;
   }> = [];
 
-  // Get (or create) the combo class for a target + override, deduped by content so
-  // instances with the same override (e.g. two same-colored icons) share a class.
+  // Get (or create) the combo class for a target + override, deduped by content
+  // so instances with the same override (e.g. two same-colored icons) share a
+  // class. The suffix is a content hash, so the same styles always produce the
+  // same combo name even across separately copied sections/pages.
   const comboClassFor = (target: string, props: Record<string, string>): string => {
     const key = `${target}|${JSON.stringify(Object.entries(props).sort())}`;
     const existing = comboByKey.get(key);
     if (existing) {
       return existing;
     }
-    const index = (comboCountByTarget.get(target) ?? 0) + 1;
-    comboCountByTarget.set(target, index);
-    const name = `${target}_v${index}`;
+    const name = `${target}_v${contentHash(key)}`;
     comboByKey.set(key, name);
     comboClasses.add(name);
     styleDefinitions.set(name, props);
@@ -179,17 +186,27 @@ export function buildResolvedStylingFromSkeleton(input: {
         });
       }
     }
-    // First node to claim a class wins — avoids merging semantically different
-    // elements (e.g. a <section> and its <header>) onto one class.
-    if (
-      target &&
-      !isReservedStyleGuideClassName(target) &&
-      !styleDefinitions.has(target) &&
-      Object.keys(properties).length > 0
-    ) {
-      styleDefinitions.set(target, properties);
-      for (const binding of bindings) {
-        variableBindings.push({ nodeId: node.id, ...binding });
+    if (target && !isReservedStyleGuideClassName(target) && Object.keys(properties).length > 0) {
+      if (isReusableBaseClass(target)) {
+        // Shared base class (heading-style-h1, text-size-medium, …): never
+        // define it from one node's CSS — the project owns it. Attach the
+        // node's resolved styles as a content-hashed combo on top, so the
+        // paste matches the source (e.g. a 48px h1 on a 56px project base, or
+        // an uppercase orange eyebrow on plain body text).
+        const comboClass = comboClassFor(target, properties);
+        if (!node.classNames.includes(comboClass)) {
+          node.classNames.push(comboClass);
+        }
+        for (const binding of bindings) {
+          variableBindings.push({ nodeId: node.id, ...binding });
+        }
+      } else if (!styleDefinitions.has(target)) {
+        // First node to claim a scoped class wins — avoids merging semantically
+        // different elements (e.g. a <section> and its <header>) onto one class.
+        styleDefinitions.set(target, properties);
+        for (const binding of bindings) {
+          variableBindings.push({ nodeId: node.id, ...binding });
+        }
       }
     }
 

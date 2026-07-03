@@ -30,7 +30,11 @@ function styleFor(html: string, className: string) {
     cssText: CSS
   });
   return {
-    definition: plan.styleDefinitions.find((entry) => entry.className === className),
+    // Shared heading bases are never defined directly — the resolved styles ride
+    // in a content-hashed combo (heading-style-h2_v…) on top of the base.
+    definition: plan.styleDefinitions.find(
+      (entry) => entry.className.startsWith(`${className}_v`) && entry.combo
+    ),
     colorBindings: plan.variableBindings.filter((binding) => binding.property === "color")
   };
 }

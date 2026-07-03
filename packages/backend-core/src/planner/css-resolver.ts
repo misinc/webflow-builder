@@ -126,9 +126,11 @@ export function parseCompiledCss(cssText: string): ParsedCss {
       }
 
       // Custom properties defined outside :root (theme variant classes) — kept
-      // as fallbacks, used only to fill vars that :root doesn't define.
+      // as fallbacks, used only to fill vars that :root doesn't define. Tailwind's
+      // internal cascade variables (--tw-*) are per-utility mechanics with many
+      // conflicting values (e.g. --tw-leading: 0) — never treat them as tokens.
       for (const [prop, value] of Object.entries(declarations)) {
-        if (prop.startsWith("--") && !scopedVars.has(prop)) {
+        if (prop.startsWith("--") && !prop.startsWith("--tw-") && !scopedVars.has(prop)) {
           scopedVars.set(prop, value);
         }
       }
