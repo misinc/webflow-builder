@@ -109,9 +109,24 @@ function stableHexId(seed: string): string {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
 }
 
+// Logical → physical property pairs (LTR). Webflow's parser drops logical
+// properties like padding-inline, losing e.g. a pill's horizontal padding.
+const LOGICAL_SIDES: Record<string, [string, string]> = {
+  "padding-inline": ["padding-left", "padding-right"],
+  "padding-block": ["padding-top", "padding-bottom"],
+  "margin-inline": ["margin-left", "margin-right"],
+  "margin-block": ["margin-top", "margin-bottom"]
+};
+
 function stylePropertiesToStyleLess(properties: Record<string, string>): string {
   const declarations: string[] = [];
   for (const [prop, value] of Object.entries(properties)) {
+    const logical = LOGICAL_SIDES[prop];
+    if (logical) {
+      const [start, end = start] = value.trim().split(/\s+/);
+      declarations.push(`${logical[0]}: ${start};`, `${logical[1]}: ${end};`);
+      continue;
+    }
     // Webflow stores flex/grid gaps under the legacy grid-*-gap names and
     // silently drops a modern `gap:` declaration on paste.
     if (prop === "gap") {

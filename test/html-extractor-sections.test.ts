@@ -36,7 +36,7 @@ describe("HtmlRepoExtractor section slicing", () => {
     );
 
     expect(index.sections).toHaveLength(1);
-    const source = index.sections[0].sourceCode;
+    const source = index.sections[0].sourceCode ?? "";
     expect(source.trimStart().startsWith("<section")).toBe(true);
     expect(source).toContain("pt-16 pb-20");
     expect(source).toContain("gap-6");

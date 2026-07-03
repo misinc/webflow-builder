@@ -516,6 +516,14 @@ export function normalizeResolvedLayout(
     out.display = "flex";
     out["flex-direction"] = "column";
   }
+  // `opacity: 0` (usually with pointer-events: none) is a JS reveal-animation's
+  // initial state — pasted as-is the element would be permanently invisible.
+  if (out.opacity !== undefined && Number(out.opacity) === 0) {
+    delete out.opacity;
+    if (out["pointer-events"]?.toLowerCase() === "none") {
+      delete out["pointer-events"];
+    }
+  }
   return out;
 }
 

@@ -30,7 +30,12 @@ export interface HtmlBuildResult {
   }>;
 }
 
-const SKIPPED_TAGS = new Set(["script", "style", "noscript", "template"]);
+// br: line breaks are already merged into textContent (a <br> Block crashes the
+// Designer canvas). source/track: media internals with no Webflow equivalent.
+const SKIPPED_TAGS = new Set(["script", "style", "noscript", "template", "br", "source", "track"]);
+// Media/embed elements Webflow can't render as generic Blocks — they become div
+// placeholders that keep the wrapper's classes (and therefore its styling).
+const MEDIA_PLACEHOLDER_TAGS = new Set(["video", "audio", "iframe", "canvas", "embed", "object"]);
 const SVG_INTERNAL_TAGS = new Set([
   "svg",
   "path",
@@ -490,7 +495,19 @@ function buildNodeFromElement(input: {
   // Render <button> CTAs as links (<a>). A Webflow Button / Link Block element is
   // text-only in practice and hoists an icon + label out; the <a> path holds
   // children (same as the pills). Naming/type treat <a> and <button> identically.
-  const tag = rawTag === "button" ? "a" : rawTag;
+  let tag = rawTag === "button" ? "a" : rawTag;
+  if (MEDIA_PLACEHOLDER_TAGS.has(tag)) {
+    // A <video>/<iframe>/… Block crashes the Designer canvas. Keep a div
+    // placeholder carrying the element's classes so the layout slot survives;
+    // the actual media is re-added in Webflow (Video/Embed element + asset).
+    input.warnings.push(
+      warning(
+        "html-media-placeholder",
+        `Replaced <${tag}> with a div placeholder — re-add it in Webflow as a Video/Embed element.`
+      )
+    );
+    tag = "div";
+  }
   if (SKIPPED_TAGS.has(tag)) {
     input.warnings.push(warning("html-removed-cruft", `Removed <${tag}> from the HTML skeleton.`));
     return null;
@@ -595,6 +612,20 @@ function buildNodeFromElement(input: {
   // text into a text child — placed before or after the element children to match
   // the source order (label-then-icon vs icon-then-label).
   if (node.textContent && node.textContent.trim().length > 0 && node.children.length > 0) {
+    // Headings and text elements must never gain nested children — a Paragraph
+    // inside a Heading crashes the Designer canvas on paste, and Webflow text
+    // elements are text-only anyway. Their inline text is already merged into
+    // textContent; drop the leftover child nodes.
+    if (node.type === "heading" || node.type === "text") {
+      input.warnings.push(
+        warning(
+          "html-flattened-text-element",
+          `Kept <${tag}> as plain text and removed ${node.children.length} nested element${node.children.length === 1 ? "" : "s"} (invalid inside a Webflow text element).`
+        )
+      );
+      node.children = [];
+      return node;
+    }
     const firstElementIndex = input.element.childNodes.findIndex(
       (child) => child.nodeType === NodeType.ELEMENT_NODE
     );
