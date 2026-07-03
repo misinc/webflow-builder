@@ -1,0 +1,24 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "html-preview",
+      "autoPort": false,
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8123",
+        "--directory",
+        "/private/tmp/claude-501/-Users-karim-apps-webflow-builder-app/ed4dd39a-b9b3-4cb1-84ae-7d53d509ed22/scratchpad/html-repo/misinc"
+      ],
+      "port": 8123
+    },
+    {
+      "name": "extension-dev",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite", "--config", "vite.extension.config.ts", "--port", "5199", "--strictPort"],
+      "port": 5199
+    }
+  ]
+}

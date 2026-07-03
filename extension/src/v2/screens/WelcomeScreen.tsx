@@ -68,8 +68,9 @@ export function WelcomeScreen() {
             Welcome to Webflow Builder
           </h2>
           <p className="text-[13.5px] text-wb-text-secondary leading-relaxed mx-auto max-w-[520px]">
-            Build sites in Webflow using a GitHub codebase as the source of truth. Connect once,
-            then build sections one at a time with the AI handling structure and styling.
+            Migrate sites into Webflow using a GitHub codebase as the source of truth. Each
+            section is rebuilt clean and client-first — structure, styles, and icons — and lands
+            on your canvas with a single paste.
           </p>
         </div>
 
@@ -81,22 +82,22 @@ export function WelcomeScreen() {
           <div className="grid grid-cols-3 gap-3">
             <StepCard
               num="STEP 01"
-              title="Connect & map pages"
-              body="Link a GitHub repo and map each Webflow page to the right file in your codebase."
+              title="Connect a repo"
+              body="Link a GitHub repo with pre-rendered HTML pages (a static export or compiled site) and map each Webflow page to its file."
               icon={<GitBranch size={16} />}
               iconStyle="default"
             />
             <StepCard
               num="STEP 02"
-              title="Choose a section"
-              body="Webflow Builder shows the sections in each page. Pick one to start, skip the rest for later."
+              title="Pick a page or section"
+              body="Copy a whole page at once, or open a section to review its client-first skeleton first. Skip anything for later."
               icon={<ListOrdered size={16} />}
               iconStyle="default"
             />
             <StepCard
               num="STEP 03"
-              title="Build & style"
-              body="The AI proposes a skeleton, inserts it, and applies styles from your codebase. Approve and move on."
+              title="Paste into Webflow"
+              body="Cmd+V on the canvas, click Clean up paste to reuse your classes and variables, and mark it built."
               icon={<Check size={16} strokeWidth={2.5} />}
               iconStyle="success"
             />
