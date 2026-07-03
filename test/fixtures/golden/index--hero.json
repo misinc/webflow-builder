@@ -1,0 +1,597 @@
+{
+ "type": "@webflow/XscpData",
+ "payload": {
+  "nodes": [
+   {
+    "_id": "ed4a0600-9cc8-9611-4bc5-61859aff186b",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "29ffd2b6-fccd-7aa2-97a2-642417aa3006"
+    ],
+    "children": []
+   },
+   {
+    "_id": "524db76f-bb00-8015-cf85-6842396e4c7f",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "29ffd2b6-fccd-7aa2-97a2-642417aa3006"
+    ],
+    "children": [
+     "ed4a0600-9cc8-9611-4bc5-61859aff186b"
+    ]
+   },
+   {
+    "_id": "9e8dc93f-ca34-edd5-601f-b072be22d27f",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "29ffd2b6-fccd-7aa2-97a2-642417aa3006",
+     "36bc15a2-6118-42de-a4b4-64acb4840e52"
+    ],
+    "children": []
+   },
+   {
+    "_id": "4790af73-bb77-ff95-20cc-139e712c6b1f",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "29ffd2b6-fccd-7aa2-97a2-642417aa3006",
+     "718f9571-9553-9bab-7b3b-3f22191bf7fd"
+    ],
+    "children": []
+   },
+   {
+    "_id": "f4c03157-6093-15ac-24df-41f771b6c552",
+    "text": true,
+    "v": "Strategic Web Design & AI Solutions That Drive Business Growth"
+   },
+   {
+    "_id": "f5d2d938-e85f-2229-12dc-8885526f70b3",
+    "type": "Heading",
+    "tag": "h1",
+    "data": {
+     "tag": "h1"
+    },
+    "classes": [
+     "4456e83e-cfee-110e-4a0a-36f01f8bf372",
+     "9210abcd-6bfd-dc17-af33-fc227caf39e1"
+    ],
+    "children": [
+     "f4c03157-6093-15ac-24df-41f771b6c552"
+    ]
+   },
+   {
+    "_id": "ee8a803b-0777-59ac-b470-ae4332233322",
+    "text": true,
+    "v": "We design websites, build custom tools, and use AI to help you attract more customers and grow your business."
+   },
+   {
+    "_id": "3ac91814-a72f-8ea9-749b-ab216d957dbb",
+    "type": "Paragraph",
+    "tag": "p",
+    "data": {
+     "tag": "p"
+    },
+    "classes": [
+     "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
+     "57b42051-14b9-2467-941a-932e07e48951"
+    ],
+    "children": [
+     "ee8a803b-0777-59ac-b470-ae4332233322"
+    ]
+   },
+   {
+    "_id": "9418c4b3-babb-9fbd-9b71-5de67dd2cd17",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "29ffd2b6-fccd-7aa2-97a2-642417aa3006",
+     "2808793f-5401-f74d-9c0f-f99a9c9e48d7"
+    ],
+    "children": [
+     "f5d2d938-e85f-2229-12dc-8885526f70b3",
+     "3ac91814-a72f-8ea9-749b-ab216d957dbb"
+    ]
+   },
+   {
+    "_id": "fb83d233-8ec6-b8ac-1665-24eb5b75e882",
+    "text": true,
+    "v": "Book a Free Strategy Call"
+   },
+   {
+    "_id": "6e8cf19c-beb1-c069-1af9-ddb9a577179b",
+    "type": "Link",
+    "tag": "a",
+    "data": {
+     "button": false,
+     "block": "inline",
+     "link": {
+      "url": "#"
+     }
+    },
+    "classes": [
+     "910c4985-7c55-7bef-256f-7bf2c6897dd9"
+    ],
+    "children": [
+     "fb83d233-8ec6-b8ac-1665-24eb5b75e882"
+    ]
+   },
+   {
+    "_id": "7afa8adb-70b7-8ff5-f173-568631646bcf",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "29ffd2b6-fccd-7aa2-97a2-642417aa3006",
+     "c888354f-24e4-3061-d3de-56861894331b"
+    ],
+    "children": []
+   },
+   {
+    "_id": "3acf567e-66e5-c24d-b701-588fe7c51263",
+    "text": true,
+    "v": "View Case Studies"
+   },
+   {
+    "_id": "a9cacbef-66d6-e846-de92-3ffd4676d454",
+    "type": "Paragraph",
+    "tag": "p",
+    "data": {
+     "tag": "p"
+    },
+    "classes": [],
+    "children": [
+     "3acf567e-66e5-c24d-b701-588fe7c51263"
+    ]
+   },
+   {
+    "_id": "a972d808-5181-4b69-140b-7115ae510b53",
+    "type": "Link",
+    "tag": "a",
+    "data": {
+     "button": false,
+     "block": "block",
+     "link": {
+      "url": "#"
+     }
+    },
+    "classes": [
+     "a272d213-8874-5ed1-09eb-002a2abb9833"
+    ],
+    "children": [
+     "7afa8adb-70b7-8ff5-f173-568631646bcf",
+     "a9cacbef-66d6-e846-de92-3ffd4676d454"
+    ]
+   },
+   {
+    "_id": "9dde2dbb-b413-acfd-4415-577e0934c877",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "a840491d-2a42-1085-ff11-dc78f2f8ad5b"
+    ],
+    "children": [
+     "6e8cf19c-beb1-c069-1af9-ddb9a577179b",
+     "a972d808-5181-4b69-140b-7115ae510b53"
+    ]
+   },
+   {
+    "_id": "7e164ab0-3dc7-90d1-0652-2415eaff2d2b",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "29ffd2b6-fccd-7aa2-97a2-642417aa3006",
+     "c6585f82-6d63-e7c5-f9fb-68b3170e68bb"
+    ],
+    "children": [
+     "9418c4b3-babb-9fbd-9b71-5de67dd2cd17",
+     "9dde2dbb-b413-acfd-4415-577e0934c877"
+    ]
+   },
+   {
+    "_id": "0d4a8a5b-acd8-e9d5-c7b5-20669b83846f",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "29ffd2b6-fccd-7aa2-97a2-642417aa3006",
+     "7432d1fb-1d00-2882-953f-e40dffc8c378"
+    ],
+    "children": [
+     "7e164ab0-3dc7-90d1-0652-2415eaff2d2b"
+    ]
+   },
+   {
+    "_id": "62b0118a-12e1-9f95-ff09-7e6bd21b54fb",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "6cdd4a6c-04a7-6a84-54f6-800854caa74c"
+    ],
+    "children": [
+     "524db76f-bb00-8015-cf85-6842396e4c7f",
+     "9e8dc93f-ca34-edd5-601f-b072be22d27f",
+     "4790af73-bb77-ff95-20cc-139e712c6b1f",
+     "0d4a8a5b-acd8-e9d5-c7b5-20669b83846f"
+    ]
+   },
+   {
+    "_id": "c1e21938-30d8-0fab-8494-966fca548ca9",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "171a7779-815a-5ffe-32b2-25f332830ad4"
+    ],
+    "children": [
+     "62b0118a-12e1-9f95-ff09-7e6bd21b54fb"
+    ]
+   },
+   {
+    "_id": "5d0bde04-3fa3-ae90-584b-e6a44fc352d8",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "cc0befdd-524c-2e6e-def8-c40faa76ac54"
+    ],
+    "children": [
+     "c1e21938-30d8-0fab-8494-966fca548ca9"
+    ]
+   },
+   {
+    "_id": "74211eea-7ac5-a5ef-5ff2-1e0916b7419d",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "3099fbbb-3f97-cd20-34d4-a817d799d98e"
+    ],
+    "children": [
+     "5d0bde04-3fa3-ae90-584b-e6a44fc352d8"
+    ]
+   },
+   {
+    "_id": "d0791c18-6b4d-9d11-fbd4-d4ddec6423fb",
+    "type": "Block",
+    "tag": "section",
+    "data": {
+     "tag": "section",
+     "text": false
+    },
+    "classes": [
+     "88391204-830e-9f7c-6217-d9d8238e4164"
+    ],
+    "children": [
+     "74211eea-7ac5-a5ef-5ff2-1e0916b7419d"
+    ]
+   }
+  ],
+  "styles": [
+   {
+    "_id": "29ffd2b6-fccd-7aa2-97a2-642417aa3006",
+    "fake": false,
+    "type": "class",
+    "name": "hero_content",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "position: absolute; top: 0; right: 0; bottom: 0; left: 0; z-index: 0; overflow: hidden;",
+    "variants": {},
+    "children": [
+     "2808793f-5401-f74d-9c0f-f99a9c9e48d7",
+     "36bc15a2-6118-42de-a4b4-64acb4840e52",
+     "718f9571-9553-9bab-7b3b-3f22191bf7fd",
+     "7432d1fb-1d00-2882-953f-e40dffc8c378",
+     "c6585f82-6d63-e7c5-f9fb-68b3170e68bb",
+     "c888354f-24e4-3061-d3de-56861894331b"
+    ],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "36bc15a2-6118-42de-a4b4-64acb4840e52",
+    "fake": false,
+    "type": "class",
+    "name": "hero_content_va19fd",
+    "namespace": "",
+    "comb": "&",
+    "styleLess": "z-index: 1;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "718f9571-9553-9bab-7b3b-3f22191bf7fd",
+    "fake": false,
+    "type": "class",
+    "name": "hero_content_vkky1l",
+    "namespace": "",
+    "comb": "&",
+    "styleLess": "inset: 0rem; opacity: .03; pointer-events: none; z-index: 2;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "4456e83e-cfee-110e-4a0a-36f01f8bf372",
+    "fake": false,
+    "type": "class",
+    "name": "heading-style-h1",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [
+     "9210abcd-6bfd-dc17-af33-fc227caf39e1"
+    ],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "9210abcd-6bfd-dc17-af33-fc227caf39e1",
+    "fake": false,
+    "type": "class",
+    "name": "heading-style-h1_v5zlu0",
+    "namespace": "",
+    "comb": "&",
+    "styleLess": "position: relative; width: 100%; max-width: 900px; line-height: 1.1; flex-shrink: 0; font-size: 72px;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
+    "fake": false,
+    "type": "class",
+    "name": "text-size-medium",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [
+     "57b42051-14b9-2467-941a-932e07e48951"
+    ],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "57b42051-14b9-2467-941a-932e07e48951",
+    "fake": false,
+    "type": "class",
+    "name": "text-size-medium_vz0b1l",
+    "namespace": "",
+    "comb": "&",
+    "styleLess": "position: relative; max-width: 700px; line-height: 1.6; flex-shrink: 0; font-size: 20px; color: #4a3f37;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "2808793f-5401-f74d-9c0f-f99a9c9e48d7",
+    "fake": false,
+    "type": "class",
+    "name": "hero_content_vjszbe",
+    "namespace": "",
+    "comb": "&",
+    "styleLess": "align-content: stretch; display: flex; flex-direction: column; grid-row-gap: 20px; grid-column-gap: 20px; align-items: flex-start; position: relative; width: 100%; font-weight: 300; flex-shrink: 0; color: #2a2420; z-index: 2;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "910c4985-7c55-7bef-256f-7bf2c6897dd9",
+    "fake": false,
+    "type": "class",
+    "name": "hero_link",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "align-content: stretch; display: flex; align-items: center; justify-content: center; position: relative; background-color: #9b3139; padding-left: 28px; padding-right: 28px; padding-top: 16px; padding-bottom: 16px; border-radius: 500px; flex-shrink: 0; z-index: 1;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "c888354f-24e4-3061-d3de-56861894331b",
+    "fake": false,
+    "type": "class",
+    "name": "hero_content_vw4gv0",
+    "namespace": "",
+    "comb": "&",
+    "styleLess": "inset: 0rem; border-style: solid; border-width: 1px; pointer-events: none; border-radius: 500px;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "a272d213-8874-5ed1-09eb-002a2abb9833",
+    "fake": false,
+    "type": "class",
+    "name": "hero_card",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "align-content: stretch; display: flex; align-items: center; justify-content: center; position: relative; padding-left: 28px; padding-right: 28px; padding-top: 16px; padding-bottom: 16px; border-radius: 500px; flex-shrink: 0;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "a840491d-2a42-1085-ff11-dc78f2f8ad5b",
+    "fake": false,
+    "type": "class",
+    "name": "hero_list",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "display: flex; flex-direction: row; grid-row-gap: 16px; grid-column-gap: 16px; align-items: flex-start;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "c6585f82-6d63-e7c5-f9fb-68b3170e68bb",
+    "fake": false,
+    "type": "class",
+    "name": "hero_content_vz1l1w",
+    "namespace": "",
+    "comb": "&",
+    "styleLess": "align-content: stretch; display: flex; flex-grow: 1; flex-shrink: 0; flex-basis: 0; flex-direction: column; grid-row-gap: 40px; grid-column-gap: 40px; align-items: flex-start; min-height: 1px; min-width: 0rem; position: relative; width: 100%;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "7432d1fb-1d00-2882-953f-e40dffc8c378",
+    "fake": false,
+    "type": "class",
+    "name": "hero_content_vlwgf2",
+    "namespace": "",
+    "comb": "&",
+    "styleLess": "align-content: stretch; display: flex; align-items: flex-start; position: relative; width: 100%; max-width: 1200px; flex-shrink: 0; padding-left: 3rem; padding-right: 3rem; z-index: 10;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "6cdd4a6c-04a7-6a84-54f6-800854caa74c",
+    "fake": false,
+    "type": "class",
+    "name": "hero_component",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "171a7779-815a-5ffe-32b2-25f332830ad4",
+    "fake": false,
+    "type": "class",
+    "name": "padding-section-medium",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "cc0befdd-524c-2e6e-def8-c40faa76ac54",
+    "fake": false,
+    "type": "class",
+    "name": "container-large",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "3099fbbb-3f97-cd20-34d4-a817d799d98e",
+    "fake": false,
+    "type": "class",
+    "name": "padding-global",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "88391204-830e-9f7c-6217-d9d8238e4164",
+    "fake": false,
+    "type": "class",
+    "name": "section_hero",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "align-content: stretch; display: flex; flex-direction: column; align-items: center; padding-bottom: 120px; padding-top: 100px; position: relative; width: 100%; flex-shrink: 0; overflow: hidden;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   }
+  ],
+  "assets": [],
+  "ix1": [],
+  "ix2": {
+   "interactions": [],
+   "events": [],
+   "actionLists": []
+  }
+ },
+ "meta": {
+  "droppedLinks": 0,
+  "dynBindRemovedCount": 0,
+  "dynListBindRemovedCount": 0,
+  "paginationRemovedCount": 0,
+  "universalBindingsRemovedCount": 0,
+  "unlinkedSymbolCount": 0,
+  "codeComponentsRemovedCount": 0,
+  "richTextComponentsStripped": false
+ }
+}

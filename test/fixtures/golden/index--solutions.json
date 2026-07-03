@@ -1,0 +1,1590 @@
+{
+ "type": "@webflow/XscpData",
+ "payload": {
+  "nodes": [
+   {
+    "_id": "29079ecd-dbf5-a274-5c0e-504d890bc3c6",
+    "text": true,
+    "v": "Solutions Tailored to Your Industry"
+   },
+   {
+    "_id": "deaf996e-74c1-77a5-8e6b-6a078406097b",
+    "type": "Heading",
+    "tag": "h2",
+    "data": {
+     "tag": "h2"
+    },
+    "classes": [
+     "4356e6ab-8d67-5e6e-3edb-26c9a999f44c",
+     "b9cc1d81-0b59-b609-0822-f3289a233207"
+    ],
+    "children": [
+     "29079ecd-dbf5-a274-5c0e-504d890bc3c6"
+    ]
+   },
+   {
+    "_id": "7d712aa9-1948-1ff9-53b4-6990532a8977",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "32b32e1a-065a-02e3-67f9-8d8dcd44c0a9"
+    ],
+    "children": [
+     "deaf996e-74c1-77a5-8e6b-6a078406097b"
+    ]
+   },
+   {
+    "_id": "070f48fa-41ed-27d0-b3a3-8fb2162bab94",
+    "text": true,
+    "v": "Solutions designed around how each industry actually operates."
+   },
+   {
+    "_id": "987cbd51-cda6-1011-5e87-5e400a232a9f",
+    "type": "Heading",
+    "tag": "h3",
+    "data": {
+     "tag": "h3"
+    },
+    "classes": [
+     "4256e518-4ae0-abce-b41f-c64ea99819ba",
+     "6b5894c0-e5f0-bc0c-ca63-1a3c73c67444"
+    ],
+    "children": [
+     "070f48fa-41ed-27d0-b3a3-8fb2162bab94"
+    ]
+   },
+   {
+    "_id": "4260f6da-e551-8150-ee71-8b92a9cf15d4",
+    "text": true,
+    "v": "Instead of presenting every audience at the same weight, this version creates a stronger entry point and a more editorial scan path."
+   },
+   {
+    "_id": "2bc19f91-e085-c4d1-7dac-644018c78e5f",
+    "type": "Paragraph",
+    "tag": "p",
+    "data": {
+     "tag": "p"
+    },
+    "classes": [
+     "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
+     "fba5a3ad-d975-a6cc-d82b-0b15ba642b9e"
+    ],
+    "children": [
+     "4260f6da-e551-8150-ee71-8b92a9cf15d4"
+    ]
+   },
+   {
+    "_id": "397bc835-c7ca-27d9-5601-13dccb04021f",
+    "type": "HtmlEmbed",
+    "tag": "div",
+    "v": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-store\"><path d=\"m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7\"></path><path d=\"M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8\"></path><path d=\"M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4\"></path><path d=\"M2 7h20\"></path><path d=\"M22 7v3a2 2 0 0 1-2 2a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12a2 2 0 0 1-2-2V7\"></path></svg>",
+    "data": {
+     "insideRTE": false,
+     "embed": {
+      "type": "html",
+      "meta": {
+       "html": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-store\"><path d=\"m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7\"></path><path d=\"M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8\"></path><path d=\"M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4\"></path><path d=\"M2 7h20\"></path><path d=\"M22 7v3a2 2 0 0 1-2 2a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12a2 2 0 0 1-2-2V7\"></path></svg>",
+       "div": false,
+       "iframe": false,
+       "script": false
+      }
+     }
+    },
+    "classes": [
+     "0e1e5337-82a9-a22a-c820-a101e61e3e48"
+    ],
+    "children": []
+   },
+   {
+    "_id": "2acaae8c-f7f8-647d-0f05-d1e597c34fbf",
+    "text": true,
+    "v": "Small Businesses"
+   },
+   {
+    "_id": "317ff865-4c7d-75ba-4102-f12b8db01170",
+    "type": "Paragraph",
+    "tag": "p",
+    "data": {
+     "tag": "p"
+    },
+    "classes": [],
+    "children": [
+     "2acaae8c-f7f8-647d-0f05-d1e597c34fbf"
+    ]
+   },
+   {
+    "_id": "494c51de-0095-c4ed-90ea-8d8f10701403",
+    "type": "Link",
+    "tag": "a",
+    "data": {
+     "button": false,
+     "block": "block",
+     "link": {
+      "url": "#"
+     }
+    },
+    "classes": [
+     "08127061-24f4-6e54-df06-46f9aa614786",
+     "ca2e6c0a-5473-ee27-f520-8951a71594b5"
+    ],
+    "children": [
+     "397bc835-c7ca-27d9-5601-13dccb04021f",
+     "317ff865-4c7d-75ba-4102-f12b8db01170"
+    ]
+   },
+   {
+    "_id": "976c5315-d03a-0619-ad05-c37c12bd3f9f",
+    "type": "HtmlEmbed",
+    "tag": "div",
+    "v": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-house\"><path d=\"M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8\"></path><path d=\"M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"></path></svg>",
+    "data": {
+     "insideRTE": false,
+     "embed": {
+      "type": "html",
+      "meta": {
+       "html": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-house\"><path d=\"M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8\"></path><path d=\"M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"></path></svg>",
+       "div": false,
+       "iframe": false,
+       "script": false
+      }
+     }
+    },
+    "classes": [
+     "0e1e5337-82a9-a22a-c820-a101e61e3e48"
+    ],
+    "children": []
+   },
+   {
+    "_id": "baa49f44-25ae-fa7d-9195-b2cd151eac1f",
+    "text": true,
+    "v": "Real Estate"
+   },
+   {
+    "_id": "1bfef5cd-5243-627a-4c9c-cae39039f050",
+    "type": "Paragraph",
+    "tag": "p",
+    "data": {
+     "tag": "p"
+    },
+    "classes": [],
+    "children": [
+     "baa49f44-25ae-fa7d-9195-b2cd151eac1f"
+    ]
+   },
+   {
+    "_id": "11227192-7dff-732d-686d-638b410dbf53",
+    "type": "Link",
+    "tag": "a",
+    "data": {
+     "button": false,
+     "block": "block",
+     "link": {
+      "url": "#"
+     }
+    },
+    "classes": [
+     "08127061-24f4-6e54-df06-46f9aa614786",
+     "ca2e6c0a-5473-ee27-f520-8951a71594b5"
+    ],
+    "children": [
+     "976c5315-d03a-0619-ad05-c37c12bd3f9f",
+     "1bfef5cd-5243-627a-4c9c-cae39039f050"
+    ]
+   },
+   {
+    "_id": "61201f85-e7a2-8c59-2080-248cdffc1a1f",
+    "type": "HtmlEmbed",
+    "tag": "div",
+    "v": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-hand-heart\"><path d=\"M11 14h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 16\"></path><path d=\"m7 20 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9\"></path><path d=\"m2 15 6 6\"></path><path d=\"M19.5 8.5c.7-.7 1.5-1.6 1.5-2.7A2.73 2.73 0 0 0 16 4a2.78 2.78 0 0 0-5 1.8c0 1.2.8 2 1.5 2.8L16 12Z\"></path></svg>",
+    "data": {
+     "insideRTE": false,
+     "embed": {
+      "type": "html",
+      "meta": {
+       "html": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-hand-heart\"><path d=\"M11 14h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 16\"></path><path d=\"m7 20 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9\"></path><path d=\"m2 15 6 6\"></path><path d=\"M19.5 8.5c.7-.7 1.5-1.6 1.5-2.7A2.73 2.73 0 0 0 16 4a2.78 2.78 0 0 0-5 1.8c0 1.2.8 2 1.5 2.8L16 12Z\"></path></svg>",
+       "div": false,
+       "iframe": false,
+       "script": false
+      }
+     }
+    },
+    "classes": [
+     "0e1e5337-82a9-a22a-c820-a101e61e3e48"
+    ],
+    "children": []
+   },
+   {
+    "_id": "171279bc-d388-2d7d-c9c0-b9f5eccdf87f",
+    "text": true,
+    "v": "Nonprofits"
+   },
+   {
+    "_id": "ec05cebd-3ef8-0b3a-d0a9-a6f3faff2b50",
+    "type": "Paragraph",
+    "tag": "p",
+    "data": {
+     "tag": "p"
+    },
+    "classes": [],
+    "children": [
+     "171279bc-d388-2d7d-c9c0-b9f5eccdf87f"
+    ]
+   },
+   {
+    "_id": "38e3091e-1ae4-f5ed-808a-884fa8e0c203",
+    "type": "Link",
+    "tag": "a",
+    "data": {
+     "button": false,
+     "block": "block",
+     "link": {
+      "url": "#"
+     }
+    },
+    "classes": [
+     "08127061-24f4-6e54-df06-46f9aa614786",
+     "ca2e6c0a-5473-ee27-f520-8951a71594b5"
+    ],
+    "children": [
+     "61201f85-e7a2-8c59-2080-248cdffc1a1f",
+     "ec05cebd-3ef8-0b3a-d0a9-a6f3faff2b50"
+    ]
+   },
+   {
+    "_id": "063b0e1d-0394-5819-308b-86d467c2933f",
+    "type": "HtmlEmbed",
+    "tag": "div",
+    "v": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-briefcase-business\"><path d=\"M12 12h.01\"></path><path d=\"M16 6V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2\"></path><path d=\"M22 13a18.15 18.15 0 0 1-20 0\"></path><rect width=\"20\" height=\"14\" x=\"2\" y=\"6\" rx=\"2\"></rect></svg>",
+    "data": {
+     "insideRTE": false,
+     "embed": {
+      "type": "html",
+      "meta": {
+       "html": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-briefcase-business\"><path d=\"M12 12h.01\"></path><path d=\"M16 6V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2\"></path><path d=\"M22 13a18.15 18.15 0 0 1-20 0\"></path><rect width=\"20\" height=\"14\" x=\"2\" y=\"6\" rx=\"2\"></rect></svg>",
+       "div": false,
+       "iframe": false,
+       "script": false
+      }
+     }
+    },
+    "classes": [
+     "0e1e5337-82a9-a22a-c820-a101e61e3e48"
+    ],
+    "children": []
+   },
+   {
+    "_id": "7f41643c-f180-137d-3a4d-de75c519b97f",
+    "text": true,
+    "v": "Professional Services"
+   },
+   {
+    "_id": "8d33a53d-696c-457a-31a7-b0b31ce81710",
+    "type": "Paragraph",
+    "tag": "p",
+    "data": {
+     "tag": "p"
+    },
+    "classes": [],
+    "children": [
+     "7f41643c-f180-137d-3a4d-de75c519b97f"
+    ]
+   },
+   {
+    "_id": "c22dad9a-3c62-dead-7100-3c63dbbd3473",
+    "type": "Link",
+    "tag": "a",
+    "data": {
+     "button": false,
+     "block": "block",
+     "link": {
+      "url": "#"
+     }
+    },
+    "classes": [
+     "08127061-24f4-6e54-df06-46f9aa614786",
+     "ca2e6c0a-5473-ee27-f520-8951a71594b5"
+    ],
+    "children": [
+     "063b0e1d-0394-5819-308b-86d467c2933f",
+     "8d33a53d-696c-457a-31a7-b0b31ce81710"
+    ]
+   },
+   {
+    "_id": "7d5bf1ad-0e5e-8fd9-60be-0604b2b7f47f",
+    "type": "HtmlEmbed",
+    "tag": "div",
+    "v": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-rocket\"><path d=\"M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z\"></path><path d=\"m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z\"></path><path d=\"M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0\"></path><path d=\"M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5\"></path></svg>",
+    "data": {
+     "insideRTE": false,
+     "embed": {
+      "type": "html",
+      "meta": {
+       "html": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-rocket\"><path d=\"M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z\"></path><path d=\"m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z\"></path><path d=\"M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0\"></path><path d=\"M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5\"></path></svg>",
+       "div": false,
+       "iframe": false,
+       "script": false
+      }
+     }
+    },
+    "classes": [
+     "0e1e5337-82a9-a22a-c820-a101e61e3e48"
+    ],
+    "children": []
+   },
+   {
+    "_id": "9947f77c-0435-4d7d-a9df-30351b33c47f",
+    "text": true,
+    "v": "Startups & SaaS"
+   },
+   {
+    "_id": "2db077f5-7e75-1aba-6719-535b1ceec3b0",
+    "type": "Paragraph",
+    "tag": "p",
+    "data": {
+     "tag": "p"
+    },
+    "classes": [],
+    "children": [
+     "9947f77c-0435-4d7d-a9df-30351b33c47f"
+    ]
+   },
+   {
+    "_id": "1d1be68e-36e9-dced-5bab-607fec92fa63",
+    "type": "Link",
+    "tag": "a",
+    "data": {
+     "button": false,
+     "block": "block",
+     "link": {
+      "url": "#"
+     }
+    },
+    "classes": [
+     "08127061-24f4-6e54-df06-46f9aa614786",
+     "ca2e6c0a-5473-ee27-f520-8951a71594b5"
+    ],
+    "children": [
+     "7d5bf1ad-0e5e-8fd9-60be-0604b2b7f47f",
+     "2db077f5-7e75-1aba-6719-535b1ceec3b0"
+    ]
+   },
+   {
+    "_id": "64b1f2cd-b539-2b19-82cb-30e4e551087f",
+    "type": "HtmlEmbed",
+    "tag": "div",
+    "v": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-shopping-bag\"><path d=\"M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z\"></path><path d=\"M3 6h18\"></path><path d=\"M16 10a4 4 0 0 1-8 0\"></path></svg>",
+    "data": {
+     "insideRTE": false,
+     "embed": {
+      "type": "html",
+      "meta": {
+       "html": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-shopping-bag\"><path d=\"M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z\"></path><path d=\"M3 6h18\"></path><path d=\"M16 10a4 4 0 0 1-8 0\"></path></svg>",
+       "div": false,
+       "iframe": false,
+       "script": false
+      }
+     }
+    },
+    "classes": [
+     "0e1e5337-82a9-a22a-c820-a101e61e3e48"
+    ],
+    "children": []
+   },
+   {
+    "_id": "41e31d14-ecb9-b57d-2d3e-3bbd67bb295f",
+    "text": true,
+    "v": "Retail / Ecommerce"
+   },
+   {
+    "_id": "66b1d5fd-5a8c-087a-db3e-9ef33d3dc810",
+    "type": "Paragraph",
+    "tag": "p",
+    "data": {
+     "tag": "p"
+    },
+    "classes": [],
+    "children": [
+     "41e31d14-ecb9-b57d-2d3e-3bbd67bb295f"
+    ]
+   },
+   {
+    "_id": "5754637a-e976-ce2d-637d-050319e0edf3",
+    "type": "Link",
+    "tag": "a",
+    "data": {
+     "button": false,
+     "block": "block",
+     "link": {
+      "url": "#"
+     }
+    },
+    "classes": [
+     "08127061-24f4-6e54-df06-46f9aa614786",
+     "ca2e6c0a-5473-ee27-f520-8951a71594b5"
+    ],
+    "children": [
+     "64b1f2cd-b539-2b19-82cb-30e4e551087f",
+     "66b1d5fd-5a8c-087a-db3e-9ef33d3dc810"
+    ]
+   },
+   {
+    "_id": "0172755d-2c36-a191-b5ba-b63c82047417",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "09382f17-d617-7d06-5065-8b858b7276a4"
+    ],
+    "children": [
+     "494c51de-0095-c4ed-90ea-8d8f10701403",
+     "11227192-7dff-732d-686d-638b410dbf53",
+     "38e3091e-1ae4-f5ed-808a-884fa8e0c203",
+     "c22dad9a-3c62-dead-7100-3c63dbbd3473",
+     "1d1be68e-36e9-dced-5bab-607fec92fa63",
+     "5754637a-e976-ce2d-637d-050319e0edf3"
+    ]
+   },
+   {
+    "_id": "1f5f153a-7895-3ba5-d119-b8eb650dcfcb",
+    "type": "Block",
+    "tag": "article",
+    "data": {
+     "tag": "article",
+     "text": false
+    },
+    "classes": [
+     "1ea12085-f3aa-5d32-fa11-68e30f09b218"
+    ],
+    "children": [
+     "987cbd51-cda6-1011-5e87-5e400a232a9f",
+     "2bc19f91-e085-c4d1-7dac-644018c78e5f",
+     "0172755d-2c36-a191-b5ba-b63c82047417"
+    ]
+   },
+   {
+    "_id": "c630c80e-bdb7-2c65-d8c9-0427ad3524bb",
+    "type": "HtmlEmbed",
+    "tag": "div",
+    "v": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-store\"><path d=\"m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7\"></path><path d=\"M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8\"></path><path d=\"M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4\"></path><path d=\"M2 7h20\"></path><path d=\"M22 7v3a2 2 0 0 1-2 2a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12a2 2 0 0 1-2-2V7\"></path></svg>",
+    "data": {
+     "insideRTE": false,
+     "embed": {
+      "type": "html",
+      "meta": {
+       "html": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-store\"><path d=\"m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7\"></path><path d=\"M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8\"></path><path d=\"M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4\"></path><path d=\"M2 7h20\"></path><path d=\"M22 7v3a2 2 0 0 1-2 2a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12a2 2 0 0 1-2-2V7\"></path></svg>",
+       "div": false,
+       "iframe": false,
+       "script": false
+      }
+     }
+    },
+    "classes": [
+     "0e1e5337-82a9-a22a-c820-a101e61e3e48"
+    ],
+    "children": []
+   },
+   {
+    "_id": "f7bfb831-f65d-5454-88e1-96e928c263c6",
+    "text": true,
+    "v": "Small Businesses"
+   },
+   {
+    "_id": "575fdf4a-d83c-15a5-bbc5-757bfecf672b",
+    "type": "Heading",
+    "tag": "h3",
+    "data": {
+     "tag": "h3"
+    },
+    "classes": [
+     "4256e518-4ae0-abce-b41f-c64ea99819ba",
+     "69deee16-dd0a-296c-3676-3842c2b4d228"
+    ],
+    "children": [
+     "f7bfb831-f65d-5454-88e1-96e928c263c6"
+    ]
+   },
+   {
+    "_id": "f9205f89-6acd-1e59-457a-0010adcd0017",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "28be5abe-aaf5-0019-c755-469306c3f8df"
+    ],
+    "children": [
+     "c630c80e-bdb7-2c65-d8c9-0427ad3524bb",
+     "575fdf4a-d83c-15a5-bbc5-757bfecf672b"
+    ]
+   },
+   {
+    "_id": "5b16345a-9636-5b38-398f-ab4abe8f9b1c",
+    "text": true,
+    "v": "Practical website and growth systems for owner-led teams that need results without operational overhead."
+   },
+   {
+    "_id": "44e9bc11-1e80-d899-50b6-4028e31ba177",
+    "type": "Paragraph",
+    "tag": "p",
+    "data": {
+     "tag": "p"
+    },
+    "classes": [
+     "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
+     "a9d2e17f-0968-6e2c-a1c0-162f677032f2"
+    ],
+    "children": [
+     "5b16345a-9636-5b38-398f-ab4abe8f9b1c"
+    ]
+   },
+   {
+    "_id": "143922c6-ce10-05ad-a1b5-e327d496a583",
+    "type": "Link",
+    "tag": "a",
+    "data": {
+     "button": false,
+     "block": "block",
+     "link": {
+      "url": "#"
+     }
+    },
+    "classes": [
+     "12a850d7-402f-2d52-3dd7-62892c9b0ea0"
+    ],
+    "children": [
+     "f9205f89-6acd-1e59-457a-0010adcd0017",
+     "44e9bc11-1e80-d899-50b6-4028e31ba177"
+    ]
+   },
+   {
+    "_id": "a767fd31-e2f6-d4d1-ef43-eb602720cd9f",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "66c47b1e-56a7-0fa8-b076-ddae5b589174"
+    ],
+    "children": [
+     "143922c6-ce10-05ad-a1b5-e327d496a583"
+    ]
+   },
+   {
+    "_id": "33e55c42-800f-3e65-5b5a-d413328ae69b",
+    "type": "HtmlEmbed",
+    "tag": "div",
+    "v": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-house\"><path d=\"M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8\"></path><path d=\"M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"></path></svg>",
+    "data": {
+     "insideRTE": false,
+     "embed": {
+      "type": "html",
+      "meta": {
+       "html": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-house\"><path d=\"M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8\"></path><path d=\"M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"></path></svg>",
+       "div": false,
+       "iframe": false,
+       "script": false
+      }
+     }
+    },
+    "classes": [
+     "0e1e5337-82a9-a22a-c820-a101e61e3e48"
+    ],
+    "children": []
+   },
+   {
+    "_id": "7d26323d-8c52-a014-eafc-207d7845ee26",
+    "text": true,
+    "v": "Real Estate"
+   },
+   {
+    "_id": "0c65555e-6a0a-dc25-d20f-1077783d391b",
+    "type": "Heading",
+    "tag": "h3",
+    "data": {
+     "tag": "h3"
+    },
+    "classes": [
+     "4256e518-4ae0-abce-b41f-c64ea99819ba",
+     "69deee16-dd0a-296c-3676-3842c2b4d228"
+    ],
+    "children": [
+     "7d26323d-8c52-a014-eafc-207d7845ee26"
+    ]
+   },
+   {
+    "_id": "46170281-aaea-f399-7d21-39f8fa0a2d37",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "28be5abe-aaf5-0019-c755-469306c3f8df"
+    ],
+    "children": [
+     "33e55c42-800f-3e65-5b5a-d413328ae69b",
+     "0c65555e-6a0a-dc25-d20f-1077783d391b"
+    ]
+   },
+   {
+    "_id": "f4df84d2-f5f4-bb78-bb6d-ba3212573dbc",
+    "text": true,
+    "v": "Listing-ready digital experiences, lead funnels, and CRM-connected workflows for brokers and teams."
+   },
+   {
+    "_id": "bd1c2299-374c-83d9-0eca-e240939116d7",
+    "type": "Paragraph",
+    "tag": "p",
+    "data": {
+     "tag": "p"
+    },
+    "classes": [
+     "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
+     "a9d2e17f-0968-6e2c-a1c0-162f677032f2"
+    ],
+    "children": [
+     "f4df84d2-f5f4-bb78-bb6d-ba3212573dbc"
+    ]
+   },
+   {
+    "_id": "847b7f9a-f898-556d-4ff9-c72308fb7bb3",
+    "type": "Link",
+    "tag": "a",
+    "data": {
+     "button": false,
+     "block": "block",
+     "link": {
+      "url": "#"
+     }
+    },
+    "classes": [
+     "12a850d7-402f-2d52-3dd7-62892c9b0ea0"
+    ],
+    "children": [
+     "46170281-aaea-f399-7d21-39f8fa0a2d37",
+     "bd1c2299-374c-83d9-0eca-e240939116d7"
+    ]
+   },
+   {
+    "_id": "1b477249-f9df-c091-bd5b-d6b845d2522f",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "66c47b1e-56a7-0fa8-b076-ddae5b589174"
+    ],
+    "children": [
+     "847b7f9a-f898-556d-4ff9-c72308fb7bb3"
+    ]
+   },
+   {
+    "_id": "429bbf12-9ae6-8665-11b9-c7a31f3fe23b",
+    "type": "HtmlEmbed",
+    "tag": "div",
+    "v": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-hand-heart\"><path d=\"M11 14h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 16\"></path><path d=\"m7 20 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9\"></path><path d=\"m2 15 6 6\"></path><path d=\"M19.5 8.5c.7-.7 1.5-1.6 1.5-2.7A2.73 2.73 0 0 0 16 4a2.78 2.78 0 0 0-5 1.8c0 1.2.8 2 1.5 2.8L16 12Z\"></path></svg>",
+    "data": {
+     "insideRTE": false,
+     "embed": {
+      "type": "html",
+      "meta": {
+       "html": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-hand-heart\"><path d=\"M11 14h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 16\"></path><path d=\"m7 20 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9\"></path><path d=\"m2 15 6 6\"></path><path d=\"M19.5 8.5c.7-.7 1.5-1.6 1.5-2.7A2.73 2.73 0 0 0 16 4a2.78 2.78 0 0 0-5 1.8c0 1.2.8 2 1.5 2.8L16 12Z\"></path></svg>",
+       "div": false,
+       "iframe": false,
+       "script": false
+      }
+     }
+    },
+    "classes": [
+     "0e1e5337-82a9-a22a-c820-a101e61e3e48"
+    ],
+    "children": []
+   },
+   {
+    "_id": "fa078855-b3ad-7c54-dcef-323574d0ed56",
+    "text": true,
+    "v": "Nonprofits"
+   },
+   {
+    "_id": "a713e6fe-f5da-2b25-65f8-7857a62c879b",
+    "type": "Heading",
+    "tag": "h3",
+    "data": {
+     "tag": "h3"
+    },
+    "classes": [
+     "4256e518-4ae0-abce-b41f-c64ea99819ba",
+     "69deee16-dd0a-296c-3676-3842c2b4d228"
+    ],
+    "children": [
+     "fa078855-b3ad-7c54-dcef-323574d0ed56"
+    ]
+   },
+   {
+    "_id": "99dff78d-3cc3-a5d9-553a-2364e31a2d3f",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "28be5abe-aaf5-0019-c755-469306c3f8df"
+    ],
+    "children": [
+     "429bbf12-9ae6-8665-11b9-c7a31f3fe23b",
+     "a713e6fe-f5da-2b25-65f8-7857a62c879b"
+    ]
+   },
+   {
+    "_id": "9882838e-8000-85b8-b0af-fd2e0c223684",
+    "text": true,
+    "v": "Mission-first websites focused on fundraising, volunteer recruitment, and measurable community impact."
+   },
+   {
+    "_id": "6a8e41b5-f1ab-5c19-5272-0c9c2d06bbdf",
+    "type": "Paragraph",
+    "tag": "p",
+    "data": {
+     "tag": "p"
+    },
+    "classes": [
+     "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
+     "a9d2e17f-0968-6e2c-a1c0-162f677032f2"
+    ],
+    "children": [
+     "9882838e-8000-85b8-b0af-fd2e0c223684"
+    ]
+   },
+   {
+    "_id": "a91345ea-9af0-b22d-c6f9-8e336c159053",
+    "type": "Link",
+    "tag": "a",
+    "data": {
+     "button": false,
+     "block": "block",
+     "link": {
+      "url": "#"
+     }
+    },
+    "classes": [
+     "12a850d7-402f-2d52-3dd7-62892c9b0ea0"
+    ],
+    "children": [
+     "99dff78d-3cc3-a5d9-553a-2364e31a2d3f",
+     "6a8e41b5-f1ab-5c19-5272-0c9c2d06bbdf"
+    ]
+   },
+   {
+    "_id": "788c6d15-690c-a651-071a-4d14e573d087",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "66c47b1e-56a7-0fa8-b076-ddae5b589174"
+    ],
+    "children": [
+     "a91345ea-9af0-b22d-c6f9-8e336c159053"
+    ]
+   },
+   {
+    "_id": "ff750fb6-47b2-8165-1919-fbafa45cce8b",
+    "type": "HtmlEmbed",
+    "tag": "div",
+    "v": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-briefcase-business\"><path d=\"M12 12h.01\"></path><path d=\"M16 6V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2\"></path><path d=\"M22 13a18.15 18.15 0 0 1-20 0\"></path><rect width=\"20\" height=\"14\" x=\"2\" y=\"6\" rx=\"2\"></rect></svg>",
+    "data": {
+     "insideRTE": false,
+     "embed": {
+      "type": "html",
+      "meta": {
+       "html": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-briefcase-business\"><path d=\"M12 12h.01\"></path><path d=\"M16 6V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2\"></path><path d=\"M22 13a18.15 18.15 0 0 1-20 0\"></path><rect width=\"20\" height=\"14\" x=\"2\" y=\"6\" rx=\"2\"></rect></svg>",
+       "div": false,
+       "iframe": false,
+       "script": false
+      }
+     }
+    },
+    "classes": [
+     "0e1e5337-82a9-a22a-c820-a101e61e3e48"
+    ],
+    "children": []
+   },
+   {
+    "_id": "9c9a09b1-d20c-ef94-e564-cba9302ac986",
+    "text": true,
+    "v": "Professional Services"
+   },
+   {
+    "_id": "660d1232-dbc4-58a5-665d-1343cfc3477b",
+    "type": "Heading",
+    "tag": "h3",
+    "data": {
+     "tag": "h3"
+    },
+    "classes": [
+     "4256e518-4ae0-abce-b41f-c64ea99819ba",
+     "69deee16-dd0a-296c-3676-3842c2b4d228"
+    ],
+    "children": [
+     "9c9a09b1-d20c-ef94-e564-cba9302ac986"
+    ]
+   },
+   {
+    "_id": "f2f30d85-440b-5299-0b88-b8cce9d9c3df",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "28be5abe-aaf5-0019-c755-469306c3f8df"
+    ],
+    "children": [
+     "ff750fb6-47b2-8165-1919-fbafa45cce8b",
+     "660d1232-dbc4-58a5-665d-1343cfc3477b"
+    ]
+   },
+   {
+    "_id": "8b442e36-d671-8978-340e-a726de409fe4",
+    "text": true,
+    "v": "Credibility-driven websites that support complex buying cycles for legal, financial, and consulting firms."
+   },
+   {
+    "_id": "cef6fa5d-476f-8ad9-0b06-03544fe80e7f",
+    "type": "Paragraph",
+    "tag": "p",
+    "data": {
+     "tag": "p"
+    },
+    "classes": [
+     "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
+     "a9d2e17f-0968-6e2c-a1c0-162f677032f2"
+    ],
+    "children": [
+     "8b442e36-d671-8978-340e-a726de409fe4"
+    ]
+   },
+   {
+    "_id": "65d26a6e-8063-036d-6d30-c79f1a4c1f63",
+    "type": "Link",
+    "tag": "a",
+    "data": {
+     "button": false,
+     "block": "block",
+     "link": {
+      "url": "#"
+     }
+    },
+    "classes": [
+     "12a850d7-402f-2d52-3dd7-62892c9b0ea0"
+    ],
+    "children": [
+     "f2f30d85-440b-5299-0b88-b8cce9d9c3df",
+     "cef6fa5d-476f-8ad9-0b06-03544fe80e7f"
+    ]
+   },
+   {
+    "_id": "c7ec1d4d-9e32-b791-7832-e78c51d916d7",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "66c47b1e-56a7-0fa8-b076-ddae5b589174"
+    ],
+    "children": [
+     "65d26a6e-8063-036d-6d30-c79f1a4c1f63"
+    ]
+   },
+   {
+    "_id": "a770a266-a789-7265-e730-1a9f082a4aeb",
+    "type": "HtmlEmbed",
+    "tag": "div",
+    "v": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-rocket\"><path d=\"M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z\"></path><path d=\"m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z\"></path><path d=\"M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0\"></path><path d=\"M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5\"></path></svg>",
+    "data": {
+     "insideRTE": false,
+     "embed": {
+      "type": "html",
+      "meta": {
+       "html": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-rocket\"><path d=\"M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z\"></path><path d=\"m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z\"></path><path d=\"M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0\"></path><path d=\"M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5\"></path></svg>",
+       "div": false,
+       "iframe": false,
+       "script": false
+      }
+     }
+    },
+    "classes": [
+     "0e1e5337-82a9-a22a-c820-a101e61e3e48"
+    ],
+    "children": []
+   },
+   {
+    "_id": "5116e101-72ab-7854-4b92-8499dce60546",
+    "text": true,
+    "v": "Startups & SaaS"
+   },
+   {
+    "_id": "acc6d812-d08e-53a5-dd39-4ee30fae0dfb",
+    "type": "Heading",
+    "tag": "h3",
+    "data": {
+     "tag": "h3"
+    },
+    "classes": [
+     "4256e518-4ae0-abce-b41f-c64ea99819ba",
+     "69deee16-dd0a-296c-3676-3842c2b4d228"
+    ],
+    "children": [
+     "5116e101-72ab-7854-4b92-8499dce60546"
+    ]
+   },
+   {
+    "_id": "7fe96d19-22f2-2759-f39d-df4031a0b757",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "28be5abe-aaf5-0019-c755-469306c3f8df"
+    ],
+    "children": [
+     "a770a266-a789-7265-e730-1a9f082a4aeb",
+     "acc6d812-d08e-53a5-dd39-4ee30fae0dfb"
+    ]
+   },
+   {
+    "_id": "da3b858a-c581-8638-75c9-bfda3a7a895c",
+    "text": true,
+    "v": "Conversion-focused experiences that support product positioning, activation, and scalable go-to-market growth."
+   },
+   {
+    "_id": "4d67b881-da63-5999-47b0-e9f8f7dee737",
+    "type": "Paragraph",
+    "tag": "p",
+    "data": {
+     "tag": "p"
+    },
+    "classes": [
+     "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
+     "a9d2e17f-0968-6e2c-a1c0-162f677032f2"
+    ],
+    "children": [
+     "da3b858a-c581-8638-75c9-bfda3a7a895c"
+    ]
+   },
+   {
+    "_id": "8c0985de-fe60-37ad-c122-1bcf76b07dc3",
+    "type": "Link",
+    "tag": "a",
+    "data": {
+     "button": false,
+     "block": "block",
+     "link": {
+      "url": "#"
+     }
+    },
+    "classes": [
+     "12a850d7-402f-2d52-3dd7-62892c9b0ea0"
+    ],
+    "children": [
+     "7fe96d19-22f2-2759-f39d-df4031a0b757",
+     "4d67b881-da63-5999-47b0-e9f8f7dee737"
+    ]
+   },
+   {
+    "_id": "dbca10e1-e080-0ad1-3984-0bf051df255f",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "66c47b1e-56a7-0fa8-b076-ddae5b589174"
+    ],
+    "children": [
+     "8c0985de-fe60-37ad-c122-1bcf76b07dc3"
+    ]
+   },
+   {
+    "_id": "b6488782-47cb-c465-7cf2-10d34afbfe9b",
+    "type": "HtmlEmbed",
+    "tag": "div",
+    "v": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-shopping-bag\"><path d=\"M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z\"></path><path d=\"M3 6h18\"></path><path d=\"M16 10a4 4 0 0 1-8 0\"></path></svg>",
+    "data": {
+     "insideRTE": false,
+     "embed": {
+      "type": "html",
+      "meta": {
+       "html": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-shopping-bag\"><path d=\"M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z\"></path><path d=\"M3 6h18\"></path><path d=\"M16 10a4 4 0 0 1-8 0\"></path></svg>",
+       "div": false,
+       "iframe": false,
+       "script": false
+      }
+     }
+    },
+    "classes": [
+     "0e1e5337-82a9-a22a-c820-a101e61e3e48"
+    ],
+    "children": []
+   },
+   {
+    "_id": "ec8ba495-5c53-f114-dc99-61b565da1596",
+    "text": true,
+    "v": "Retail / Ecommerce"
+   },
+   {
+    "_id": "3a84434e-80b4-6d25-a7ec-5627d76e937b",
+    "type": "Heading",
+    "tag": "h3",
+    "data": {
+     "tag": "h3"
+    },
+    "classes": [
+     "4256e518-4ae0-abce-b41f-c64ea99819ba",
+     "69deee16-dd0a-296c-3676-3842c2b4d228"
+    ],
+    "children": [
+     "ec8ba495-5c53-f114-dc99-61b565da1596"
+    ]
+   },
+   {
+    "_id": "5412a331-3eaf-fb99-c045-8ac8af9803b7",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "28be5abe-aaf5-0019-c755-469306c3f8df"
+    ],
+    "children": [
+     "b6488782-47cb-c465-7cf2-10d34afbfe9b",
+     "3a84434e-80b4-6d25-a7ec-5627d76e937b"
+    ]
+   },
+   {
+    "_id": "b4785902-eaf2-c678-21eb-f04273fadf7c",
+    "text": true,
+    "v": "Online storefronts, product-focused journeys, and conversion systems designed to increase revenue and repeat purchases."
+   },
+   {
+    "_id": "7b37e829-3810-5dd9-45c1-cab0cfb908d7",
+    "type": "Paragraph",
+    "tag": "p",
+    "data": {
+     "tag": "p"
+    },
+    "classes": [
+     "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
+     "a9d2e17f-0968-6e2c-a1c0-162f677032f2"
+    ],
+    "children": [
+     "b4785902-eaf2-c678-21eb-f04273fadf7c"
+    ]
+   },
+   {
+    "_id": "3aee83fa-9e49-6e6d-db3e-d2436600d433",
+    "type": "Link",
+    "tag": "a",
+    "data": {
+     "button": false,
+     "block": "block",
+     "link": {
+      "url": "#"
+     }
+    },
+    "classes": [
+     "12a850d7-402f-2d52-3dd7-62892c9b0ea0"
+    ],
+    "children": [
+     "5412a331-3eaf-fb99-c045-8ac8af9803b7",
+     "7b37e829-3810-5dd9-45c1-cab0cfb908d7"
+    ]
+   },
+   {
+    "_id": "28181119-f3e5-d091-a5a3-8128f98584ef",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "66c47b1e-56a7-0fa8-b076-ddae5b589174"
+    ],
+    "children": [
+     "3aee83fa-9e49-6e6d-db3e-d2436600d433"
+    ]
+   },
+   {
+    "_id": "5d571b9e-6d14-7865-866e-4cf756a2fa5b",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "c5cd4160-63cf-e165-34c8-8709766c2e47"
+    ],
+    "children": [
+     "a767fd31-e2f6-d4d1-ef43-eb602720cd9f",
+     "1b477249-f9df-c091-bd5b-d6b845d2522f",
+     "788c6d15-690c-a651-071a-4d14e573d087",
+     "c7ec1d4d-9e32-b791-7832-e78c51d916d7",
+     "dbca10e1-e080-0ad1-3984-0bf051df255f",
+     "28181119-f3e5-d091-a5a3-8128f98584ef"
+    ]
+   },
+   {
+    "_id": "e0acd239-828c-5539-4a7d-f30032198877",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "337ba419-53d7-34b7-c30c-3806fcaddeb1"
+    ],
+    "children": [
+     "1f5f153a-7895-3ba5-d119-b8eb650dcfcb",
+     "5d571b9e-6d14-7865-866e-4cf756a2fa5b"
+    ]
+   },
+   {
+    "_id": "38547746-9bcb-052d-e42d-6a27bf0b7203",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "b2ec1398-f782-6869-47af-76e585332bf3"
+    ],
+    "children": [
+     "7d712aa9-1948-1ff9-53b4-6990532a8977",
+     "e0acd239-828c-5539-4a7d-f30032198877"
+    ]
+   },
+   {
+    "_id": "0ef62bc3-fcc6-a448-4a44-31c771dcda56",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "171a7779-815a-5ffe-32b2-25f332830ad4"
+    ],
+    "children": [
+     "38547746-9bcb-052d-e42d-6a27bf0b7203"
+    ]
+   },
+   {
+    "_id": "35788193-261c-41e7-3752-b00491dfb7b9",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "cc0befdd-524c-2e6e-def8-c40faa76ac54"
+    ],
+    "children": [
+     "0ef62bc3-fcc6-a448-4a44-31c771dcda56"
+    ]
+   },
+   {
+    "_id": "699ed81b-5ede-06e6-4de8-2061429172c4",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "3099fbbb-3f97-cd20-34d4-a817d799d98e"
+    ],
+    "children": [
+     "35788193-261c-41e7-3752-b00491dfb7b9"
+    ]
+   },
+   {
+    "_id": "e1829c6b-182a-77ce-62dc-ef29653b7c2c",
+    "type": "Block",
+    "tag": "section",
+    "data": {
+     "tag": "section",
+     "text": false
+    },
+    "classes": [
+     "af8771c0-8fb4-cb2d-668c-c9112bc8a75f"
+    ],
+    "children": [
+     "699ed81b-5ede-06e6-4de8-2061429172c4"
+    ]
+   }
+  ],
+  "styles": [
+   {
+    "_id": "4356e6ab-8d67-5e6e-3edb-26c9a999f44c",
+    "fake": false,
+    "type": "class",
+    "name": "heading-style-h2",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [
+     "b9cc1d81-0b59-b609-0822-f3289a233207"
+    ],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "b9cc1d81-0b59-b609-0822-f3289a233207",
+    "fake": false,
+    "type": "class",
+    "name": "heading-style-h2_v1pnn4",
+    "namespace": "",
+    "comb": "&",
+    "styleLess": "width: 100%; font-weight: 300; line-height: 1.2; color: #6b4a1e; font-size: 48px;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "32b32e1a-065a-02e3-67f9-8d8dcd44c0a9",
+    "fake": false,
+    "type": "class",
+    "name": "solutions_content",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "align-content: stretch; display: flex; flex-direction: column; grid-row-gap: 16px; grid-column-gap: 16px; align-items: flex-start; position: relative; width: 100%; flex-shrink: 0;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "4256e518-4ae0-abce-b41f-c64ea99819ba",
+    "fake": false,
+    "type": "class",
+    "name": "heading-style-h3",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "6b5894c0-e5f0-bc0c-ca63-1a3c73c67444",
+    "fake": false,
+    "type": "class",
+    "name": "solutions_feature_heading",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "margin: 0; color: #6b4a1e; font-family: Manrope,sans-serif; font-weight: 300; letter-spacing: -.04em; font-size: clamp(2.2rem,3.4vw,3.8rem); line-height: .96;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
+    "fake": false,
+    "type": "class",
+    "name": "text-size-medium",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "fba5a3ad-d975-a6cc-d82b-0b15ba642b9e",
+    "fake": false,
+    "type": "class",
+    "name": "solutions_feature_text",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "margin: 0; align-self: end; margin-top: 14px; max-width: 28ch; color: #8f6a35; line-height: 1.7;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "0e1e5337-82a9-a22a-c820-a101e61e3e48",
+    "fake": false,
+    "type": "class",
+    "name": "icon-embed-xsmall",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "08127061-24f4-6e54-df06-46f9aa614786",
+    "fake": false,
+    "type": "class",
+    "name": "solutions_link",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "align-self: flex-start; align-items: center; display: inline-flex; flex-grow: 0; flex-shrink: 0; flex-basis: auto; grid-row-gap: 8px; grid-column-gap: 8px; height: auto; padding: 9px 13px; background: #ffffffb3; border: 1px solid rgba(166,32,37,.12); border-radius: 999px; color: #6b4a1e; font-size: .96rem;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "ca2e6c0a-5473-ee27-f520-8951a71594b5",
+    "fake": false,
+    "type": "class",
+    "name": "solutions_pill",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "09382f17-d617-7d06-5065-8b858b7276a4",
+    "fake": false,
+    "type": "class",
+    "name": "solutions_pill_list",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "align-items: flex-start; display: flex; flex-wrap: wrap; grid-row-gap: 8px; grid-column-gap: 8px; justify-self: start; margin-top: 18px; max-width: 360px;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "1ea12085-f3aa-5d32-fa11-68e30f09b218",
+    "fake": false,
+    "type": "class",
+    "name": "solutions_feature",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "display: grid; grid-row-gap: 16px; grid-column-gap: 16px; position: relative; grid-template-rows: auto auto 1fr auto; height: 100%; padding: 34px; border-radius: 30px; overflow: hidden; background: radial-gradient(circle at top right,rgba(255,153,2,.2),transparent 28%),linear-gradient(160deg,#fff8ef,#ffefcf); border: 1px solid rgba(166,32,37,.12); box-shadow: 0 22px 46px #6b4a1e17;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "69deee16-dd0a-296c-3676-3842c2b4d228",
+    "fake": false,
+    "type": "class",
+    "name": "solutions_card_heading",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "margin: 0; color: #6b4a1e; font-family: Manrope,sans-serif; font-weight: 300; letter-spacing: -.04em; font-size: clamp(1.45rem,1.8vw,2rem); line-height: 1.08;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "28be5abe-aaf5-0019-c755-469306c3f8df",
+    "fake": false,
+    "type": "class",
+    "name": "solutions_card_title",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "align-items: center; display: flex; grid-row-gap: 12px; grid-column-gap: 12px;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "a9d2e17f-0968-6e2c-a1c0-162f677032f2",
+    "fake": false,
+    "type": "class",
+    "name": "solutions_card_text",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "margin: 0; max-width: 31ch; color: #8f6a35; line-height: 1.7;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "12a850d7-402f-2d52-3dd7-62892c9b0ea0",
+    "fake": false,
+    "type": "class",
+    "name": "solutions_card",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "display: grid; grid-row-gap: 16px; grid-column-gap: 16px; position: relative; min-height: 205px; padding: 22px; border-radius: 30px; overflow: hidden; background: #fffdfa; border: 1px solid rgba(166,32,37,.12); box-shadow: 0 16px 36px #6b4a1e12;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "66c47b1e-56a7-0fa8-b076-ddae5b589174",
+    "fake": false,
+    "type": "class",
+    "name": "solutions_item",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "c5cd4160-63cf-e165-34c8-8709766c2e47",
+    "fake": false,
+    "type": "class",
+    "name": "solutions_card_list",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "display: grid; grid-row-gap: 20px; grid-column-gap: 20px; grid-template-columns: repeat(2,minmax(0,1fr)); grid-template-rows: repeat(3,minmax(0,1fr));",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "337ba419-53d7-34b7-c30c-3806fcaddeb1",
+    "fake": false,
+    "type": "class",
+    "name": "solutions_grid",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "align-items: stretch; display: grid; grid-row-gap: 20px; grid-column-gap: 20px; grid-template-columns: 1.02fr 1.38fr; width: 100%;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "b2ec1398-f782-6869-47af-76e585332bf3",
+    "fake": false,
+    "type": "class",
+    "name": "solutions_component",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "align-content: stretch; display: flex; flex-direction: column; grid-row-gap: 64px; grid-column-gap: 64px; align-items: flex-start; position: relative; width: 100%; max-width: 1200px; flex-shrink: 0;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "171a7779-815a-5ffe-32b2-25f332830ad4",
+    "fake": false,
+    "type": "class",
+    "name": "padding-section-medium",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "cc0befdd-524c-2e6e-def8-c40faa76ac54",
+    "fake": false,
+    "type": "class",
+    "name": "container-large",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "3099fbbb-3f97-cd20-34d4-a817d799d98e",
+    "fake": false,
+    "type": "class",
+    "name": "padding-global",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "af8771c0-8fb4-cb2d-668c-c9112bc8a75f",
+    "fake": false,
+    "type": "class",
+    "name": "section_solutions",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "padding: 88px 20px; align-content: stretch; display: flex; flex-direction: column; align-items: center; position: relative; width: 100%; flex-shrink: 0; background: #fffdf9;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   }
+  ],
+  "assets": [],
+  "ix1": [],
+  "ix2": {
+   "interactions": [],
+   "events": [],
+   "actionLists": []
+  }
+ },
+ "meta": {
+  "droppedLinks": 0,
+  "dynBindRemovedCount": 0,
+  "dynListBindRemovedCount": 0,
+  "paginationRemovedCount": 0,
+  "universalBindingsRemovedCount": 0,
+  "unlinkedSymbolCount": 0,
+  "codeComponentsRemovedCount": 0,
+  "richTextComponentsStripped": false
+ }
+}

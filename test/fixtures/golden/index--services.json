@@ -1,0 +1,952 @@
+{
+ "type": "@webflow/XscpData",
+ "payload": {
+  "nodes": [
+   {
+    "_id": "99475fc9-84b6-f86c-0db3-db29f5a3f86e",
+    "text": true,
+    "v": "Technology Solutions for Growing Businesses"
+   },
+   {
+    "_id": "b8a1c9fa-57fe-bc15-8f19-dc7b1924f67b",
+    "type": "Heading",
+    "tag": "h2",
+    "data": {
+     "tag": "h2"
+    },
+    "classes": [
+     "4356e6ab-8d67-5e6e-3edb-26c9a999f44c",
+     "5a18897e-652b-24c3-3d33-6e21cbed6b31"
+    ],
+    "children": [
+     "99475fc9-84b6-f86c-0db3-db29f5a3f86e"
+    ]
+   },
+   {
+    "_id": "5b00c125-9b50-e02c-114c-f4dd4000405e",
+    "text": true,
+    "v": "We design, develop, and optimize digital systems that help small businesses grow, simplify operations, and stay visible as the web shifts toward AI-assisted discovery."
+   },
+   {
+    "_id": "848ac05e-d72c-6dd5-9c1c-67c7522e55cb",
+    "type": "Paragraph",
+    "tag": "p",
+    "data": {
+     "tag": "p"
+    },
+    "classes": [
+     "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
+     "c4d4e836-a100-4420-f54a-948e419fd3fc"
+    ],
+    "children": [
+     "5b00c125-9b50-e02c-114c-f4dd4000405e"
+    ]
+   },
+   {
+    "_id": "f09e1231-9ffc-2579-d0f8-61e89ae64397",
+    "text": true,
+    "v": "Book a Free Strategy Call"
+   },
+   {
+    "_id": "4ffffb30-c62a-1986-77eb-a3ae60eff4c2",
+    "type": "Paragraph",
+    "tag": "p",
+    "data": {
+     "tag": "p"
+    },
+    "classes": [],
+    "children": [
+     "f09e1231-9ffc-2579-d0f8-61e89ae64397"
+    ]
+   },
+   {
+    "_id": "b4abe26d-37a9-db95-e14c-9058a81be92b",
+    "type": "HtmlEmbed",
+    "tag": "div",
+    "v": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-arrow-right\"><path d=\"M5 12h14\"></path><path d=\"m12 5 7 7-7 7\"></path></svg>",
+    "data": {
+     "insideRTE": false,
+     "embed": {
+      "type": "html",
+      "meta": {
+       "html": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-arrow-right\"><path d=\"M5 12h14\"></path><path d=\"m12 5 7 7-7 7\"></path></svg>",
+       "div": false,
+       "iframe": false,
+       "script": false
+      }
+     }
+    },
+    "classes": [
+     "0e1e5337-82a9-a22a-c820-a101e61e3e48"
+    ],
+    "children": []
+   },
+   {
+    "_id": "5b7da8a2-40d4-ec15-3bfd-9be3f8abab6b",
+    "type": "Link",
+    "tag": "a",
+    "data": {
+     "button": false,
+     "block": "block",
+     "link": {
+      "url": "#"
+     }
+    },
+    "classes": [
+     "fa76fadd-e0db-ffbc-5eec-0b151a0b3d6e"
+    ],
+    "children": [
+     "4ffffb30-c62a-1986-77eb-a3ae60eff4c2",
+     "b4abe26d-37a9-db95-e14c-9058a81be92b"
+    ]
+   },
+   {
+    "_id": "516308c5-9db9-ce2d-39cc-de08e36d8ea3",
+    "type": "Block",
+    "tag": "aside",
+    "data": {
+     "tag": "aside",
+     "text": false
+    },
+    "classes": [
+     "a6759f8e-5d50-382b-3177-db2924cb8499"
+    ],
+    "children": [
+     "b8a1c9fa-57fe-bc15-8f19-dc7b1924f67b",
+     "848ac05e-d72c-6dd5-9c1c-67c7522e55cb",
+     "5b7da8a2-40d4-ec15-3bfd-9be3f8abab6b"
+    ]
+   },
+   {
+    "_id": "5483baa6-64ea-ef4d-719a-83a775821f23",
+    "type": "HtmlEmbed",
+    "tag": "div",
+    "v": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-globe\"><circle cx=\"12\" cy=\"12\" r=\"10\"></circle><path d=\"M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20\"></path><path d=\"M2 12h20\"></path></svg>",
+    "data": {
+     "insideRTE": false,
+     "embed": {
+      "type": "html",
+      "meta": {
+       "html": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-globe\"><circle cx=\"12\" cy=\"12\" r=\"10\"></circle><path d=\"M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20\"></path><path d=\"M2 12h20\"></path></svg>",
+       "div": false,
+       "iframe": false,
+       "script": false
+      }
+     }
+    },
+    "classes": [
+     "0e1e5337-82a9-a22a-c820-a101e61e3e48"
+    ],
+    "children": []
+   },
+   {
+    "_id": "8c839c4d-f04b-a395-050a-07b855b5b3eb",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "df665f24-9f79-c133-1dfd-5cc3df188c69",
+     "d35a5358-d184-aacc-d6b4-43a409f70c44"
+    ],
+    "children": [
+     "5483baa6-64ea-ef4d-719a-83a775821f23"
+    ]
+   },
+   {
+    "_id": "93257391-982a-d314-4fd0-a1890014bdc6",
+    "text": true,
+    "v": "Growth Foundation"
+   },
+   {
+    "_id": "af4ba9d2-d2d0-34cd-8390-996b81ad5733",
+    "type": "Paragraph",
+    "tag": "p",
+    "data": {
+     "tag": "p"
+    },
+    "classes": [
+     "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
+     "bb04341b-24a6-5594-9e5b-649b5a741b6a"
+    ],
+    "children": [
+     "93257391-982a-d314-4fd0-a1890014bdc6"
+    ]
+   },
+   {
+    "_id": "30f89dfd-2b86-dc54-3b46-75fd67f328e6",
+    "text": true,
+    "v": "Websites That Convert"
+   },
+   {
+    "_id": "07b995c6-c09b-fd4d-a3d4-1ec7938594e3",
+    "type": "Heading",
+    "tag": "h3",
+    "data": {
+     "tag": "h3"
+    },
+    "classes": [
+     "4256e518-4ae0-abce-b41f-c64ea99819ba",
+     "188c65f2-421b-f154-efd6-9a5eddb67eb0"
+    ],
+    "children": [
+     "30f89dfd-2b86-dc54-3b46-75fd67f328e6"
+    ]
+   },
+   {
+    "_id": "2e31b921-1c6c-f914-9dcc-50f9fa71b8c6",
+    "text": true,
+    "v": "Modern, conversion-optimized websites built on Webflow and Square Online that grow with your business and adapt to changing needs."
+   },
+   {
+    "_id": "c95ddb1a-5c2d-9ecd-bd34-9783f91d29d3",
+    "type": "Paragraph",
+    "tag": "p",
+    "data": {
+     "tag": "p"
+    },
+    "classes": [
+     "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
+     "bb04341b-24a6-5594-9e5b-649b5a741b6a"
+    ],
+    "children": [
+     "2e31b921-1c6c-f914-9dcc-50f9fa71b8c6"
+    ]
+   },
+   {
+    "_id": "8811ffed-69b7-aad5-764b-b498790e3b6b",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "3ef5c8c2-dd6d-2e30-03e4-4c1a415fc864"
+    ],
+    "children": [
+     "af4ba9d2-d2d0-34cd-8390-996b81ad5733",
+     "07b995c6-c09b-fd4d-a3d4-1ec7938594e3",
+     "c95ddb1a-5c2d-9ecd-bd34-9783f91d29d3"
+    ]
+   },
+   {
+    "_id": "f9a7a7be-f223-9455-6d0e-79a716bbd88b",
+    "type": "Block",
+    "tag": "article",
+    "data": {
+     "tag": "article",
+     "text": false
+    },
+    "classes": [
+     "1b182a4b-5e6f-401a-da4e-10c53f3c87f0"
+    ],
+    "children": [
+     "8c839c4d-f04b-a395-050a-07b855b5b3eb",
+     "8811ffed-69b7-aad5-764b-b498790e3b6b"
+    ]
+   },
+   {
+    "_id": "fbd485aa-a213-7bcd-76ef-ad53f1579b73",
+    "type": "HtmlEmbed",
+    "tag": "div",
+    "v": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-layers\"><path d=\"M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z\"></path><path d=\"M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12\"></path><path d=\"M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17\"></path></svg>",
+    "data": {
+     "insideRTE": false,
+     "embed": {
+      "type": "html",
+      "meta": {
+       "html": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-layers\"><path d=\"M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z\"></path><path d=\"M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12\"></path><path d=\"M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17\"></path></svg>",
+       "div": false,
+       "iframe": false,
+       "script": false
+      }
+     }
+    },
+    "classes": [
+     "0e1e5337-82a9-a22a-c820-a101e61e3e48"
+    ],
+    "children": []
+   },
+   {
+    "_id": "e670ffc5-f7ab-5e55-7068-52d08718f05b",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "df665f24-9f79-c133-1dfd-5cc3df188c69",
+     "25029cd1-7cc0-e608-a1a4-eced478bb3e2"
+    ],
+    "children": [
+     "fbd485aa-a213-7bcd-76ef-ad53f1579b73"
+    ]
+   },
+   {
+    "_id": "fda7d76d-64d2-7a14-1167-280daf4de566",
+    "text": true,
+    "v": "Operational Systems"
+   },
+   {
+    "_id": "45cac816-d0ef-33cd-c651-fe5790b27d03",
+    "type": "Paragraph",
+    "tag": "p",
+    "data": {
+     "tag": "p"
+    },
+    "classes": [
+     "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
+     "bb04341b-24a6-5594-9e5b-649b5a741b6a"
+    ],
+    "children": [
+     "fda7d76d-64d2-7a14-1167-280daf4de566"
+    ]
+   },
+   {
+    "_id": "a08477d1-5703-1dd4-ca92-5909c5707606",
+    "text": true,
+    "v": "Custom Applications"
+   },
+   {
+    "_id": "c5e84132-c865-fecd-e426-11cba3537b73",
+    "type": "Heading",
+    "tag": "h3",
+    "data": {
+     "tag": "h3"
+    },
+    "classes": [
+     "4256e518-4ae0-abce-b41f-c64ea99819ba",
+     "188c65f2-421b-f154-efd6-9a5eddb67eb0"
+    ],
+    "children": [
+     "a08477d1-5703-1dd4-ca92-5909c5707606"
+    ]
+   },
+   {
+    "_id": "45f5db85-7b41-f994-fc44-9b85ee4a08d6",
+    "text": true,
+    "v": "Tailored web applications and integrations designed to solve your specific business challenges and streamline operations."
+   },
+   {
+    "_id": "0d8470f6-8531-6e4d-7c68-76b7016e57c3",
+    "type": "Paragraph",
+    "tag": "p",
+    "data": {
+     "tag": "p"
+    },
+    "classes": [
+     "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
+     "bb04341b-24a6-5594-9e5b-649b5a741b6a"
+    ],
+    "children": [
+     "45f5db85-7b41-f994-fc44-9b85ee4a08d6"
+    ]
+   },
+   {
+    "_id": "44ce8b5d-b59e-7795-54a4-456877dd2b2b",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "3ef5c8c2-dd6d-2e30-03e4-4c1a415fc864"
+    ],
+    "children": [
+     "45cac816-d0ef-33cd-c651-fe5790b27d03",
+     "c5e84132-c865-fecd-e426-11cba3537b73",
+     "0d8470f6-8531-6e4d-7c68-76b7016e57c3"
+    ]
+   },
+   {
+    "_id": "15acade2-7fa1-fb15-ab9c-e323dfc536eb",
+    "type": "Block",
+    "tag": "article",
+    "data": {
+     "tag": "article",
+     "text": false
+    },
+    "classes": [
+     "1b182a4b-5e6f-401a-da4e-10c53f3c87f0",
+     "657ff07b-3ce5-8185-4510-3d9667d6101f"
+    ],
+    "children": [
+     "e670ffc5-f7ab-5e55-7068-52d08718f05b",
+     "44ce8b5d-b59e-7795-54a4-456877dd2b2b"
+    ]
+   },
+   {
+    "_id": "5782867e-add2-834d-798f-bd8f7c966d63",
+    "type": "HtmlEmbed",
+    "tag": "div",
+    "v": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-bot\"><path d=\"M12 8V4H8\"></path><rect width=\"16\" height=\"12\" x=\"4\" y=\"8\" rx=\"2\"></rect><path d=\"M2 14h2\"></path><path d=\"M20 14h2\"></path><path d=\"M15 13v2\"></path><path d=\"M9 13v2\"></path></svg>",
+    "data": {
+     "insideRTE": false,
+     "embed": {
+      "type": "html",
+      "meta": {
+       "html": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-bot\"><path d=\"M12 8V4H8\"></path><rect width=\"16\" height=\"12\" x=\"4\" y=\"8\" rx=\"2\"></rect><path d=\"M2 14h2\"></path><path d=\"M20 14h2\"></path><path d=\"M15 13v2\"></path><path d=\"M9 13v2\"></path></svg>",
+       "div": false,
+       "iframe": false,
+       "script": false
+      }
+     }
+    },
+    "classes": [
+     "0e1e5337-82a9-a22a-c820-a101e61e3e48"
+    ],
+    "children": []
+   },
+   {
+    "_id": "343c6615-43f8-c015-e08a-5e00dae146db",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "df665f24-9f79-c133-1dfd-5cc3df188c69",
+     "2d259adc-e5de-4c68-7939-cb4490c31fe0"
+    ],
+    "children": [
+     "5782867e-add2-834d-798f-bd8f7c966d63"
+    ]
+   },
+   {
+    "_id": "7a6be9d9-b37c-e914-2cd8-8071ce697196",
+    "text": true,
+    "v": "Visibility Multiplier"
+   },
+   {
+    "_id": "3c8dd722-8868-dc4d-325e-cffb69de4d53",
+    "type": "Paragraph",
+    "tag": "p",
+    "data": {
+     "tag": "p"
+    },
+    "classes": [
+     "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
+     "bb04341b-24a6-5594-9e5b-649b5a741b6a"
+    ],
+    "children": [
+     "7a6be9d9-b37c-e914-2cd8-8071ce697196"
+    ]
+   },
+   {
+    "_id": "3ef0fc8d-48c2-54d4-66cb-586dc49d17e6",
+    "text": true,
+    "v": "AI & AEO Optimization"
+   },
+   {
+    "_id": "0149ca2e-87f4-734d-c61e-ab7f4e7769c3",
+    "type": "Heading",
+    "tag": "h3",
+    "data": {
+     "tag": "h3"
+    },
+    "classes": [
+     "4256e518-4ae0-abce-b41f-c64ea99819ba",
+     "188c65f2-421b-f154-efd6-9a5eddb67eb0"
+    ],
+    "children": [
+     "3ef0fc8d-48c2-54d4-66cb-586dc49d17e6"
+    ]
+   },
+   {
+    "_id": "e2852df9-2570-fb14-88c4-951172dcfcd6",
+    "text": true,
+    "v": "Forward-thinking AI integration and Answer Engine Optimization to ensure your business is found by both search engines and AI assistants."
+   },
+   {
+    "_id": "e5e8c3ca-9aca-4b4d-06d0-05f3f2a188b3",
+    "type": "Paragraph",
+    "tag": "p",
+    "data": {
+     "tag": "p"
+    },
+    "classes": [
+     "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
+     "bb04341b-24a6-5594-9e5b-649b5a741b6a"
+    ],
+    "children": [
+     "e2852df9-2570-fb14-88c4-951172dcfcd6"
+    ]
+   },
+   {
+    "_id": "95367c3d-64ae-0e55-fea2-5f8838b2302b",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "3ef5c8c2-dd6d-2e30-03e4-4c1a415fc864"
+    ],
+    "children": [
+     "3c8dd722-8868-dc4d-325e-cffb69de4d53",
+     "0149ca2e-87f4-734d-c61e-ab7f4e7769c3",
+     "e5e8c3ca-9aca-4b4d-06d0-05f3f2a188b3"
+    ]
+   },
+   {
+    "_id": "0616d556-2bcf-a555-703c-3a9f82c9d4fb",
+    "type": "Block",
+    "tag": "article",
+    "data": {
+     "tag": "article",
+     "text": false
+    },
+    "classes": [
+     "1b182a4b-5e6f-401a-da4e-10c53f3c87f0",
+     "09a8b9f5-b49b-79e8-e674-7c010f9dba2a"
+    ],
+    "children": [
+     "343c6615-43f8-c015-e08a-5e00dae146db",
+     "95367c3d-64ae-0e55-fea2-5f8838b2302b"
+    ]
+   },
+   {
+    "_id": "8db13a95-c25e-46ad-21f2-c798755fb543",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "0526a624-05e8-27cd-6d0f-433d8075e3cf"
+    ],
+    "children": [
+     "f9a7a7be-f223-9455-6d0e-79a716bbd88b",
+     "15acade2-7fa1-fb15-ab9c-e323dfc536eb",
+     "0616d556-2bcf-a555-703c-3a9f82c9d4fb"
+    ]
+   },
+   {
+    "_id": "20e576d2-fc3e-e77d-e028-1b3b9453bf63",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "194a5604-5766-bcf1-bf59-2ab944b621b3"
+    ],
+    "children": [
+     "516308c5-9db9-ce2d-39cc-de08e36d8ea3",
+     "8db13a95-c25e-46ad-21f2-c798755fb543"
+    ]
+   },
+   {
+    "_id": "972c7c9f-cb16-325c-4330-d85fd87fc4a2",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "171a7779-815a-5ffe-32b2-25f332830ad4"
+    ],
+    "children": [
+     "20e576d2-fc3e-e77d-e028-1b3b9453bf63"
+    ]
+   },
+   {
+    "_id": "023441a7-ee34-67a7-61db-de00d3501ca9",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "cc0befdd-524c-2e6e-def8-c40faa76ac54"
+    ],
+    "children": [
+     "972c7c9f-cb16-325c-4330-d85fd87fc4a2"
+    ]
+   },
+   {
+    "_id": "8fd0075f-259f-157a-a86d-e7a9586b3a78",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "3099fbbb-3f97-cd20-34d4-a817d799d98e"
+    ],
+    "children": [
+     "023441a7-ee34-67a7-61db-de00d3501ca9"
+    ]
+   },
+   {
+    "_id": "161feb5f-3ea2-04ae-fffa-7ae55709327c",
+    "type": "Block",
+    "tag": "section",
+    "data": {
+     "tag": "section",
+     "text": false
+    },
+    "classes": [
+     "8e8e9b1c-9b87-77d9-04f5-eac980e1cc0b"
+    ],
+    "children": [
+     "8fd0075f-259f-157a-a86d-e7a9586b3a78"
+    ]
+   }
+  ],
+  "styles": [
+   {
+    "_id": "4356e6ab-8d67-5e6e-3edb-26c9a999f44c",
+    "fake": false,
+    "type": "class",
+    "name": "heading-style-h2",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [
+     "5a18897e-652b-24c3-3d33-6e21cbed6b31"
+    ],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "5a18897e-652b-24c3-3d33-6e21cbed6b31",
+    "fake": false,
+    "type": "class",
+    "name": "heading-style-h2_vn8gub",
+    "namespace": "",
+    "comb": "&",
+    "styleLess": "max-width: 11ch; font-family: \"Manrope\",ui-sans-serif,system-ui,sans-serif; font-weight: 300; font-size: clamp(2.4rem,4vw,4.4rem); line-height: .98;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
+    "fake": false,
+    "type": "class",
+    "name": "text-size-medium",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [
+     "c4d4e836-a100-4420-f54a-948e419fd3fc"
+    ],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "c4d4e836-a100-4420-f54a-948e419fd3fc",
+    "fake": false,
+    "type": "class",
+    "name": "text-size-medium_vetk4p",
+    "namespace": "",
+    "comb": "&",
+    "styleLess": "color: #8f6a35; line-height: 1.65;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "0e1e5337-82a9-a22a-c820-a101e61e3e48",
+    "fake": false,
+    "type": "class",
+    "name": "icon-embed-xsmall",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "fa76fadd-e0db-ffbc-5eec-0b151a0b3d6e",
+    "fake": false,
+    "type": "class",
+    "name": "services_link",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "align-items: center; align-self: start; display: inline-flex; grid-row-gap: 10px; grid-column-gap: 10px; margin-top: 8px; padding: 15px 24px; background: linear-gradient(135deg,#ff9902 0%,#ffb638 100%); border: 0; border-radius: 999px; box-shadow: 0 20px 40px #ff990238; color: #fff; cursor: pointer; font-family: Manrope,sans-serif; font-size: .95rem; font-weight: 700; letter-spacing: .03em;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "a6759f8e-5d50-382b-3177-db2924cb8499",
+    "fake": false,
+    "type": "class",
+    "name": "services_content",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "display: grid; grid-row-gap: 18px; grid-column-gap: 18px; padding-right: 18px; position: sticky; top: 108px; max-width: 34rem;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "df665f24-9f79-c133-1dfd-5cc3df188c69",
+    "fake": false,
+    "type": "class",
+    "name": "services_icon",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "align-items: center; display: inline-flex; height: 54px; justify-content: center; margin-bottom: 24px; width: 54px; background: #ffffffd1; border: 1px solid currentColor; border-radius: 999px;",
+    "variants": {},
+    "children": [
+     "25029cd1-7cc0-e608-a1a4-eced478bb3e2",
+     "2d259adc-e5de-4c68-7939-cb4490c31fe0",
+     "d35a5358-d184-aacc-d6b4-43a409f70c44"
+    ],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "d35a5358-d184-aacc-d6b4-43a409f70c44",
+    "fake": false,
+    "type": "class",
+    "name": "services_icon_v1iraj",
+    "namespace": "",
+    "comb": "&",
+    "styleLess": "color: #ff9902;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "bb04341b-24a6-5594-9e5b-649b5a741b6a",
+    "fake": false,
+    "type": "class",
+    "name": "services_card_text",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "color: #8f6a35; font-size: .78rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; line-height: 1.65;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "4256e518-4ae0-abce-b41f-c64ea99819ba",
+    "fake": false,
+    "type": "class",
+    "name": "heading-style-h3",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "188c65f2-421b-f154-efd6-9a5eddb67eb0",
+    "fake": false,
+    "type": "class",
+    "name": "services_card_heading",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "margin: 0 0 12px; color: #6b4a1e; font-family: Manrope,sans-serif; font-weight: 300; letter-spacing: -.03em; font-size: clamp(1.8rem,2.3vw,2.5rem); line-height: 1.08;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "3ef5c8c2-dd6d-2e30-03e4-4c1a415fc864",
+    "fake": false,
+    "type": "class",
+    "name": "services_item",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "1b182a4b-5e6f-401a-da4e-10c53f3c87f0",
+    "fake": false,
+    "type": "class",
+    "name": "services_card",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "align-items: start; display: grid; grid-row-gap: 18px; grid-column-gap: 18px; grid-template-columns: auto 1fr; padding: 24px 24px 26px; min-height: 0; background: linear-gradient(180deg,#fffdfaf7,#fff7eaf5); border: 1px solid rgba(166,32,37,.12); border-left: 8px solid #ff9902; border-radius: 24px; box-shadow: 0 14px 28px #6b4a1e12; backdrop-filter: blur(10px);",
+    "variants": {},
+    "children": [
+     "09a8b9f5-b49b-79e8-e674-7c010f9dba2a",
+     "657ff07b-3ce5-8185-4510-3d9667d6101f"
+    ],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "25029cd1-7cc0-e608-a1a4-eced478bb3e2",
+    "fake": false,
+    "type": "class",
+    "name": "services_icon_v1t7l8",
+    "namespace": "",
+    "comb": "&",
+    "styleLess": "color: #a62025;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "657ff07b-3ce5-8185-4510-3d9667d6101f",
+    "fake": false,
+    "type": "class",
+    "name": "services_card_v12mp9",
+    "namespace": "",
+    "comb": "&",
+    "styleLess": "border-left: 8px solid #a62025;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "2d259adc-e5de-4c68-7939-cb4490c31fe0",
+    "fake": false,
+    "type": "class",
+    "name": "services_icon_vzs92u",
+    "namespace": "",
+    "comb": "&",
+    "styleLess": "color: rgb(201, 146, 61);",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "09a8b9f5-b49b-79e8-e674-7c010f9dba2a",
+    "fake": false,
+    "type": "class",
+    "name": "services_card_velxg9",
+    "namespace": "",
+    "comb": "&",
+    "styleLess": "border-left: 8px solid #c9923d;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "0526a624-05e8-27cd-6d0f-433d8075e3cf",
+    "fake": false,
+    "type": "class",
+    "name": "services_card_list",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "display: flex; grid-row-gap: 18px; grid-column-gap: 18px; flex-direction: column;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "194a5604-5766-bcf1-bf59-2ab944b621b3",
+    "fake": false,
+    "type": "class",
+    "name": "services_component",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "align-items: start; display: grid; grid-row-gap: 42px; grid-column-gap: 42px; grid-template-columns: .8fr 1.2fr; min-height: 1320px;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "171a7779-815a-5ffe-32b2-25f332830ad4",
+    "fake": false,
+    "type": "class",
+    "name": "padding-section-medium",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "cc0befdd-524c-2e6e-def8-c40faa76ac54",
+    "fake": false,
+    "type": "class",
+    "name": "container-large",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "3099fbbb-3f97-cd20-34d4-a817d799d98e",
+    "fake": false,
+    "type": "class",
+    "name": "padding-global",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "8e8e9b1c-9b87-77d9-04f5-eac980e1cc0b",
+    "fake": false,
+    "type": "class",
+    "name": "section_services",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "padding: 96px 20px; position: relative; background: #ffefcf;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   }
+  ],
+  "assets": [],
+  "ix1": [],
+  "ix2": {
+   "interactions": [],
+   "events": [],
+   "actionLists": []
+  }
+ },
+ "meta": {
+  "droppedLinks": 0,
+  "dynBindRemovedCount": 0,
+  "dynListBindRemovedCount": 0,
+  "paginationRemovedCount": 0,
+  "universalBindingsRemovedCount": 0,
+  "unlinkedSymbolCount": 0,
+  "codeComponentsRemovedCount": 0,
+  "richTextComponentsStripped": false
+ }
+}

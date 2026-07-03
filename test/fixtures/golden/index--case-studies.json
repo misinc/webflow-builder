@@ -1,0 +1,963 @@
+{
+ "type": "@webflow/XscpData",
+ "payload": {
+  "nodes": [
+   {
+    "_id": "17752296-5a56-c130-7294-f55e9de761cc",
+    "text": true,
+    "v": "Recent Client Success Stories"
+   },
+   {
+    "_id": "00c01c15-549a-cef1-9cac-a134982cc367",
+    "type": "Heading",
+    "tag": "h2",
+    "data": {
+     "tag": "h2"
+    },
+    "classes": [
+     "4356e6ab-8d67-5e6e-3edb-26c9a999f44c",
+     "b9cc1d81-0b59-b609-0822-f3289a233207"
+    ],
+    "children": [
+     "17752296-5a56-c130-7294-f55e9de761cc"
+    ]
+   },
+   {
+    "_id": "b20a4766-c532-6e51-30e1-ea635484a6e7",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6"
+    ],
+    "children": [
+     "00c01c15-549a-cef1-9cac-a134982cc367"
+    ]
+   },
+   {
+    "_id": "48799166-7412-5721-6e72-4eb37fb91797",
+    "type": "Image",
+    "tag": "img",
+    "data": {
+     "attr": {
+      "src": "",
+      "alt": ""
+     },
+     "img": {}
+    },
+    "classes": [
+     "9a6f2b8e-4b5a-261b-bad1-15d97d218ee9"
+    ],
+    "children": []
+   },
+   {
+    "_id": "7f43f0a1-65a7-a9c9-c05b-328820721787",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6",
+     "45577068-9433-3d06-b8e0-cbc623a94672"
+    ],
+    "children": [
+     "48799166-7412-5721-6e72-4eb37fb91797"
+    ]
+   },
+   {
+    "_id": "e7e87935-8712-3e90-0b3c-fb29b58aa742",
+    "text": true,
+    "v": "Healthcare"
+   },
+   {
+    "_id": "a874b83e-ebb1-ebd9-8b7f-60d3f5e7351f",
+    "type": "Paragraph",
+    "tag": "p",
+    "data": {
+     "tag": "p"
+    },
+    "classes": [
+     "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
+     "18599019-c698-77a9-61fe-9770feee0527"
+    ],
+    "children": [
+     "e7e87935-8712-3e90-0b3c-fb29b58aa742"
+    ]
+   },
+   {
+    "_id": "0c90e9f5-6283-7161-5aab-2ea4cc50f717",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6",
+     "9d28a133-0d77-ae05-ff90-da2efda3b1cf"
+    ],
+    "children": [
+     "a874b83e-ebb1-ebd9-8b7f-60d3f5e7351f"
+    ]
+   },
+   {
+    "_id": "17c4c296-4daa-1b21-202b-74e3273a4237",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6",
+     "de7f237c-ca91-890b-4204-2ca395542ab1"
+    ],
+    "children": [
+     "0c90e9f5-6283-7161-5aab-2ea4cc50f717"
+    ]
+   },
+   {
+    "_id": "fc182a65-6d98-c388-ff79-84115e9d59aa",
+    "text": true,
+    "v": "Regional Medical Practice"
+   },
+   {
+    "_id": "e642f25e-a12c-2ae1-9412-b18b4f23fac7",
+    "type": "Heading",
+    "tag": "h3",
+    "data": {
+     "tag": "h3"
+    },
+    "classes": [
+     "4256e518-4ae0-abce-b41f-c64ea99819ba",
+     "bc263d77-2167-6fd6-6aa1-8955371ac374"
+    ],
+    "children": [
+     "fc182a65-6d98-c388-ff79-84115e9d59aa"
+    ]
+   },
+   {
+    "_id": "77a00b99-0147-fe08-e7c0-65055eedb702",
+    "text": true,
+    "v": "300% increase in online appointment bookings within 6 months"
+   },
+   {
+    "_id": "6b2db8d2-edd2-8121-dd30-294fc224cf0f",
+    "type": "Paragraph",
+    "tag": "p",
+    "data": {
+     "tag": "p"
+    },
+    "classes": [
+     "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
+     "c78c032f-bc5b-c1a0-ef56-799b996a5716"
+    ],
+    "children": [
+     "77a00b99-0147-fe08-e7c0-65055eedb702"
+    ]
+   },
+   {
+    "_id": "a8165efd-bc67-cf49-23b3-82442cab05ef",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "1db29782-85ac-5a7f-624c-9b617c8cb8ad"
+    ],
+    "children": [
+     "17c4c296-4daa-1b21-202b-74e3273a4237",
+     "e642f25e-a12c-2ae1-9412-b18b4f23fac7",
+     "6b2db8d2-edd2-8121-dd30-294fc224cf0f"
+    ]
+   },
+   {
+    "_id": "ae93997e-1776-8129-0d77-2c039f1badaf",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6",
+     "c3946ff2-765a-33c8-fabc-840272ddc5cc"
+    ],
+    "children": [
+     "7f43f0a1-65a7-a9c9-c05b-328820721787",
+     "a8165efd-bc67-cf49-23b3-82442cab05ef"
+    ]
+   },
+   {
+    "_id": "08147fe9-cf18-f831-de1c-efb89ce0498f",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6"
+    ],
+    "children": [
+     "ae93997e-1776-8129-0d77-2c039f1badaf"
+    ]
+   },
+   {
+    "_id": "01ebd286-47d3-0b21-11d2-9193198b5397",
+    "type": "Image",
+    "tag": "img",
+    "data": {
+     "attr": {
+      "src": "",
+      "alt": ""
+     },
+     "img": {}
+    },
+    "classes": [
+     "9a6f2b8e-4b5a-261b-bad1-15d97d218ee9"
+    ],
+    "children": []
+   },
+   {
+    "_id": "a52448ad-2774-3049-835b-ff34fedcbd4f",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6",
+     "45577068-9433-3d06-b8e0-cbc623a94672"
+    ],
+    "children": [
+     "01ebd286-47d3-0b21-11d2-9193198b5397"
+    ]
+   },
+   {
+    "_id": "ecfafeb5-a38b-3350-7fbb-466915c13a82",
+    "text": true,
+    "v": "Nonprofit"
+   },
+   {
+    "_id": "f0144dfe-29fc-4799-1dba-2953368342df",
+    "type": "Paragraph",
+    "tag": "p",
+    "data": {
+     "tag": "p"
+    },
+    "classes": [
+     "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
+     "18599019-c698-77a9-61fe-9770feee0527"
+    ],
+    "children": [
+     "ecfafeb5-a38b-3350-7fbb-466915c13a82"
+    ]
+   },
+   {
+    "_id": "c2326fa9-1f58-ad61-668e-436840d57b1f",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6",
+     "9d28a133-0d77-ae05-ff90-da2efda3b1cf"
+    ],
+    "children": [
+     "f0144dfe-29fc-4799-1dba-2953368342df"
+    ]
+   },
+   {
+    "_id": "948995b6-427d-8da1-96e6-9ec3dcf8b537",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6",
+     "de7f237c-ca91-890b-4204-2ca395542ab1"
+    ],
+    "children": [
+     "c2326fa9-1f58-ad61-668e-436840d57b1f"
+    ]
+   },
+   {
+    "_id": "dbaed6fd-6698-81c8-e860-13f9be24f52a",
+    "text": true,
+    "v": "Community Foundation"
+   },
+   {
+    "_id": "b533eb66-fb1d-7b61-4866-93737c827cd7",
+    "type": "Heading",
+    "tag": "h3",
+    "data": {
+     "tag": "h3"
+    },
+    "classes": [
+     "4256e518-4ae0-abce-b41f-c64ea99819ba",
+     "bc263d77-2167-6fd6-6aa1-8955371ac374"
+    ],
+    "children": [
+     "dbaed6fd-6698-81c8-e860-13f9be24f52a"
+    ]
+   },
+   {
+    "_id": "20f22221-ffc4-d148-60d3-c2bdd644cec2",
+    "text": true,
+    "v": "Streamlined donation process increased contributions by 85%"
+   },
+   {
+    "_id": "aab3e80a-1275-3ba1-27ee-0c67fbb39bbf",
+    "type": "Paragraph",
+    "tag": "p",
+    "data": {
+     "tag": "p"
+    },
+    "classes": [
+     "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
+     "c78c032f-bc5b-c1a0-ef56-799b996a5716"
+    ],
+    "children": [
+     "20f22221-ffc4-d148-60d3-c2bdd644cec2"
+    ]
+   },
+   {
+    "_id": "baf01151-77ca-d349-91c6-7ef8476b8067",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "1db29782-85ac-5a7f-624c-9b617c8cb8ad"
+    ],
+    "children": [
+     "948995b6-427d-8da1-96e6-9ec3dcf8b537",
+     "b533eb66-fb1d-7b61-4866-93737c827cd7",
+     "aab3e80a-1275-3ba1-27ee-0c67fbb39bbf"
+    ]
+   },
+   {
+    "_id": "e87e767e-f99e-aca9-9fc9-70837a15542f",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6",
+     "c3946ff2-765a-33c8-fabc-840272ddc5cc"
+    ],
+    "children": [
+     "a52448ad-2774-3049-835b-ff34fedcbd4f",
+     "baf01151-77ca-d349-91c6-7ef8476b8067"
+    ]
+   },
+   {
+    "_id": "2610eb95-eb50-e7f1-6c36-88b4de515c67",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6"
+    ],
+    "children": [
+     "e87e767e-f99e-aca9-9fc9-70837a15542f"
+    ]
+   },
+   {
+    "_id": "321db1be-7461-e2a1-61ca-476bae436187",
+    "type": "Image",
+    "tag": "img",
+    "data": {
+     "attr": {
+      "src": "",
+      "alt": ""
+     },
+     "img": {}
+    },
+    "classes": [
+     "9a6f2b8e-4b5a-261b-bad1-15d97d218ee9"
+    ],
+    "children": []
+   },
+   {
+    "_id": "eb586589-0905-e049-edc5-30c098d79a67",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6",
+     "45577068-9433-3d06-b8e0-cbc623a94672"
+    ],
+    "children": [
+     "321db1be-7461-e2a1-61ca-476bae436187"
+    ]
+   },
+   {
+    "_id": "6dd7de4d-a5d2-9890-beeb-e1c116d51c92",
+    "text": true,
+    "v": "Professional Services"
+   },
+   {
+    "_id": "3b6dec7e-7061-bed9-efd8-9e9374b0231f",
+    "type": "Paragraph",
+    "tag": "p",
+    "data": {
+     "tag": "p"
+    },
+    "classes": [
+     "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
+     "18599019-c698-77a9-61fe-9770feee0527"
+    ],
+    "children": [
+     "6dd7de4d-a5d2-9890-beeb-e1c116d51c92"
+    ]
+   },
+   {
+    "_id": "fd0c4445-d79d-48e1-78a7-15f4a5f3e377",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6",
+     "9d28a133-0d77-ae05-ff90-da2efda3b1cf"
+    ],
+    "children": [
+     "3b6dec7e-7061-bed9-efd8-9e9374b0231f"
+    ]
+   },
+   {
+    "_id": "0f927ad6-187a-ed21-e22f-5823f4744eb7",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6",
+     "de7f237c-ca91-890b-4204-2ca395542ab1"
+    ],
+    "children": [
+     "fd0c4445-d79d-48e1-78a7-15f4a5f3e377"
+    ]
+   },
+   {
+    "_id": "38c680c5-7c7b-b308-32eb-0f716bb30bea",
+    "text": true,
+    "v": "Legal Association"
+   },
+   {
+    "_id": "28abb676-1101-40e1-06fd-af43acae7ff7",
+    "type": "Heading",
+    "tag": "h3",
+    "data": {
+     "tag": "h3"
+    },
+    "classes": [
+     "4256e518-4ae0-abce-b41f-c64ea99819ba",
+     "bc263d77-2167-6fd6-6aa1-8955371ac374"
+    ],
+    "children": [
+     "38c680c5-7c7b-b308-32eb-0f716bb30bea"
+    ]
+   },
+   {
+    "_id": "118dca21-cef8-c588-c963-1bfd784fc982",
+    "text": true,
+    "v": "Custom member portal reduced admin time by 60%"
+   },
+   {
+    "_id": "78aca1b2-9f32-9c21-b7d2-a96fffaa160f",
+    "type": "Paragraph",
+    "tag": "p",
+    "data": {
+     "tag": "p"
+    },
+    "classes": [
+     "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
+     "c78c032f-bc5b-c1a0-ef56-799b996a5716"
+    ],
+    "children": [
+     "118dca21-cef8-c588-c963-1bfd784fc982"
+    ]
+   },
+   {
+    "_id": "9091c84d-e37d-f249-ee1e-bad4e91b5e0f",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "1db29782-85ac-5a7f-624c-9b617c8cb8ad"
+    ],
+    "children": [
+     "0f927ad6-187a-ed21-e22f-5823f4744eb7",
+     "28abb676-1101-40e1-06fd-af43acae7ff7",
+     "78aca1b2-9f32-9c21-b7d2-a96fffaa160f"
+    ]
+   },
+   {
+    "_id": "7d35c4d6-2ec0-4829-8ef9-82cb7bc2f18f",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6",
+     "c3946ff2-765a-33c8-fabc-840272ddc5cc"
+    ],
+    "children": [
+     "eb586589-0905-e049-edc5-30c098d79a67",
+     "9091c84d-e37d-f249-ee1e-bad4e91b5e0f"
+    ]
+   },
+   {
+    "_id": "39da0311-6643-39b1-f3d1-e32046723dff",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6"
+    ],
+    "children": [
+     "7d35c4d6-2ec0-4829-8ef9-82cb7bc2f18f"
+    ]
+   },
+   {
+    "_id": "3f018cb6-b1c9-93d1-7864-82532dfe05a7",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6",
+     "6f2a82e7-0cb0-cc68-7dc5-759b62d5f5de"
+    ],
+    "children": [
+     "08147fe9-cf18-f831-de1c-efb89ce0498f",
+     "2610eb95-eb50-e7f1-6c36-88b4de515c67",
+     "39da0311-6643-39b1-f3d1-e32046723dff"
+    ]
+   },
+   {
+    "_id": "1d5b97fd-f869-9c19-83f9-6e3442df1dff",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "aeb05bc4-9c81-4a54-1438-82d06ba2b92c"
+    ],
+    "children": [
+     "b20a4766-c532-6e51-30e1-ea635484a6e7",
+     "3f018cb6-b1c9-93d1-7864-82532dfe05a7"
+    ]
+   },
+   {
+    "_id": "8f38497c-14b4-2e30-0d1f-0abc24b7de48",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "171a7779-815a-5ffe-32b2-25f332830ad4"
+    ],
+    "children": [
+     "1d5b97fd-f869-9c19-83f9-6e3442df1dff"
+    ]
+   },
+   {
+    "_id": "ebf30bf4-86b7-f6d3-1676-eb135a03c749",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "cc0befdd-524c-2e6e-def8-c40faa76ac54"
+    ],
+    "children": [
+     "8f38497c-14b4-2e30-0d1f-0abc24b7de48"
+    ]
+   },
+   {
+    "_id": "14d3bf66-6326-3f6e-c868-f1a816445b92",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "3099fbbb-3f97-cd20-34d4-a817d799d98e"
+    ],
+    "children": [
+     "ebf30bf4-86b7-f6d3-1676-eb135a03c749"
+    ]
+   },
+   {
+    "_id": "0841e0c8-c3a4-b11a-1c1a-ac7aab51851e",
+    "type": "Block",
+    "tag": "section",
+    "data": {
+     "tag": "section",
+     "text": false
+    },
+    "classes": [
+     "71c1d83c-0c1d-8de4-3126-95b87fab2bcc",
+     "4d66bf9e-b9f3-9c57-34f5-069d53ad8dd5"
+    ],
+    "children": [
+     "14d3bf66-6326-3f6e-c868-f1a816445b92"
+    ]
+   }
+  ],
+  "styles": [
+   {
+    "_id": "4356e6ab-8d67-5e6e-3edb-26c9a999f44c",
+    "fake": false,
+    "type": "class",
+    "name": "heading-style-h2",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [
+     "b9cc1d81-0b59-b609-0822-f3289a233207"
+    ],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "b9cc1d81-0b59-b609-0822-f3289a233207",
+    "fake": false,
+    "type": "class",
+    "name": "heading-style-h2_v1pnn4",
+    "namespace": "",
+    "comb": "&",
+    "styleLess": "width: 100%; font-weight: 300; line-height: 1.2; color: #6b4a1e; font-size: 48px;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6",
+    "fake": false,
+    "type": "class",
+    "name": "case-studies_content",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "align-content: stretch; display: flex; flex-direction: column; grid-row-gap: 16px; grid-column-gap: 16px; align-items: flex-start; position: relative; width: 100%; flex-shrink: 0;",
+    "variants": {},
+    "children": [
+     "45577068-9433-3d06-b8e0-cbc623a94672",
+     "6f2a82e7-0cb0-cc68-7dc5-759b62d5f5de",
+     "9d28a133-0d77-ae05-ff90-da2efda3b1cf",
+     "c3946ff2-765a-33c8-fabc-840272ddc5cc",
+     "de7f237c-ca91-890b-4204-2ca395542ab1"
+    ],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "9a6f2b8e-4b5a-261b-bad1-15d97d218ee9",
+    "fake": false,
+    "type": "class",
+    "name": "case-studies_image",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "position: absolute; inset: 0rem; width: 100%; height: 100%; object-fit: cover;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "45577068-9433-3d06-b8e0-cbc623a94672",
+    "fake": false,
+    "type": "class",
+    "name": "case-studies_content_vky5kg",
+    "namespace": "",
+    "comb": "&",
+    "styleLess": "height: 240px; overflow: hidden; background-color: oklch(96.7% .003 264.542);",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
+    "fake": false,
+    "type": "class",
+    "name": "text-size-medium",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [
+     "18599019-c698-77a9-61fe-9770feee0527",
+     "c78c032f-bc5b-c1a0-ef56-799b996a5716"
+    ],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "18599019-c698-77a9-61fe-9770feee0527",
+    "fake": false,
+    "type": "class",
+    "name": "text-size-medium_vx18pd",
+    "namespace": "",
+    "comb": "&",
+    "styleLess": "position: relative; font-weight: 500; line-height: 1.4; flex-shrink: 0; color: #9b3139; font-size: 11px; letter-spacing: .5px; text-transform: uppercase;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "9d28a133-0d77-ae05-ff90-da2efda3b1cf",
+    "fake": false,
+    "type": "class",
+    "name": "case-studies_content_vxpye4",
+    "namespace": "",
+    "comb": "&",
+    "styleLess": "align-items: center; padding-left: 10px; padding-right: 10px; padding-top: 4px; padding-bottom: 4px; border-radius: 500px; background-color: #ffaa1d1a;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "de7f237c-ca91-890b-4204-2ca395542ab1",
+    "fake": false,
+    "type": "class",
+    "name": "case-studies_content_v3csko",
+    "namespace": "",
+    "comb": "&",
+    "styleLess": "align-items: center; grid-row-gap: 8px; grid-column-gap: 8px;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "4256e518-4ae0-abce-b41f-c64ea99819ba",
+    "fake": false,
+    "type": "class",
+    "name": "heading-style-h3",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [
+     "bc263d77-2167-6fd6-6aa1-8955371ac374"
+    ],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "bc263d77-2167-6fd6-6aa1-8955371ac374",
+    "fake": false,
+    "type": "class",
+    "name": "heading-style-h3_v11i5t",
+    "namespace": "",
+    "comb": "&",
+    "styleLess": "font-weight: 500; color: #6b4a1e; font-size: 22px; line-height: 1.3;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "c78c032f-bc5b-c1a0-ef56-799b996a5716",
+    "fake": false,
+    "type": "class",
+    "name": "text-size-medium_v14k7f",
+    "namespace": "",
+    "comb": "&",
+    "styleLess": "font-weight: 300; color: #777; font-size: 15px; line-height: 1.6;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "1db29782-85ac-5a7f-624c-9b617c8cb8ad",
+    "fake": false,
+    "type": "class",
+    "name": "case-studies_item",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "padding: 32px; display: flex; flex-direction: column; grid-row-gap: 12px; grid-column-gap: 12px;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "c3946ff2-765a-33c8-fabc-840272ddc5cc",
+    "fake": false,
+    "type": "class",
+    "name": "case-studies_content_vau4je",
+    "namespace": "",
+    "comb": "&",
+    "styleLess": "background-color: #fff; overflow: hidden; border-radius: 28px; cursor: pointer;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "6f2a82e7-0cb0-cc68-7dc5-759b62d5f5de",
+    "fake": false,
+    "type": "class",
+    "name": "case-studies_content_vpfqrk",
+    "namespace": "",
+    "comb": "&",
+    "styleLess": "display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); grid-row-gap: 32px; grid-column-gap: 32px;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "aeb05bc4-9c81-4a54-1438-82d06ba2b92c",
+    "fake": false,
+    "type": "class",
+    "name": "case-studies_component",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "align-content: stretch; display: flex; flex-direction: column; grid-row-gap: 64px; grid-column-gap: 64px; align-items: flex-start; position: relative; width: 100%; max-width: 1200px; flex-shrink: 0; padding-left: 3rem; padding-right: 3rem;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "171a7779-815a-5ffe-32b2-25f332830ad4",
+    "fake": false,
+    "type": "class",
+    "name": "padding-section-medium",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "cc0befdd-524c-2e6e-def8-c40faa76ac54",
+    "fake": false,
+    "type": "class",
+    "name": "container-large",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "3099fbbb-3f97-cd20-34d4-a817d799d98e",
+    "fake": false,
+    "type": "class",
+    "name": "padding-global",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "71c1d83c-0c1d-8de4-3126-95b87fab2bcc",
+    "fake": false,
+    "type": "class",
+    "name": "section_case-studies",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "align-content: stretch; display: flex; flex-direction: column; align-items: center; position: relative; width: 100%; padding-top: 120px; padding-bottom: 120px; flex-shrink: 0; background: #fff7ea;",
+    "variants": {},
+    "children": [
+     "4d66bf9e-b9f3-9c57-34f5-069d53ad8dd5"
+    ],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "4d66bf9e-b9f3-9c57-34f5-069d53ad8dd5",
+    "fake": false,
+    "type": "class",
+    "name": "section_case-studies_v1shor",
+    "namespace": "",
+    "comb": "&",
+    "styleLess": "background-color: rgb(250, 250, 250);",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   }
+  ],
+  "assets": [],
+  "ix1": [],
+  "ix2": {
+   "interactions": [],
+   "events": [],
+   "actionLists": []
+  }
+ },
+ "meta": {
+  "droppedLinks": 0,
+  "dynBindRemovedCount": 0,
+  "dynListBindRemovedCount": 0,
+  "paginationRemovedCount": 0,
+  "universalBindingsRemovedCount": 0,
+  "unlinkedSymbolCount": 0,
+  "codeComponentsRemovedCount": 0,
+  "richTextComponentsStripped": false
+ }
+}

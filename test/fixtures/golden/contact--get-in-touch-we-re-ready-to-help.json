@@ -1,0 +1,490 @@
+{
+ "type": "@webflow/XscpData",
+ "payload": {
+  "nodes": [
+   {
+    "_id": "cf6cc7b2-4b9e-e8a3-bdf3-4c8545be3319",
+    "text": true,
+    "v": "Contact MIS, Inc."
+   },
+   {
+    "_id": "acea8415-746a-8ffa-44cc-ea7b426b7c70",
+    "type": "Paragraph",
+    "tag": "p",
+    "data": {
+     "tag": "p"
+    },
+    "classes": [
+     "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
+     "f47c3467-49f5-f020-284b-e4b3b74f79c6"
+    ],
+    "children": [
+     "cf6cc7b2-4b9e-e8a3-bdf3-4c8545be3319"
+    ]
+   },
+   {
+    "_id": "53c340ca-5845-5c63-89c0-ccfd9db03489",
+    "text": true,
+    "v": "Get in Touch - We're Ready to Help"
+   },
+   {
+    "_id": "49b8e01d-164f-1ffa-6ae4-fcd3998be010",
+    "type": "Heading",
+    "tag": "h1",
+    "data": {
+     "tag": "h1"
+    },
+    "classes": [
+     "4456e83e-cfee-110e-4a0a-36f01f8bf372",
+     "d57d6723-e60f-f08f-5768-4e9cb72eb311"
+    ],
+    "children": [
+     "53c340ca-5845-5c63-89c0-ccfd9db03489"
+    ]
+   },
+   {
+    "_id": "d9bb39a6-9c89-59a3-1e2b-4709555e4521",
+    "text": true,
+    "v": "Choose the path that fits your goal: book a free strategy call, request a custom proposal, or send a general inquiry. Each option opens a focused form so you can share only what matters and get a faster response."
+   },
+   {
+    "_id": "d41b3771-db8c-3a7a-4cc9-2d4722c365c8",
+    "type": "Paragraph",
+    "tag": "p",
+    "data": {
+     "tag": "p"
+    },
+    "classes": [
+     "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
+     "44eb6ec2-ac18-0def-b716-1e516985577d"
+    ],
+    "children": [
+     "d9bb39a6-9c89-59a3-1e2b-4709555e4521"
+    ]
+   },
+   {
+    "_id": "a0c95d75-c2b8-6353-5c1b-b1de08db013d",
+    "text": true,
+    "v": "Schedule a Strategy Call"
+   },
+   {
+    "_id": "2ec7097a-432b-3032-b4e6-cbe802f322fe",
+    "type": "Link",
+    "tag": "a",
+    "data": {
+     "button": false,
+     "block": "inline",
+     "link": {
+      "url": "#"
+     }
+    },
+    "classes": [
+     "8b2ed183-c659-d28f-240d-c97c029489d1",
+     "905566c4-5e0f-4f3c-1fa1-405860df6224"
+    ],
+    "children": [
+     "a0c95d75-c2b8-6353-5c1b-b1de08db013d"
+    ]
+   },
+   {
+    "_id": "66bae3e9-413f-6593-e4df-c342d57529e5",
+    "text": true,
+    "v": "Request a Proposal"
+   },
+   {
+    "_id": "205cbed6-87e3-2372-dbd9-1af4de176a16",
+    "type": "Link",
+    "tag": "a",
+    "data": {
+     "button": false,
+     "block": "inline",
+     "link": {
+      "url": "#"
+     }
+    },
+    "classes": [
+     "8b2ed183-c659-d28f-240d-c97c029489d1",
+     "905566c4-5e0f-4f3c-1fa1-405860df6224"
+    ],
+    "children": [
+     "66bae3e9-413f-6593-e4df-c342d57529e5"
+    ]
+   },
+   {
+    "_id": "6ef8dbfd-c43b-cfd3-d616-7186df727c0d",
+    "text": true,
+    "v": "Send a Message"
+   },
+   {
+    "_id": "7b000c72-c1c8-0932-c57a-9640434544ae",
+    "type": "Link",
+    "tag": "a",
+    "data": {
+     "button": false,
+     "block": "inline",
+     "link": {
+      "url": "#"
+     }
+    },
+    "classes": [
+     "8b2ed183-c659-d28f-240d-c97c029489d1",
+     "905566c4-5e0f-4f3c-1fa1-405860df6224"
+    ],
+    "children": [
+     "6ef8dbfd-c43b-cfd3-d616-7186df727c0d"
+    ]
+   },
+   {
+    "_id": "a933d311-2596-c47a-b27e-9327c7f62c48",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "40a32bed-c71d-95e7-769c-2412db3ac4d1"
+    ],
+    "children": [
+     "2ec7097a-432b-3032-b4e6-cbe802f322fe",
+     "205cbed6-87e3-2372-dbd9-1af4de176a16",
+     "7b000c72-c1c8-0932-c57a-9640434544ae"
+    ]
+   },
+   {
+    "_id": "d8b14e2a-0b0b-73a3-06a3-db5d228d8cc9",
+    "text": true,
+    "v": "We respond within one business day."
+   },
+   {
+    "_id": "4e3de33d-0ee3-36fa-55cd-84334ecbcd90",
+    "type": "Paragraph",
+    "tag": "p",
+    "data": {
+     "tag": "p"
+    },
+    "classes": [
+     "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
+     "de574fec-729e-6bce-5fd7-970a3658392a"
+    ],
+    "children": [
+     "d8b14e2a-0b0b-73a3-06a3-db5d228d8cc9"
+    ]
+   },
+   {
+    "_id": "78ff3342-703e-beaa-d9d6-1108ce1f7796",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "a297b7f8-eeb6-06c2-d7c3-1d024d3697e6"
+    ],
+    "children": [
+     "acea8415-746a-8ffa-44cc-ea7b426b7c70",
+     "49b8e01d-164f-1ffa-6ae4-fcd3998be010",
+     "d41b3771-db8c-3a7a-4cc9-2d4722c365c8",
+     "a933d311-2596-c47a-b27e-9327c7f62c48",
+     "4e3de33d-0ee3-36fa-55cd-84334ecbcd90"
+    ]
+   },
+   {
+    "_id": "cdf900bd-c904-9aa2-0ecf-fa6b1c93d458",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "685d8d6a-16db-71a4-d502-5aa6ebe24af0"
+    ],
+    "children": [
+     "78ff3342-703e-beaa-d9d6-1108ce1f7796"
+    ]
+   },
+   {
+    "_id": "2fabf1f8-44f2-7e13-40c2-85a754c2eb31",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "171a7779-815a-5ffe-32b2-25f332830ad4"
+    ],
+    "children": [
+     "cdf900bd-c904-9aa2-0ecf-fa6b1c93d458"
+    ]
+   },
+   {
+    "_id": "93f20374-2e1e-c63c-fc2b-c7e83b55c9e4",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "cc0befdd-524c-2e6e-def8-c40faa76ac54"
+    ],
+    "children": [
+     "2fabf1f8-44f2-7e13-40c2-85a754c2eb31"
+    ]
+   },
+   {
+    "_id": "eca6faca-95bd-9d17-64ee-b6c198923185",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "3099fbbb-3f97-cd20-34d4-a817d799d98e"
+    ],
+    "children": [
+     "93f20374-2e1e-c63c-fc2b-c7e83b55c9e4"
+    ]
+   },
+   {
+    "_id": "4b13ea08-4703-e8bd-6d01-9579c5d1d3af",
+    "type": "Block",
+    "tag": "section",
+    "data": {
+     "tag": "section",
+     "text": false
+    },
+    "classes": [
+     "0198273a-18e4-2304-80ab-04d68107c6f0"
+    ],
+    "children": [
+     "eca6faca-95bd-9d17-64ee-b6c198923185"
+    ]
+   }
+  ],
+  "styles": [
+   {
+    "_id": "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
+    "fake": false,
+    "type": "class",
+    "name": "text-size-medium",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [
+     "44eb6ec2-ac18-0def-b716-1e516985577d",
+     "de574fec-729e-6bce-5fd7-970a3658392a",
+     "f47c3467-49f5-f020-284b-e4b3b74f79c6"
+    ],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "f47c3467-49f5-f020-284b-e4b3b74f79c6",
+    "fake": false,
+    "type": "class",
+    "name": "text-size-medium_vyhun7",
+    "namespace": "",
+    "comb": "&",
+    "styleLess": "font-size: .75rem; line-height: 1.3333; font-weight: 500; text-transform: uppercase; letter-spacing: .025em; color: #ff9902;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "4456e83e-cfee-110e-4a0a-36f01f8bf372",
+    "fake": false,
+    "type": "class",
+    "name": "heading-style-h1",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [
+     "d57d6723-e60f-f08f-5768-4e9cb72eb311"
+    ],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "d57d6723-e60f-f08f-5768-4e9cb72eb311",
+    "fake": false,
+    "type": "class",
+    "name": "heading-style-h1_v18m0r",
+    "namespace": "",
+    "comb": "&",
+    "styleLess": "font-size: 3rem; line-height: 1; font-weight: 500; color: #6b4a1e;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "44eb6ec2-ac18-0def-b716-1e516985577d",
+    "fake": false,
+    "type": "class",
+    "name": "text-size-medium_vdjafo",
+    "namespace": "",
+    "comb": "&",
+    "styleLess": "max-width: 48rem; margin-left: auto; margin-right: auto; font-size: 1.125rem; line-height: 1.5556; color: #8f6a35;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "8b2ed183-c659-d28f-240d-c97c029489d1",
+    "fake": false,
+    "type": "class",
+    "name": "get-in-touch_link",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "display: inline-flex; align-items: center; justify-content: center; grid-row-gap: 0.5rem; grid-column-gap: 0.5rem; height: 2.25rem; white-space: nowrap; font-weight: 500; flex-shrink: 0; outline-style: none; background-color: #ff9902; color: #fff; border-radius: 3.40282e38px; padding-left: 1.5rem; padding-right: 1.5rem; padding-top: 1.5rem; padding-bottom: 1.5rem; font-size: .875rem; line-height: 1.4286; letter-spacing: .025em;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "905566c4-5e0f-4f3c-1fa1-405860df6224",
+    "fake": false,
+    "type": "class",
+    "name": "get-in-touch_pill",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "40a32bed-c71d-95e7-769c-2412db3ac4d1",
+    "fake": false,
+    "type": "class",
+    "name": "get-in-touch_pill_list",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "display: flex; width: 100%; max-width: 48rem; flex-direction: row; grid-row-gap: 0.75rem; grid-column-gap: 0.75rem; justify-content: center; margin-left: auto; margin-right: auto;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "de574fec-729e-6bce-5fd7-970a3658392a",
+    "fake": false,
+    "type": "class",
+    "name": "text-size-medium_vx8m5f",
+    "namespace": "",
+    "comb": "&",
+    "styleLess": "font-size: .875rem; line-height: 1.4286; color: #8f6a35;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "a297b7f8-eeb6-06c2-d7c3-1d024d3697e6",
+    "fake": false,
+    "type": "class",
+    "name": "get-in-touch_content",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "display: flex; max-width: 56rem; flex-direction: column; grid-row-gap: 1.5rem; grid-column-gap: 1.5rem; margin-left: auto; margin-right: auto; text-align: center;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "685d8d6a-16db-71a4-d502-5aa6ebe24af0",
+    "fake": false,
+    "type": "class",
+    "name": "get-in-touch_component",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "width: 100%; max-width: 72rem; margin-left: auto; margin-right: auto; padding-left: 3rem; padding-right: 3rem;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "171a7779-815a-5ffe-32b2-25f332830ad4",
+    "fake": false,
+    "type": "class",
+    "name": "padding-section-medium",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "cc0befdd-524c-2e6e-def8-c40faa76ac54",
+    "fake": false,
+    "type": "class",
+    "name": "container-large",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "3099fbbb-3f97-cd20-34d4-a817d799d98e",
+    "fake": false,
+    "type": "class",
+    "name": "padding-global",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "0198273a-18e4-2304-80ab-04d68107c6f0",
+    "fake": false,
+    "type": "class",
+    "name": "section_get-in-touch",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "width: 100%; padding-top: 6rem; padding-bottom: 8rem;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   }
+  ],
+  "assets": [],
+  "ix1": [],
+  "ix2": {
+   "interactions": [],
+   "events": [],
+   "actionLists": []
+  }
+ },
+ "meta": {
+  "droppedLinks": 0,
+  "dynBindRemovedCount": 0,
+  "dynListBindRemovedCount": 0,
+  "paginationRemovedCount": 0,
+  "universalBindingsRemovedCount": 0,
+  "unlinkedSymbolCount": 0,
+  "codeComponentsRemovedCount": 0,
+  "richTextComponentsStripped": false
+ }
+}

@@ -1,0 +1,442 @@
+{
+ "type": "@webflow/XscpData",
+ "payload": {
+  "nodes": [
+   {
+    "_id": "ddb88287-7789-ebe8-3f12-45fb48f225de",
+    "text": true,
+    "v": "Free Strategy Call"
+   },
+   {
+    "_id": "6395f2f0-8398-f119-855c-2d3d88413743",
+    "type": "Paragraph",
+    "tag": "p",
+    "data": {
+     "tag": "p"
+    },
+    "classes": [
+     "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
+     "413f0e71-8abf-b219-7205-b188ef0cd1b7"
+    ],
+    "children": [
+     "ddb88287-7789-ebe8-3f12-45fb48f225de"
+    ]
+   },
+   {
+    "_id": "54d287fb-59c2-afe8-f2cb-35efdf13abf6",
+    "text": true,
+    "v": "Ready to Talk Through Your Next Project?"
+   },
+   {
+    "_id": "701cbc1c-7431-b999-178c-8a89ef916f4b",
+    "type": "Heading",
+    "tag": "h2",
+    "data": {
+     "tag": "h2"
+    },
+    "classes": [
+     "4356e6ab-8d67-5e6e-3edb-26c9a999f44c",
+     "377fedb8-ac02-cac7-f60f-7f4bc1e2c48d"
+    ],
+    "children": [
+     "54d287fb-59c2-afe8-f2cb-35efdf13abf6"
+    ]
+   },
+   {
+    "_id": "7738b473-0c5c-5668-ca57-29978084f1d6",
+    "text": true,
+    "v": "Get practical guidance on web design, custom development, and AI strategy tailored to your business, goals, and stage of growth."
+   },
+   {
+    "_id": "0bf4b25c-2d6c-2a99-3867-86c92b0774cb",
+    "type": "Paragraph",
+    "tag": "p",
+    "data": {
+     "tag": "p"
+    },
+    "classes": [
+     "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
+     "4a788344-3db3-35af-88e6-98a708b2d925"
+    ],
+    "children": [
+     "7738b473-0c5c-5668-ca57-29978084f1d6"
+    ]
+   },
+   {
+    "_id": "538d9eeb-d401-42d5-ecf7-bcd6a68a036f",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "20590ea2-7470-3a64-2c12-80fe15173e60"
+    ],
+    "children": [
+     "6395f2f0-8398-f119-855c-2d3d88413743",
+     "701cbc1c-7431-b999-178c-8a89ef916f4b",
+     "0bf4b25c-2d6c-2a99-3867-86c92b0774cb"
+    ]
+   },
+   {
+    "_id": "aec3f8ab-71fe-d2a8-464d-bc9fa6f33696",
+    "text": true,
+    "v": "Book a Free Strategy Call"
+   },
+   {
+    "_id": "8314c9fc-8a50-6e19-dc8e-68697cdcf78b",
+    "type": "Paragraph",
+    "tag": "p",
+    "data": {
+     "tag": "p"
+    },
+    "classes": [
+     "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
+     "015627d7-b2a0-f493-72f9-f514a4dd0825"
+    ],
+    "children": [
+     "aec3f8ab-71fe-d2a8-464d-bc9fa6f33696"
+    ]
+   },
+   {
+    "_id": "d1c14923-c038-5415-45f9-c02e1af810df",
+    "type": "Link",
+    "tag": "a",
+    "data": {
+     "button": false,
+     "block": "block",
+     "link": {
+      "url": "#"
+     }
+    },
+    "classes": [
+     "a63632bf-d3ea-4383-6f52-396c4ff354e5"
+    ],
+    "children": [
+     "8314c9fc-8a50-6e19-dc8e-68697cdcf78b"
+    ]
+   },
+   {
+    "_id": "1420825c-399f-3d54-b019-fca884a5fdbc",
+    "text": true,
+    "v": "No pressure. Clear recommendations."
+   },
+   {
+    "_id": "3eef9673-d720-d255-76a6-efde160303df",
+    "type": "Paragraph",
+    "tag": "p",
+    "data": {
+     "tag": "p"
+    },
+    "classes": [
+     "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
+     "d051f3e9-741f-021c-9326-9db938fa72be"
+    ],
+    "children": [
+     "1420825c-399f-3d54-b019-fca884a5fdbc"
+    ]
+   },
+   {
+    "_id": "1c1b4fc8-7522-cd71-f663-ce4d3257ccdb",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "4a072ec0-6fff-93ce-fcba-a7e6f918ca7a"
+    ],
+    "children": [
+     "538d9eeb-d401-42d5-ecf7-bcd6a68a036f",
+     "d1c14923-c038-5415-45f9-c02e1af810df",
+     "3eef9673-d720-d255-76a6-efde160303df"
+    ]
+   },
+   {
+    "_id": "18dcd1fd-70c3-f714-5ae7-6c3dc42eaaa6",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "171a7779-815a-5ffe-32b2-25f332830ad4"
+    ],
+    "children": [
+     "1c1b4fc8-7522-cd71-f663-ce4d3257ccdb"
+    ]
+   },
+   {
+    "_id": "80f182e1-c6a1-c2cb-8b6d-d4b2b5a104fd",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "cc0befdd-524c-2e6e-def8-c40faa76ac54"
+    ],
+    "children": [
+     "18dcd1fd-70c3-f714-5ae7-6c3dc42eaaa6"
+    ]
+   },
+   {
+    "_id": "4ed38fc5-6c3b-9c52-045a-b043f8e51978",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "3099fbbb-3f97-cd20-34d4-a817d799d98e"
+    ],
+    "children": [
+     "80f182e1-c6a1-c2cb-8b6d-d4b2b5a104fd"
+    ]
+   },
+   {
+    "_id": "abc51175-498c-3cc2-0d76-d8e37afece28",
+    "type": "Block",
+    "tag": "section",
+    "data": {
+     "tag": "section",
+     "text": false
+    },
+    "classes": [
+     "f27a7708-9b3a-0772-3f9e-3542cbf78f96",
+     "5e14cbcd-6bb1-3e0d-47e4-60c094689ce3"
+    ],
+    "children": [
+     "4ed38fc5-6c3b-9c52-045a-b043f8e51978"
+    ]
+   }
+  ],
+  "styles": [
+   {
+    "_id": "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
+    "fake": false,
+    "type": "class",
+    "name": "text-size-medium",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [
+     "413f0e71-8abf-b219-7205-b188ef0cd1b7",
+     "4a788344-3db3-35af-88e6-98a708b2d925",
+     "d051f3e9-741f-021c-9326-9db938fa72be"
+    ],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "413f0e71-8abf-b219-7205-b188ef0cd1b7",
+    "fake": false,
+    "type": "class",
+    "name": "text-size-medium_v3kzb5",
+    "namespace": "",
+    "comb": "&",
+    "styleLess": "font-weight: 500; text-transform: uppercase; letter-spacing: 1.5px; font-size: 13px; color: #9b3139;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "4356e6ab-8d67-5e6e-3edb-26c9a999f44c",
+    "fake": false,
+    "type": "class",
+    "name": "heading-style-h2",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [
+     "377fedb8-ac02-cac7-f60f-7f4bc1e2c48d"
+    ],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "377fedb8-ac02-cac7-f60f-7f4bc1e2c48d",
+    "fake": false,
+    "type": "class",
+    "name": "heading-style-h2_vas5kj",
+    "namespace": "",
+    "comb": "&",
+    "styleLess": "width: 100%; font-weight: 300; line-height: 1.1; color: #6b4a1e; font-size: 56px;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "4a788344-3db3-35af-88e6-98a708b2d925",
+    "fake": false,
+    "type": "class",
+    "name": "text-size-medium_vlesjv",
+    "namespace": "",
+    "comb": "&",
+    "styleLess": "max-width: 700px; font-weight: 300; color: #777; font-size: 20px; line-height: 1.6;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "20590ea2-7470-3a64-2c12-80fe15173e60",
+    "fake": false,
+    "type": "class",
+    "name": "contact_content",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "align-content: stretch; display: flex; flex-direction: column; grid-row-gap: 20px; grid-column-gap: 20px; align-items: center;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "015627d7-b2a0-f493-72f9-f514a4dd0825",
+    "fake": false,
+    "type": "class",
+    "name": "contact_card_text",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "position: relative; font-weight: 500; line-height: 1.4; flex-shrink: 0; color: #fff; font-size: 16px; letter-spacing: 1px;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "a63632bf-d3ea-4383-6f52-396c4ff354e5",
+    "fake": false,
+    "type": "class",
+    "name": "contact_card",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "align-content: stretch; display: flex; align-items: center; justify-content: center; position: relative; background-color: #9b3139; padding-left: 42px; padding-right: 42px; padding-top: 20px; padding-bottom: 20px; border-radius: 500px; flex-shrink: 0;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "d051f3e9-741f-021c-9326-9db938fa72be",
+    "fake": false,
+    "type": "class",
+    "name": "text-size-medium_v12lew",
+    "namespace": "",
+    "comb": "&",
+    "styleLess": "max-width: 560px; font-size: 15px; line-height: 1.7; color: #777;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "4a072ec0-6fff-93ce-fcba-a7e6f918ca7a",
+    "fake": false,
+    "type": "class",
+    "name": "contact_component",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "align-content: stretch; display: flex; flex-direction: column; grid-row-gap: 48px; grid-column-gap: 48px; align-items: center; position: relative; width: 100%; max-width: 900px; flex-shrink: 0; padding-left: 3rem; padding-right: 3rem; text-align: center;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "171a7779-815a-5ffe-32b2-25f332830ad4",
+    "fake": false,
+    "type": "class",
+    "name": "padding-section-medium",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "cc0befdd-524c-2e6e-def8-c40faa76ac54",
+    "fake": false,
+    "type": "class",
+    "name": "container-large",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "3099fbbb-3f97-cd20-34d4-a817d799d98e",
+    "fake": false,
+    "type": "class",
+    "name": "padding-global",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "f27a7708-9b3a-0772-3f9e-3542cbf78f96",
+    "fake": false,
+    "type": "class",
+    "name": "section_contact",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "align-content: stretch; display: flex; flex-direction: column; align-items: center; position: relative; width: 100%; padding-top: 140px; padding-bottom: 140px; flex-shrink: 0; background: radial-gradient(circle at 50% 0%,rgba(255,153,2,.14),transparent 38%),linear-gradient(180deg,#fff4d7 0%,#ffefcf 58%,#fff8ea 100%);",
+    "variants": {},
+    "children": [
+     "5e14cbcd-6bb1-3e0d-47e4-60c094689ce3"
+    ],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "5e14cbcd-6bb1-3e0d-47e4-60c094689ce3",
+    "fake": false,
+    "type": "class",
+    "name": "section_contact_v1iux1",
+    "namespace": "",
+    "comb": "&",
+    "styleLess": "background-color: rgb(250, 250, 250);",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   }
+  ],
+  "assets": [],
+  "ix1": [],
+  "ix2": {
+   "interactions": [],
+   "events": [],
+   "actionLists": []
+  }
+ },
+ "meta": {
+  "droppedLinks": 0,
+  "dynBindRemovedCount": 0,
+  "dynListBindRemovedCount": 0,
+  "paginationRemovedCount": 0,
+  "universalBindingsRemovedCount": 0,
+  "unlinkedSymbolCount": 0,
+  "codeComponentsRemovedCount": 0,
+  "richTextComponentsStripped": false
+ }
+}
