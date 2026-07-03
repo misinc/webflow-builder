@@ -53,10 +53,10 @@ function StepNode({ step, index }: { step: Step; index: number }) {
   );
 }
 
-/** Convenience builder for the build-flow stepper. */
+/** Convenience builder for the build-flow stepper: Skeleton → Paste → Done. */
 export function buildStepper(active: 'skeleton' | 'style' | 'done', erroredAt?: 'skeleton'): Step[] {
   const idx = active === 'skeleton' ? 0 : active === 'style' ? 1 : 2;
-  return ['Skeleton', 'Style', 'Done'].map((label, i) => {
+  return ['Skeleton', 'Paste', 'Done'].map((label, i) => {
     if (erroredAt === 'skeleton' && i === 0) return { label, state: 'error' };
     if (i < idx) return { label, state: 'done' };
     if (i === idx) return { label, state: 'active' };

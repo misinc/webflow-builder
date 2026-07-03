@@ -8,30 +8,51 @@ import { SectionDetailHeader } from "../components/Headers";
 import { Spinner } from "../components/Spinner";
 import { useNavigation } from "../context/NavigationContext";
 import { useAppState } from "../context/AppStateContext";
+import { getWebflowBridge } from "../../webflow/bridge.js";
 import type { BuildNode } from "@wfb/shared/contracts.js";
 import { getSkeletonDisplayTag, normalizeSkeletonPlan } from "../../skeleton/tree.js";
+
+const bridge = getWebflowBridge();
 
 export function SkeletonReviewScreen() {
   const { navigate } = useNavigation();
   const {
     analysis,
-    approveCurrentSkeleton,
+    approveCurrentSection,
     beginSkeletonEdit,
     buildClipboardPayload,
-    currentTargetNodeId,
+    createComponentOnApprove,
     error,
-    insertCurrentSkeleton,
     isMutating,
     loadingLabel,
     regenerateSkeleton,
     selectedSection,
     selectedSectionId,
+    selectedSectionOpportunity,
+    setCreateComponentOnApprove,
     skipCurrentSection,
     skeleton
   } = useAppState();
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
   const [copyLabel, setCopyLabel] = useState("Copy for Webflow");
+  const [cleanupLabel, setCleanupLabel] = useState("Clean up paste");
+  const [hasCopied, setHasCopied] = useState(false);
   const [pendingPayload, setPendingPayload] = useState<string | null>(null);
+
+  const cleanupPaste = async () => {
+    setCleanupLabel("Cleaning…");
+    try {
+      const deduped = await bridge.dedupeSelectionStyles();
+      const bound = await bridge.bindTokensInSelection();
+      setCleanupLabel(
+        `${deduped.swappedClasses.length} class${deduped.swappedClasses.length === 1 ? "" : "es"} · ${bound.boundProperties} token${bound.boundProperties === 1 ? "" : "s"}`
+      );
+      window.setTimeout(() => setCleanupLabel("Clean up paste"), 3200);
+    } catch {
+      setCleanupLabel("Select the pasted section first");
+      window.setTimeout(() => setCleanupLabel("Clean up paste"), 3200);
+    }
+  };
 
   const copySectionForWebflow = async () => {
     if (!selectedSectionId) {
@@ -50,6 +71,7 @@ export function SkeletonReviewScreen() {
     try {
       copyWebflowPayloadToClipboard(payload);
       setPendingPayload(null);
+      setHasCopied(true);
       setCopyLabel("Copied — Cmd+V on canvas");
       window.setTimeout(() => setCopyLabel("Copy for Webflow"), 3200);
     } catch {
@@ -68,9 +90,6 @@ export function SkeletonReviewScreen() {
   const classCount = displaySkeleton
     ? new Set(collectClassNames(displaySkeleton.elementTree)).size
     : 0;
-  const hasInsertedSkeleton = Boolean(currentTargetNodeId);
-  const isApprovingSkeleton = isMutating && loadingLabel === "Approving skeleton";
-  const isInsertingSkeleton = isMutating && loadingLabel === "Inserting skeleton";
   const isRefreshingSkeleton =
     Boolean(displaySkeleton) && isMutating && loadingLabel === "Generating skeleton";
   const isGeneratingSkeleton =
@@ -101,59 +120,61 @@ export function SkeletonReviewScreen() {
           </Button>
           <div className="flex-1" />
           <span className="text-[11px] text-wb-text-tertiary mr-2">
-            {hasInsertedSkeleton
-              ? "Skeleton placed on canvas"
-              : isInsertingSkeleton
-              ? "Inserting skeleton…"
-              : isApprovingSkeleton
-              ? "Approving skeleton…"
+            {hasCopied
+              ? "Pasted? Select it on the canvas, then Clean up paste."
               : isRefreshingSkeleton
               ? "Regenerating skeleton…"
               : isGeneratingSkeleton
               ? "Generating skeleton…"
               : `${elementCount} elements · ${classCount} classes`}
           </span>
+          {selectedSectionOpportunity ? (
+            <label
+              className="inline-flex items-center gap-2 text-[11.5px] text-wb-text-secondary whitespace-nowrap mr-1"
+              title={`This section is used on ${selectedSectionOpportunity.files} pages — marking it built also registers your selection as a Webflow Component so other pages can insert instances.`}
+            >
+              <input
+                type="checkbox"
+                checked={createComponentOnApprove}
+                onChange={(event) => setCreateComponentOnApprove(event.target.checked)}
+                className="h-3.5 w-3.5 rounded border border-white/[0.16] bg-wb-input accent-[var(--wb-accent)]"
+              />
+              Create component
+            </label>
+          ) : null}
           <Button
             variant="ghost"
-            disabled={!hasInsertedSkeleton || isMutating}
+            disabled={isMutating}
             onClick={() => {
-              void approveCurrentSkeleton().then((approved) => {
+              void cleanupPaste();
+            }}
+            title="After pasting: select the pasted section on the canvas, then click. Swaps duplicated 'name 2' classes to your existing classes and relinks values to your variables."
+          >
+            {cleanupLabel}
+          </Button>
+          <Button
+            variant={hasCopied ? "primary" : "ghost"}
+            disabled={isMutating}
+            onClick={() => {
+              void approveCurrentSection().then((approved) => {
                 if (approved) {
-                  navigate("applying-styles");
+                  navigate("section-complete");
                 }
               });
             }}
+            title="Marks this section built and advances the queue (also creates the component when the checkbox is on)."
           >
-            Approve skeleton
+            Mark section built
           </Button>
           <Button
-            variant="ghost"
-            disabled={
-              !displaySkeleton ||
-              isGeneratingSkeleton ||
-              isRefreshingSkeleton ||
-              isInsertingSkeleton
-            }
-            onClick={() => {
-              void insertCurrentSkeleton();
-            }}
-            title="Fallback path: build node-by-node via the Designer API, then style through the approval gates."
-          >
-            {hasInsertedSkeleton
-              ? "Insert again"
-              : isInsertingSkeleton
-              ? "Inserting skeleton…"
-              : "Insert via API"}
-          </Button>
-          <Button
-            variant="primary"
+            variant={hasCopied ? "ghost" : "primary"}
             disabled={
               !displaySkeleton || isGeneratingSkeleton || isRefreshingSkeleton || isMutating
             }
             onClick={() => {
               void copySectionForWebflow();
             }}
-            title="Copies this section as a Webflow paste payload (structure + full styles + SVG icons). Paste on the canvas, then Clean up paste from the section list."
+            title="Copies this section as a Webflow paste payload (structure + full styles + SVG icons). Paste on the canvas, then Clean up paste."
           >
             <Clipboard size={12} />
             {isMutating && loadingLabel === "Preparing section copy" ? "Preparing…" : copyLabel}
