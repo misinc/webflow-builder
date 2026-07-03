@@ -207,6 +207,29 @@ export function buildResolvedStylingFromSkeleton(input: {
         for (const binding of bindings) {
           variableBindings.push({ nodeId: node.id, ...binding });
         }
+      } else {
+        // A LATER node sharing the scoped class (e.g. hero background layers
+        // and the content wrapper all named hero_content) must not lose its
+        // styles to first-wins — its differing declarations ride in a
+        // content-hashed combo on top of the shared class.
+        const existing = styleDefinitions.get(target)!;
+        const overrides: Record<string, string> = {};
+        for (const [property, value] of Object.entries(properties)) {
+          if (existing[property] !== value) {
+            overrides[property] = value;
+          }
+        }
+        if (Object.keys(overrides).length > 0) {
+          const comboClass = comboClassFor(target, overrides);
+          if (!node.classNames.includes(comboClass)) {
+            node.classNames.push(comboClass);
+          }
+          for (const binding of bindings) {
+            if (overrides[binding.property] !== undefined) {
+              variableBindings.push({ nodeId: node.id, ...binding });
+            }
+          }
+        }
       }
     }
 

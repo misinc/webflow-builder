@@ -508,8 +508,15 @@ export function normalizeResolvedLayout(
   const out = { ...declarations };
   const position = out.position?.toLowerCase();
   const hasFixedPxHeight = typeof out.height === "string" && /^\d+(\.\d+)?px$/.test(out.height.trim());
+  // A full-cover overlay (all four offsets set, e.g. `absolute inset-0` hero
+  // background layers) is legitimate positioning — keep it. Deck items have a
+  // top offset but no bottom; those are the ones that pile up when shared.
+  const isFullCoverOverlay =
+    out.inset !== undefined ||
+    (out.top !== undefined && out.right !== undefined && out.bottom !== undefined && out.left !== undefined);
   const stripPositioning =
-    position === "absolute" || position === "fixed" || (position === "sticky" && hasFixedPxHeight);
+    ((position === "absolute" || position === "fixed") && !isFullCoverOverlay) ||
+    (position === "sticky" && hasFixedPxHeight);
   if (stripPositioning) {
     delete out.position;
     delete out.top;

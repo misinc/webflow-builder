@@ -220,6 +220,8 @@ function generatedClassNames(input: {
   textContent?: string;
   children: BuildNode[];
   sharedStyleContext?: SharedStyleContext;
+  /** How many structural siblings (incl. this element) share its parent. */
+  siblingElementCount?: number;
 }): string[] {
   const { tag, sectionKey, path, sourceClassNames, textContent, children, sharedStyleContext } = input;
   const childTags = new Set(children.map((child) => child.tag));
@@ -364,7 +366,10 @@ function generatedClassNames(input: {
       // A content-block <article> that matched no structural pattern is a card.
       return [`${sectionKey}_card`];
     }
-    if (path.length <= 2) {
+    if (path.length <= 2 && (input.siblingElementCount ?? 1) <= 1) {
+      // The single top-level wrapper is the section's _component. Multiple
+      // depth-2 siblings (hero background layers, overlays) are NOT components —
+      // the scaffold provides the synthetic _component around them.
       return [`${sectionKey}_component`];
     }
     return [`${sectionKey}_content`];
@@ -490,6 +495,7 @@ function buildNodeFromElement(input: {
   warnings: PlannerWarning[];
   assetBindings: SkeletonPlan["assetBindings"];
   sourceClassNames: Set<string>;
+  siblingElementCount?: number;
 }): BuildNode | null {
   const rawTag = elementTag(input.element);
   // Render <button> CTAs as links (<a>). A Webflow Button / Link Block element is
@@ -545,6 +551,13 @@ function buildNodeFromElement(input: {
       ? directTextFor(input.element)
       : undefined;
   const children: BuildNode[] = [];
+  const structuralChildCount = input.element.childNodes.filter((child) => {
+    if (child.nodeType !== NodeType.ELEMENT_NODE) {
+      return false;
+    }
+    const childTag = elementTag(child as HTMLElement);
+    return !SKIPPED_TAGS.has(childTag) && !SVG_INTERNAL_TAGS.has(childTag);
+  }).length;
 
   input.element.childNodes.forEach((child, index) => {
     if (child.nodeType !== NodeType.ELEMENT_NODE) {
@@ -565,7 +578,8 @@ function buildNodeFromElement(input: {
     const childNode = buildNodeFromElement({
       ...input,
       element: childElement,
-      path: [...input.path, index]
+      path: [...input.path, index],
+      siblingElementCount: structuralChildCount
     });
     if (childNode) {
       children.push(childNode);
@@ -581,7 +595,8 @@ function buildNodeFromElement(input: {
     sourceClassNames: sourceClasses,
     textContent,
     children,
-    sharedStyleContext: input.sharedStyleContext
+    sharedStyleContext: input.sharedStyleContext,
+    siblingElementCount: input.siblingElementCount
   });
   const node: BuildNode = decorateSemanticChildren({
     id,
