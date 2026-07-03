@@ -424,7 +424,10 @@ function decorateCardDescendants(node: BuildNode, sectionKey: string): BuildNode
 }
 
 function wrapSectionWithClientFirstScaffold(root: BuildNode, sectionKey: string): BuildNode {
-  if (root.tag !== "section" || root.children.some((child) => child.classNames.includes("padding-global"))) {
+  // Every section slice gets the client-first scaffold, whatever its source
+  // root tag was (<section>, <div>, <main>, …) — skip only when the source
+  // already carries it.
+  if (root.children.some((child) => child.classNames.includes("padding-global"))) {
     return root;
   }
   const componentClass = `${sectionKey}_component`;
@@ -664,7 +667,11 @@ export function htmlToBuildNode(input: {
   const warnings: PlannerWarning[] = [];
   const assetBindings: SkeletonPlan["assetBindings"] = [];
   const sourceClassNames = new Set<string>();
-  const sectionKey = slugify(input.sectionName ?? input.sectionId) || "section";
+  // Long section names (often derived from headings, e.g. "Get in Touch -
+  // We're Ready to Help") would become unwieldy class prefixes — cap the key
+  // at its first three words.
+  const fullSectionKey = slugify(input.sectionName ?? input.sectionId) || "section";
+  const sectionKey = fullSectionKey.split("-").slice(0, 3).join("-") || "section";
   const root = buildNodeFromElement({
     element: rootElement,
     sectionId: input.sectionId,
@@ -677,6 +684,14 @@ export function htmlToBuildNode(input: {
   });
   if (!root) {
     return null;
+  }
+  // The slice root becomes the client-first section regardless of its source
+  // tag — a <div>-rooted section still needs `section_{key}` (not `_component`)
+  // so the scaffold and styling target line up.
+  if (!root.classNames.some((name) => name.startsWith("section_"))) {
+    root.classNames = [`section_${sectionKey}`];
+    root.tag = "section";
+    root.type = "section";
   }
   const scaffoldedRoot = wrapSectionWithClientFirstScaffold(root, sectionKey);
   return {
