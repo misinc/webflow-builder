@@ -143,6 +143,27 @@ describe("webflow clipboard serializer", () => {
     expect(JSON.stringify(again)).toBe(JSON.stringify(payload));
   });
 
+  it("maps a node label to the Navigator displayName", () => {
+    const labeled = buildWebflowClipboardPayload({
+      elementTree: {
+        id: "wrap",
+        type: "box",
+        tag: "div",
+        classNames: [],
+        label: "Pasted sections — unwrap me",
+        children: [tree]
+      },
+      styleDefinitions
+    });
+    const wrapper = labeled.payload.nodes.find(
+      (n) => (n.data as { displayName?: string } | undefined)?.displayName
+    )!;
+    expect((wrapper.data as { displayName: string }).displayName).toBe(
+      "Pasted sections — unwrap me"
+    );
+    expect(wrapper.classes).toEqual([]);
+  });
+
   it("references existing project styles by their REAL id (no 'name 2' dupes)", () => {
     const withProject = buildWebflowClipboardPayload({
       elementTree: tree,

@@ -1038,24 +1038,18 @@ export class WorkflowService {
       sections.push({ sectionId: item.repoSectionId, sectionName: item.sectionName });
     }
 
-    // Section mode pastes the bare section; page mode always delivers the
-    // client-first page shell: page-wrapper > main-wrapper > section(s).
+    // Section mode pastes the bare section. Page mode roots the payload at the
+    // client-first `main-wrapper` — the user owns page-wrapper + navbar/footer
+    // components, and the pasted main-wrapper (a payload needs a single root)
+    // slots between them as a legitimate page element. No unwrap step.
     const elementTree: BuildNode = request.sectionId
       ? trees[0]
       : {
-          id: `page-wrapper-${request.webflowPageId}`,
+          id: `main-wrapper-${request.webflowPageId}`,
           type: "box",
-          tag: "div",
-          classNames: ["page-wrapper"],
-          children: [
-            {
-              id: `main-wrapper-${request.webflowPageId}`,
-              type: "box",
-              tag: "main",
-              classNames: ["main-wrapper"],
-              children: trees
-            }
-          ]
+          tag: "main",
+          classNames: ["main-wrapper"],
+          children: trees
         };
     const payload = buildWebflowClipboardPayload({
       elementTree,

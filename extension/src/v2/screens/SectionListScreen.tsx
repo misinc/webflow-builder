@@ -105,8 +105,8 @@ export function SectionListScreen() {
       setCopyPageLabel(sectionCount ? `Copied ${sectionCount} sections` : "Copied");
       setPasteHint(
         componentizedSections.length > 0
-          ? `Paste on the canvas, then Clean up paste. Skipped ${componentizedSections.length} section${componentizedSections.length === 1 ? "" : "s"} with existing components — use their Insert instance chips.`
-          : "On the canvas: select the page body, press Cmd+V, then select the pasted wrapper and click Clean up paste."
+          ? `Paste the main-wrapper between your navbar and footer, then Clean up paste. Skipped ${componentizedSections.length} section${componentizedSections.length === 1 ? "" : "s"} with existing components — use their Insert instance chips.`
+          : "Select your navbar (inside page-wrapper), press Cmd+V — the main-wrapper lands after it, before the footer. Then Clean up paste."
       );
       window.setTimeout(() => setCopyPageLabel("Copy page for Webflow"), 3200);
       window.setTimeout(() => setPasteHint(null), 12000);

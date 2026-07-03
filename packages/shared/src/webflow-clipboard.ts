@@ -229,6 +229,12 @@ export function buildWebflowClipboardPayload(input: WebflowClipboardInput): Xscp
       });
     }
 
+    // A node label becomes the Designer's Navigator display name (e.g. the
+    // page-mode wrapper announces itself as "Pasted sections — unwrap me").
+    if (node.label && shape.data) {
+      (shape.data as Record<string, unknown>).displayName = node.label;
+    }
+
     node.classNames.forEach((name) => usedClassNames.add(name));
     const baseName = node.classNames.find((name) => !definitionByName.get(name)?.combo);
     if (baseName) {
