@@ -47,6 +47,7 @@ import { extractAssetReferencesFromSource } from "../extractor/asset-references.
 import { RepositorySnapshot } from "../github/client.js";
 import { HeuristicBuildPlanner } from "../planner/heuristic-planner.js";
 import { htmlToSkeletonPlan } from "../planner/html-planner.js";
+import { extractChromeHtml } from "../extractor/html-extractor.js";
 import { buildWebflowClipboardPayload } from "@wfb/shared/webflow-clipboard.js";
 import {
   workflowClipboardRequestSchema,
@@ -977,6 +978,74 @@ export class WorkflowService {
       request.webflowPageId,
       request.requestedBy
     );
+
+    if (request.chrome) {
+      // Site chrome (announcement bar + navbar, or footer): sliced from around
+      // <main> on the mapped page, built ONCE per site, componentized after
+      // pasting. No section scaffold — it lives outside main-wrapper.
+      const pageSource = queue.repoPage?.sourceCode;
+      if (!pageSource) {
+        throw new Error("The mapped page's source is unavailable — Re-scan the repo first.");
+      }
+      const chromeHtml = extractChromeHtml(pageSource, request.chrome);
+      if (!chromeHtml) {
+        throw new Error(
+          request.chrome === "header"
+            ? "No navbar/header markup found before <main> on this page."
+            : "No footer markup found after <main> on this page."
+        );
+      }
+      const firstItem = queue.items[0];
+      if (!firstItem) {
+        throw new Error("No sections indexed for this page — Re-scan the repo first.");
+      }
+      const sectionName = request.chrome === "header" ? "Navbar" : "Footer";
+      const metadata = {
+        repoId: request.repoId,
+        pageId: queue.repoPage!.id,
+        sectionId: `chrome-${request.chrome}`,
+        pageName: queue.repoPage!.name,
+        sectionName,
+        sourceFile: queue.repoPage!.sourceFile,
+        repoType: "html" as const
+      };
+      const chromeSkeleton = htmlToSkeletonPlan({
+        metadata,
+        sourceCode: chromeHtml,
+        chrome: true
+      });
+      if (!chromeSkeleton) {
+        throw new Error(`Could not parse the ${sectionName.toLowerCase()} markup.`);
+      }
+      const chromeContext = await this.getSectionStateContext({
+        repoId: request.repoId,
+        webflowSiteId: request.webflowSiteId,
+        webflowPageId: request.webflowPageId,
+        sectionId: firstItem.repoSectionId,
+        requestedBy: request.requestedBy,
+        mode: "fullAssist",
+        selectedElementId: null
+      });
+      const chromeCss = chromeContext.sectionContext.relevantStylesheets
+        .map((sheet) => sheet.content)
+        .join("\n");
+      const chromeStyling = buildResolvedStylingFromSkeleton({
+        metadata,
+        mode: "fullAssist",
+        skeleton: chromeSkeleton,
+        cssText: chromeCss
+      });
+      const chromePayload = buildWebflowClipboardPayload({
+        elementTree: chromeSkeleton.elementTree,
+        styleDefinitions: chromeStyling.styleDefinitions
+      });
+      return workflowClipboardResponseSchema.parse({
+        payload: JSON.stringify(chromePayload),
+        sections: [{ sectionId: metadata.sectionId, sectionName }],
+        classCount: chromeStyling.styleDefinitions.length,
+        warnings: chromeSkeleton.warnings
+      });
+    }
     const targetItems = queue.items.filter((item) =>
       request.sectionId
         ? item.repoSectionId === request.sectionId

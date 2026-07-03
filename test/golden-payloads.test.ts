@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { HtmlRepoExtractor } from "@wfb/backend-core/extractor/html-extractor.js";
+import { extractChromeHtml, HtmlRepoExtractor } from "@wfb/backend-core/extractor/html-extractor.js";
 import { htmlToSkeletonPlan } from "@wfb/backend-core/planner/html-planner.js";
 import { buildResolvedStylingFromSkeleton } from "@wfb/backend-core/planner/resolved-styling.js";
 import { buildWebflowClipboardPayload } from "@wfb/shared/webflow-clipboard.js";
@@ -32,6 +32,46 @@ function sectionsOf(page: string) {
   });
   return index.sections;
 }
+
+describe("golden payloads (site chrome)", () => {
+  for (const kind of ["header", "footer"] as const) {
+    it(`index · chrome ${kind}`, async () => {
+      const html = readFileSync(path.join(FIXTURES, "index.html"), "utf8");
+      const chromeHtml = extractChromeHtml(html, kind);
+      expect(chromeHtml).not.toBeNull();
+      const sectionName = kind === "header" ? "Navbar" : "Footer";
+      const metadata = {
+        repoId: "golden-repo",
+        pageId: "golden-page",
+        sectionId: `chrome-${kind}`,
+        pageName: "index",
+        sectionName,
+        sourceFile: "index.html",
+        repoType: "html" as const
+      };
+      const skeleton = htmlToSkeletonPlan({ metadata, sourceCode: chromeHtml!, chrome: true });
+      expect(skeleton).not.toBeNull();
+      // chrome keeps its own root tag with a component class — no section scaffold
+      expect(skeleton!.elementTree.classNames[0]).toBe(`${kind === "header" ? "navbar" : "footer"}_component`);
+      expect(
+        skeleton!.elementTree.children.some((child) => child.classNames.includes("padding-global"))
+      ).toBe(false);
+      const styling = buildResolvedStylingFromSkeleton({
+        metadata,
+        mode: "fullAssist",
+        skeleton: skeleton!,
+        cssText: css
+      });
+      const payload = buildWebflowClipboardPayload({
+        elementTree: skeleton!.elementTree,
+        styleDefinitions: styling.styleDefinitions
+      });
+      await expect(JSON.stringify(payload, null, 1)).toMatchFileSnapshot(
+        `./fixtures/golden/index--chrome-${kind}.json`
+      );
+    });
+  }
+});
 
 describe("golden payloads (whole-section outcomes)", () => {
   for (const page of ["index", "contact"]) {

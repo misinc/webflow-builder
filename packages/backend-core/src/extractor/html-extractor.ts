@@ -9,6 +9,7 @@ import { isHtmlRepoPageFile } from "./repo-type.js";
 const SECTION_TAGS = new Set(["section", "header", "footer", "article"]);
 const LANDMARK_TAGS = new Set(["main", "aside", "nav"]);
 const WRAPPER_TAGS = new Set(["div", "main", "body"]);
+const SKIPPED_TAGS = new Set(["script", "style", "noscript", "template", "link", "meta"]);
 const HEADING_TAG_PATTERN = /^h[1-6]$/;
 export const HTML_REPO_INDEX_VERSION = 3;
 
@@ -167,6 +168,46 @@ function wrapGroup(children: HTMLElement[]): HTMLElement {
   }
   wrapper.set_content(children.map((child) => child.toString()).join(""));
   return wrapper;
+}
+
+/**
+ * Extract the site chrome around <main>: everything before it (announcement
+ * bar + navbar) or after it (footer). Sitewide elements are excluded from
+ * section slicing — they are built ONCE via this and then componentized.
+ */
+export function extractChromeHtml(sourceCode: string, kind: "header" | "footer"): string | null {
+  const document = parse(sourceCode, {
+    comment: false,
+    lowerCaseTagName: true,
+    blockTextElements: { script: true, style: true, pre: false }
+  });
+  const body = document.querySelector("body") ?? document;
+  // Descend through single-child wrappers until we reach the container that
+  // actually holds <main> among its children.
+  let container: HTMLElement = body as HTMLElement;
+  for (let depth = 0; depth < 8; depth += 1) {
+    const children = elementChildren(container);
+    if (children.some((child) => tagName(child) === "main")) {
+      break;
+    }
+    if (children.length === 1 && WRAPPER_TAGS.has(tagName(children[0]))) {
+      container = children[0];
+      continue;
+    }
+    return null;
+  }
+  const children = elementChildren(container);
+  const mainIndex = children.findIndex((child) => tagName(child) === "main");
+  if (mainIndex < 0) {
+    return null;
+  }
+  const picked = kind === "header" ? children.slice(0, mainIndex) : children.slice(mainIndex + 1);
+  const meaningful = picked.filter((child) => !SKIPPED_TAGS.has(tagName(child)));
+  if (meaningful.length === 0) {
+    return null;
+  }
+  const wrapperTag = kind === "header" ? "header" : "footer";
+  return `<${wrapperTag}>${meaningful.map((child) => child.toString()).join("")}</${wrapperTag}>`;
 }
 
 function findSectionElements(sourceCode: string): HTMLElement[] {

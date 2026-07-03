@@ -512,6 +512,9 @@ export const workflowClipboardRequestSchema = z.object({
   /** Page mode: sections to leave out (e.g. ones whose Webflow Component already
    *  exists — those are inserted as linked instances instead of pasted copies). */
   excludeSectionIds: z.array(z.string().min(1)).default([]),
+  /** Site chrome mode: copy everything before <main> (announcement bar + navbar)
+   *  or after it (footer) from the mapped page — built once, then componentized. */
+  chrome: z.enum(["header", "footer"]).optional(),
   requestedBy: z.string().min(1)
 });
 

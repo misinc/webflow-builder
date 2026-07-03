@@ -704,6 +704,7 @@ export function htmlToBuildNode(input: {
   sourceCode: string;
   sectionId: string;
   sectionName?: string;
+  chrome?: boolean;
   sharedStyleContext?: SharedStyleContext;
 }): HtmlBuildResult | null {
   const document = parse(input.sourceCode, {
@@ -740,6 +741,18 @@ export function htmlToBuildNode(input: {
   if (!root) {
     return null;
   }
+  // Site chrome (navbar/footer) keeps its own tag and gets NO section scaffold —
+  // it lives outside main-wrapper and is componentized after the paste.
+  if (input.chrome) {
+    root.classNames = [`${sectionKey}_component`];
+    return {
+      root,
+      assetBindings,
+      warnings,
+      sourceClassNames: [...sourceClassNames].sort(),
+      classMappingDecisions: []
+    };
+  }
   // The slice root becomes the client-first section regardless of its source
   // tag — a <div>-rooted section still needs `section_{key}` (not `_component`)
   // so the scaffold and styling target line up.
@@ -763,11 +776,14 @@ export function htmlToSkeletonPlan(input: {
   sourceCode: string;
   sharedStyleContext?: SharedStyleContext;
   inheritedWarnings?: PlannerWarning[];
+  /** Site chrome (navbar/footer): keep the root tag, no section scaffold. */
+  chrome?: boolean;
 }): SkeletonPlan | null {
   const parsed = htmlToBuildNode({
     sourceCode: input.sourceCode,
     sectionId: input.metadata.sectionId,
     sectionName: input.metadata.sectionName,
+    chrome: input.chrome,
     sharedStyleContext: input.sharedStyleContext
   });
   if (!parsed) {

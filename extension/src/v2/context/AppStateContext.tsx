@@ -306,7 +306,7 @@ interface AppStateContextValue {
   buildClipboardPayload: (
     sectionId?: string,
     excludeSectionIds?: string[],
-    options?: { silent?: boolean }
+    options?: { silent?: boolean; chrome?: "header" | "footer" }
   ) => Promise<WorkflowClipboardResponse | null>;
   /** Approve every remaining section of the page (after a whole-page paste). */
   approveAllRemainingSections: () => Promise<boolean>;
@@ -1645,7 +1645,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     async (
       sectionId?: string,
       excludeSectionIds?: string[],
-      options?: { silent?: boolean }
+      options?: { silent?: boolean; chrome?: "header" | "footer" }
     ): Promise<WorkflowClipboardResponse | null> => {
       if (!selectedRepoId || !session?.userId || !designerContext?.siteId || !designerContext.pageId) {
         if (!options?.silent) {
@@ -1659,6 +1659,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         webflowPageId: designerContext.pageId!,
         sectionId,
         excludeSectionIds: excludeSectionIds ?? [],
+        chrome: options?.chrome,
         requestedBy: session.userId
       };
       if (options?.silent) {

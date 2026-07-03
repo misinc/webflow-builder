@@ -151,6 +151,44 @@ export function SectionListScreen() {
     }
   };
 
+  const [chromeLabels, setChromeLabels] = useState<{ header: string; footer: string }>({
+    header: "Copy navbar",
+    footer: "Copy footer"
+  });
+  const [pendingChrome, setPendingChrome] = useState<{ kind: "header" | "footer"; payload: string } | null>(null);
+
+  // Site chrome (announcement bar + navbar / footer) is sliced from around
+  // <main> — built ONCE per site, then componentized and reused on every page.
+  const copyChrome = async (kind: "header" | "footer") => {
+    let payload = pendingChrome?.kind === kind ? pendingChrome.payload : null;
+    if (!payload) {
+      const result = await buildClipboardPayload(undefined, undefined, { chrome: kind });
+      if (!result) {
+        return;
+      }
+      payload = result.payload;
+    }
+    const label = kind === "header" ? "navbar" : "footer";
+    try {
+      copyWebflowPayloadToClipboard(payload);
+      setPendingChrome(null);
+      setChromeLabels((current) => ({ ...current, [kind]: "Copied" }));
+      setUiHint(
+        kind === "header"
+          ? "Paste the navbar inside your page-wrapper (above main-wrapper), Clean up paste, then right-click it → Create Component to reuse it on every page."
+          : "Paste the footer inside your page-wrapper (below main-wrapper), Clean up paste, then right-click it → Create Component to reuse it on every page."
+      );
+      window.setTimeout(
+        () => setChromeLabels((current) => ({ ...current, [kind]: kind === "header" ? "Copy navbar" : "Copy footer" })),
+        2600
+      );
+    } catch {
+      setPendingChrome({ kind, payload });
+      setChromeLabels((current) => ({ ...current, [kind]: "Click again to copy" }));
+      void label;
+    }
+  };
+
   const cleanupPaste = async () => {
     setCleanupLabel("Cleaning…");
     try {
@@ -307,6 +345,36 @@ export function SectionListScreen() {
           title="Sections in this page"
           count={isMapped ? `${currentSections.length} detected` : "Not mapped"}
         />
+
+        {isMapped ? (
+          <div className="px-5 py-2 flex items-center gap-2 border-b border-white/[0.06]">
+            <span className="text-[11px] text-wb-text-tertiary flex-1 min-w-0">
+              Site chrome (navbar + footer) is built once, then added to pages as Components.
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={isMutating}
+              onClick={() => {
+                void copyChrome("header");
+              }}
+            >
+              <Clipboard size={11} />
+              {chromeLabels.header}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={isMutating}
+              onClick={() => {
+                void copyChrome("footer");
+              }}
+            >
+              <Clipboard size={11} />
+              {chromeLabels.footer}
+            </Button>
+          </div>
+        ) : null}
 
         <div className="px-3 py-2">
           {!isMapped ? (
