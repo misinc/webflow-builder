@@ -1,8 +1,10 @@
+import { useState } from "react";
 import {
   Home,
   RefreshCw,
   GripVertical,
   ChevronRight,
+  Clipboard,
   Clock,
   Sparkles,
   X,
@@ -21,13 +23,19 @@ import {
 } from "../components/Badge";
 import { useNavigation } from "../context/NavigationContext";
 import { useAppState } from "../context/AppStateContext";
+import { getWebflowBridge } from "../../webflow/bridge.js";
+import { copyWebflowPayloadToClipboard } from "../../webflow/clipboard.js";
 import type { SectionStatus } from "../types";
+
+const bridge = getWebflowBridge();
 
 export function SectionListScreen() {
   const { navigate } = useNavigation();
   const {
     activeMapping,
     activeQueue,
+    approveAllRemainingSections,
+    buildClipboardPayload,
     confirmSiteStylePlan,
     completeCurrentPage,
     componentBannerDismissed,
@@ -58,6 +66,58 @@ export function SectionListScreen() {
   const canContinue = isMapped && currentSections.length > 0 && Boolean(selectedSection);
   const progressPercent =
     totalCount > 0 ? Math.round(((builtCount + skippedCount) / totalCount) * 100) : 0;
+
+  const [copyPageLabel, setCopyPageLabel] = useState("Copy page for Webflow");
+  const [cleanupLabel, setCleanupLabel] = useState("Clean up paste");
+  const [hasCopiedPage, setHasCopiedPage] = useState(false);
+  const [pasteHint, setPasteHint] = useState<string | null>(null);
+  const [pendingPayload, setPendingPayload] = useState<string | null>(null);
+
+  const copyPageForWebflow = async () => {
+    // A slow payload fetch can outlive the click's user-activation window, in
+    // which case the clipboard write is blocked — we keep the payload and the
+    // second click copies it synchronously.
+    let payload = pendingPayload;
+    let sectionCount: number | null = null;
+    if (!payload) {
+      const result = await buildClipboardPayload();
+      if (!result) {
+        return;
+      }
+      payload = result.payload;
+      sectionCount = result.sections.length;
+    }
+    try {
+      copyWebflowPayloadToClipboard(payload);
+      setPendingPayload(null);
+      setHasCopiedPage(true);
+      setCopyPageLabel(sectionCount ? `Copied ${sectionCount} sections` : "Copied");
+      setPasteHint(
+        "On the canvas: select the page body, press Cmd+V, then select the pasted wrapper and click Clean up paste."
+      );
+      window.setTimeout(() => setCopyPageLabel("Copy page for Webflow"), 3200);
+      window.setTimeout(() => setPasteHint(null), 12000);
+    } catch {
+      setPendingPayload(payload);
+      setCopyPageLabel("Click again to copy");
+    }
+  };
+
+  const cleanupPaste = async () => {
+    setCleanupLabel("Cleaning…");
+    try {
+      const deduped = await bridge.dedupeSelectionStyles();
+      const bound = await bridge.bindTokensInSelection();
+      setCleanupLabel(
+        `${deduped.swappedClasses.length} class${deduped.swappedClasses.length === 1 ? "" : "es"} · ${bound.boundProperties} token${bound.boundProperties === 1 ? "" : "s"}`
+      );
+      window.setTimeout(() => setCleanupLabel("Clean up paste"), 3200);
+    } catch (err) {
+      setCleanupLabel("Clean up paste");
+      setPasteHint(err instanceof Error ? err.message : "Cleanup failed — select the pasted element first.");
+      window.setTimeout(() => setPasteHint(null), 6000);
+    }
+  };
 
   return (
     <Panel>
@@ -259,9 +319,38 @@ export function SectionListScreen() {
           <Clock size={12} />
           Site progress
         </Button>
+        {pasteHint ? (
+          <span className="text-[11px] text-wb-text-primary min-w-0 truncate" title={pasteHint}>
+            {pasteHint}
+          </span>
+        ) : null}
         <div className="flex-1" />
+        {isMapped && !isPageComplete ? (
+          <Button
+            variant="ghost"
+            disabled={isMutating}
+            onClick={() => {
+              void cleanupPaste();
+            }}
+            title="Select the pasted element on the canvas first — swaps duplicated 'name 2' classes to your existing classes and relinks values to your variables."
+          >
+            {cleanupLabel}
+          </Button>
+        ) : null}
+        {isMapped && hasCopiedPage && !isPageComplete ? (
+          <Button
+            variant="ghost"
+            disabled={isMutating}
+            onClick={() => {
+              void approveAllRemainingSections();
+            }}
+            title="Mark every remaining section of this page as built (after pasting the whole page)."
+          >
+            Approve all
+          </Button>
+        ) : null}
         <Button
-          variant="primary"
+          variant={isMapped && !isPageComplete ? "ghost" : "primary"}
           disabled={!isMapped ? false : !canContinue && !isPageComplete}
           onClick={() => {
             if (!isMapped) {
@@ -292,6 +381,19 @@ export function SectionListScreen() {
                   : "Select a section"
             : "Resolve mapping"}
         </Button>
+        {isMapped && !isPageComplete && currentSections.length > 0 ? (
+          <Button
+            variant="primary"
+            disabled={isMutating}
+            onClick={() => {
+              void copyPageForWebflow();
+            }}
+            title="Builds the whole page (all remaining sections, full styles, SVG icons) as one Webflow paste payload."
+          >
+            <Clipboard size={12} />
+            {isMutating && loadingLabel === "Preparing page copy" ? "Preparing…" : copyPageLabel}
+          </Button>
+        ) : null}
       </div>
     </Panel>
   );

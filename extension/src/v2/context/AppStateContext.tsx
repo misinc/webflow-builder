@@ -24,6 +24,7 @@ import {
   V2Session,
   WebflowSitePage,
   WorkflowQueueItem,
+  WorkflowClipboardResponse,
   WorkflowQueueResponse,
   type WorkflowSectionDecisionInput,
   type WorkflowSectionRequest
@@ -300,6 +301,10 @@ interface AppStateContextValue {
   componentForSection: (section: CurrentSectionRow) => { id: string; name: string } | null;
   /** Insert an instance of the section's existing Component and approve the section. */
   insertComponentInstance: (sectionId: string) => Promise<boolean>;
+  /** Webflow paste payload for one section, or the whole page when sectionId is omitted. */
+  buildClipboardPayload: (sectionId?: string) => Promise<WorkflowClipboardResponse | null>;
+  /** Approve every remaining section of the page (after a whole-page paste). */
+  approveAllRemainingSections: () => Promise<boolean>;
   lastCompletedSection: SectionOutcomeSummary | null;
   activeSectionError: string | null;
   selectSection: (sectionId: string) => void;
@@ -1627,6 +1632,75 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     withMutation
   ]);
 
+  const buildClipboardPayload = useCallback(
+    async (sectionId?: string): Promise<WorkflowClipboardResponse | null> => {
+      if (!selectedRepoId || !session?.userId || !designerContext?.siteId || !designerContext.pageId) {
+        setError("Designer context is not ready.");
+        return null;
+      }
+      try {
+        return await withMutation(
+          sectionId ? "Preparing section copy" : "Preparing page copy",
+          async () =>
+            backend.buildClipboardPayload({
+              repoId: selectedRepoId,
+              webflowSiteId: designerContext.siteId!,
+              webflowPageId: designerContext.pageId!,
+              sectionId,
+              requestedBy: session.userId
+            })
+        );
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Failed to build the Webflow copy payload."
+        );
+        return null;
+      }
+    },
+    [designerContext?.pageId, designerContext?.siteId, selectedRepoId, session?.userId, withMutation]
+  );
+
+  const approveAllRemainingSections = useCallback(async (): Promise<boolean> => {
+    if (!selectedRepoId || !session?.userId || !designerContext?.siteId || !designerContext.pageId || !activeQueue) {
+      setError("Designer context is not ready.");
+      return false;
+    }
+    try {
+      return await withMutation("Approving pasted sections", async () => {
+        const pageId = designerContext.pageId!;
+        let nextQueue = activeQueue;
+        for (const item of activeQueue.items) {
+          if (item.status === "approved" || item.status === "skipped") {
+            continue;
+          }
+          nextQueue = await backend.approveSection({
+            repoId: selectedRepoId,
+            webflowSiteId: designerContext.siteId!,
+            webflowPageId: pageId,
+            sectionId: item.repoSectionId,
+            requestedBy: session.userId
+          });
+        }
+        setQueueByPageId((current) => ({ ...current, [pageId]: nextQueue }));
+        resetSectionRunState(nextSectionIdFromQueue(nextQueue));
+        await refreshComponentOpportunities();
+        return true;
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to approve the pasted sections.");
+      return false;
+    }
+  }, [
+    activeQueue,
+    designerContext?.pageId,
+    designerContext?.siteId,
+    refreshComponentOpportunities,
+    resetSectionRunState,
+    selectedRepoId,
+    session?.userId,
+    withMutation
+  ]);
+
   const insertComponentInstance = useCallback(
     async (sectionId: string): Promise<boolean> => {
       const row = currentSections.find((section) => section.id === sectionId) ?? null;
@@ -1951,6 +2025,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setCreateComponentOnApprove,
       componentForSection,
       insertComponentInstance,
+      buildClipboardPayload,
+      approveAllRemainingSections,
       lastCompletedSection,
       activeSectionError:
         (selectedSectionId ? sectionErrorsById[selectedSectionId] : null) ?? error,
@@ -2081,6 +2157,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       createComponentOnApprove,
       componentForSection,
       insertComponentInstance,
+      buildClipboardPayload,
+      approveAllRemainingSections,
       session,
       siteStylePlan,
       skeleton,

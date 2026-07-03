@@ -29,6 +29,9 @@ import {
   stylingPlanSchema,
   V2BootstrapResponse,
   v2BootstrapResponseSchema,
+  workflowClipboardResponseSchema,
+  WorkflowClipboardRequest,
+  WorkflowClipboardResponse,
   workflowQueueResponseSchema,
   WorkflowQueueResponse,
   WorkflowSectionDecisionInput,
@@ -170,6 +173,7 @@ const cloudRouteMap: Record<string, string> = {
   "workflow-site-style-plan-rebuild": "/workflow/site-style-plan/rebuild",
   "workflow-site-style-plan-confirm": "/workflow/site-style-plan/confirm",
   "workflow-queue": "/workflow/queue",
+  "workflow-clipboard-payload": "/workflow/clipboard-payload",
   "workflow-section-analyze": "/workflow/section/analyze",
   "workflow-section-generate-skeleton": "/workflow/section/generate-skeleton",
   "workflow-section-generate-skeleton-start": "/workflow/section/generate-skeleton/start",
@@ -602,6 +606,22 @@ export class BackendClient {
       signal
     );
     return sectionVerificationSchema.parse(response);
+  }
+
+  async buildClipboardPayload(
+    input: WorkflowClipboardRequest,
+    signal?: AbortSignal
+  ): Promise<WorkflowClipboardResponse> {
+    const response = await request<WorkflowClipboardResponse>(
+      this.functionUrl("workflow-clipboard-payload"),
+      {
+        method: "POST",
+        body: JSON.stringify(input),
+        signal
+      },
+      input.requestedBy
+    );
+    return workflowClipboardResponseSchema.parse(response);
   }
 
   async approveSection(input: WorkflowSectionDecisionInput): Promise<WorkflowQueueResponse> {

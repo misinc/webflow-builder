@@ -16,6 +16,7 @@ import {
 import { getWebflowBridge } from "../../webflow/bridge.js";
 import type { BuildNode, DebugSkeletonRequest, SharedStyleContext, SkeletonPlan } from "@wfb/shared/contracts.js";
 import { buildWebflowClipboardPayload } from "@wfb/shared/webflow-clipboard.js";
+import { copyWebflowPayloadToClipboard } from "../../webflow/clipboard.js";
 
 const backend = new BackendClient();
 const bridge = getWebflowBridge();
@@ -283,23 +284,7 @@ export function DebugSkeletonScreen() {
           styleId: style.id
         }))
       });
-      const json = JSON.stringify(payload);
-      // Webflow's Designer reads the paste as the `application/json` clipboard
-      // flavor — only settable from a real copy event, not navigator.clipboard.
-      const onCopy = (event: ClipboardEvent) => {
-        event.preventDefault();
-        event.clipboardData?.setData("application/json", json);
-        event.clipboardData?.setData("text/plain", json);
-      };
-      document.addEventListener("copy", onCopy);
-      try {
-        const copied = document.execCommand("copy");
-        if (!copied) {
-          throw new Error("The browser blocked the clipboard write. Click the button again.");
-        }
-      } finally {
-        document.removeEventListener("copy", onCopy);
-      }
+      copyWebflowPayloadToClipboard(JSON.stringify(payload));
       setWebflowCopyLabel("Copied");
       setCopyHint("On the canvas: click where the section should go, then press Cmd+V (Ctrl+V on Windows).");
       window.setTimeout(() => setWebflowCopyLabel("Copy for Webflow"), 2600);

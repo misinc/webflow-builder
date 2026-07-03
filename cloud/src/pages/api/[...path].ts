@@ -9,6 +9,7 @@ import {
   pageMappingsUpsertInputSchema,
   repoConnectionInputSchema,
   siteStylePlanRequestSchema,
+  workflowClipboardRequestSchema,
   workflowSectionDecisionInputSchema,
   workflowSectionPlacementInputSchema,
   workflowSectionRequestSchema
@@ -328,6 +329,14 @@ async function handlePost(request: Request, locals: App.Locals, pathname: string
     return json(
       await services.workflowService.analyzeSection(
         await parseBody(request, workflowSectionRequestSchema)
+      )
+    );
+  }
+
+  if (pathname === "/api/workflow/clipboard-payload") {
+    return json(
+      await services.workflowService.buildClipboardPayload(
+        await parseBody(request, workflowClipboardRequestSchema)
       )
     );
   }

@@ -503,6 +503,25 @@ export const workflowQueueRequestSchema = z.object({
   requestedBy: z.string().min(1)
 });
 
+export const workflowClipboardRequestSchema = z.object({
+  repoId: z.string().min(1),
+  webflowSiteId: z.string().min(1),
+  webflowPageId: z.string().min(1),
+  /** Omit to build a payload for the WHOLE mapped page (all queued sections). */
+  sectionId: z.string().min(1).optional(),
+  requestedBy: z.string().min(1)
+});
+
+export const workflowClipboardResponseSchema = z.object({
+  /** Serialized @webflow/XscpData JSON, ready for the clipboard. */
+  payload: z.string().min(1),
+  sections: z.array(
+    z.object({ sectionId: z.string().min(1), sectionName: z.string().min(1) })
+  ),
+  classCount: z.number().int().nonnegative(),
+  warnings: z.array(plannerWarningSchema).default([])
+});
+
 export const workflowSectionRequestSchema = z.object({
   repoId: z.string().min(1),
   webflowSiteId: z.string().min(1),
@@ -713,6 +732,8 @@ export type WorkflowQueueResponse = z.infer<typeof workflowQueueResponseSchema>;
 export type PageMappingsUpsertInput = z.infer<typeof pageMappingsUpsertInputSchema>;
 export type WorkflowQueueRequest = z.infer<typeof workflowQueueRequestSchema>;
 export type WorkflowSectionRequest = z.infer<typeof workflowSectionRequestSchema>;
+export type WorkflowClipboardRequest = z.infer<typeof workflowClipboardRequestSchema>;
+export type WorkflowClipboardResponse = z.infer<typeof workflowClipboardResponseSchema>;
 export type DebugSkeletonRequest = z.infer<typeof debugSkeletonRequestSchema>;
 export type DebugSkeletonJobStart = z.infer<typeof debugSkeletonJobStartSchema>;
 export type DebugSkeletonJobTrigger = z.infer<typeof debugSkeletonJobTriggerSchema>;

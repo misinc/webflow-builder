@@ -1,5 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { ChevronDown, ChevronRight, ExternalLink, Pencil, Plus, RefreshCw } from "lucide-react";
+import { ChevronDown, ChevronRight, Clipboard, ExternalLink, Pencil, Plus, RefreshCw } from "lucide-react";
+import { copyWebflowPayloadToClipboard } from "../../webflow/clipboard.js";
 import { Panel } from "../components/Panel";
 import { Button, IconButton } from "../components/Button";
 import { Stepper, buildStepper } from "../components/Stepper";
@@ -16,6 +17,7 @@ export function SkeletonReviewScreen() {
     analysis,
     approveCurrentSkeleton,
     beginSkeletonEdit,
+    buildClipboardPayload,
     currentTargetNodeId,
     error,
     insertCurrentSkeleton,
@@ -23,10 +25,38 @@ export function SkeletonReviewScreen() {
     loadingLabel,
     regenerateSkeleton,
     selectedSection,
+    selectedSectionId,
     skipCurrentSection,
     skeleton
   } = useAppState();
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
+  const [copyLabel, setCopyLabel] = useState("Copy for Webflow");
+  const [pendingPayload, setPendingPayload] = useState<string | null>(null);
+
+  const copySectionForWebflow = async () => {
+    if (!selectedSectionId) {
+      return;
+    }
+    // Keep the payload if the clipboard write misses the user-activation
+    // window (slow fetch) — the second click copies synchronously.
+    let payload = pendingPayload;
+    if (!payload) {
+      const result = await buildClipboardPayload(selectedSectionId);
+      if (!result) {
+        return;
+      }
+      payload = result.payload;
+    }
+    try {
+      copyWebflowPayloadToClipboard(payload);
+      setPendingPayload(null);
+      setCopyLabel("Copied — Cmd+V on canvas");
+      window.setTimeout(() => setCopyLabel("Copy for Webflow"), 3200);
+    } catch {
+      setPendingPayload(payload);
+      setCopyLabel("Click again to copy");
+    }
+  };
   const sourceText = (analysis?.sourceCode?.trim() || selectedSection?.sourceCode?.trim() || "");
   const displaySkeleton = useMemo(() => {
     if (!skeleton) {
@@ -97,7 +127,7 @@ export function SkeletonReviewScreen() {
             Approve skeleton
           </Button>
           <Button
-            variant="primary"
+            variant="ghost"
             disabled={
               !displaySkeleton ||
               isGeneratingSkeleton ||
@@ -107,14 +137,26 @@ export function SkeletonReviewScreen() {
             onClick={() => {
               void insertCurrentSkeleton();
             }}
+            title="Fallback path: build node-by-node via the Designer API, then style through the approval gates."
           >
             {hasInsertedSkeleton
               ? "Insert again"
               : isInsertingSkeleton
               ? "Inserting skeleton…"
-              : isRefreshingSkeleton || isGeneratingSkeleton
-              ? "Generating skeleton…"
-              : "Insert into Webflow"}
+              : "Insert via API"}
+          </Button>
+          <Button
+            variant="primary"
+            disabled={
+              !displaySkeleton || isGeneratingSkeleton || isRefreshingSkeleton || isMutating
+            }
+            onClick={() => {
+              void copySectionForWebflow();
+            }}
+            title="Copies this section as a Webflow paste payload (structure + full styles + SVG icons). Paste on the canvas, then Clean up paste from the section list."
+          >
+            <Clipboard size={12} />
+            {isMutating && loadingLabel === "Preparing section copy" ? "Preparing…" : copyLabel}
           </Button>
         </>
       }

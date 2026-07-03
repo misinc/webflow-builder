@@ -47,6 +47,13 @@ import { extractAssetReferencesFromSource } from "../extractor/asset-references.
 import { RepositorySnapshot } from "../github/client.js";
 import { HeuristicBuildPlanner } from "../planner/heuristic-planner.js";
 import { htmlToSkeletonPlan } from "../planner/html-planner.js";
+import { buildWebflowClipboardPayload } from "@wfb/shared/webflow-clipboard.js";
+import {
+  workflowClipboardRequestSchema,
+  workflowClipboardResponseSchema,
+  WorkflowClipboardRequest,
+  WorkflowClipboardResponse
+} from "@wfb/shared/contracts.js";
 import { PlanningProvider, providerWarning } from "../planner/planning-provider.js";
 import { serializeSectionContext } from "../planner/section-serializer.js";
 import { shouldFallbackStylingPlan } from "../planner/style-fallback.js";
@@ -953,6 +960,102 @@ export class WorkflowService {
 
   private async getDebugSkeletonJobRecord(jobId: string): Promise<DebugSkeletonJobRecord | null> {
     return this.blobStore.getJson<DebugSkeletonJobRecord>(this.debugSkeletonJobKey(jobId));
+  }
+
+  /**
+   * Build a Webflow clipboard (XscpData) payload for one section or the whole
+   * mapped page — the paste-based delivery path. Sections resolve
+   * deterministically (skeleton + full styling from the repo's compiled CSS);
+   * a multi-section page is wrapped in a client-first `page-wrapper` div since
+   * a paste payload has a single root.
+   */
+  async buildClipboardPayload(input: WorkflowClipboardRequest): Promise<WorkflowClipboardResponse> {
+    const request = workflowClipboardRequestSchema.parse(input);
+    const queue = await this.getQueue(
+      request.repoId,
+      request.webflowSiteId,
+      request.webflowPageId,
+      request.requestedBy
+    );
+    const targetItems = queue.items.filter((item) =>
+      request.sectionId ? item.repoSectionId === request.sectionId : item.status !== "skipped"
+    );
+    if (targetItems.length === 0) {
+      throw new Error(
+        request.sectionId
+          ? "That section is not in this page's workflow queue."
+          : "No sections found to copy for this page."
+      );
+    }
+
+    const sections: Array<{ sectionId: string; sectionName: string }> = [];
+    const trees: BuildNode[] = [];
+    const mergedStyles = new Map<
+      string,
+      { className: string; properties: Record<string, string>; combo?: boolean }
+    >();
+    const warnings: PlannerWarning[] = [];
+
+    for (const item of targetItems) {
+      const context = await this.getSectionStateContext({
+        repoId: request.repoId,
+        webflowSiteId: request.webflowSiteId,
+        webflowPageId: request.webflowPageId,
+        sectionId: item.repoSectionId,
+        requestedBy: request.requestedBy,
+        mode: "fullAssist",
+        selectedElementId: null
+      });
+      if (context.metadata.repoType !== "html") {
+        throw new Error("Copy for Webflow currently supports HTML repos only.");
+      }
+      const skeleton = htmlToSkeletonPlan({
+        metadata: context.metadata,
+        sourceCode: context.sectionContext.sourceCode,
+        sharedStyleContext: context.sharedStyleContext
+      });
+      if (!skeleton) {
+        throw new Error(`Could not parse section "${item.sectionName}" as HTML.`);
+      }
+      const cssText = context.sectionContext.relevantStylesheets
+        .map((sheet) => sheet.content)
+        .join("\n");
+      const styling = buildResolvedStylingFromSkeleton({
+        metadata: context.metadata,
+        mode: "fullAssist",
+        skeleton,
+        cssText
+      });
+      trees.push(skeleton.elementTree);
+      for (const definition of styling.styleDefinitions) {
+        if (!mergedStyles.has(definition.className)) {
+          mergedStyles.set(definition.className, definition);
+        }
+      }
+      warnings.push(...skeleton.warnings);
+      sections.push({ sectionId: item.repoSectionId, sectionName: item.sectionName });
+    }
+
+    const elementTree: BuildNode =
+      trees.length === 1
+        ? trees[0]
+        : {
+            id: `page-wrapper-${request.webflowPageId}`,
+            type: "box",
+            tag: "div",
+            classNames: ["page-wrapper"],
+            children: trees
+          };
+    const payload = buildWebflowClipboardPayload({
+      elementTree,
+      styleDefinitions: [...mergedStyles.values()]
+    });
+    return workflowClipboardResponseSchema.parse({
+      payload: JSON.stringify(payload),
+      sections,
+      classCount: mergedStyles.size,
+      warnings
+    });
   }
 
   private buildDebugSkeletonProviderInput(request: DebugSkeletonRequest) {
