@@ -16,7 +16,7 @@
     },
     "classes": [
      "4356e6ab-8d67-5e6e-3edb-26c9a999f44c",
-     "5a18897e-652b-24c3-3d33-6e21cbed6b31"
+     "878cdde2-58fb-1191-feb9-7dcf22aa507f"
     ],
     "children": [
      "99475fc9-84b6-f86c-0db3-db29f5a3f86e"
@@ -617,19 +617,19 @@
     "styleLess": "",
     "variants": {},
     "children": [
-     "5a18897e-652b-24c3-3d33-6e21cbed6b31"
+     "878cdde2-58fb-1191-feb9-7dcf22aa507f"
     ],
     "origin": null,
     "selector": null
    },
    {
-    "_id": "5a18897e-652b-24c3-3d33-6e21cbed6b31",
+    "_id": "878cdde2-58fb-1191-feb9-7dcf22aa507f",
     "fake": false,
     "type": "class",
-    "name": "heading-style-h2_vn8gub",
+    "name": "heading-style-h2_v1al6l",
     "namespace": "",
     "comb": "&",
-    "styleLess": "max-width: 11ch; font-family: \"Manrope\",ui-sans-serif,system-ui,sans-serif; font-weight: 300; font-size: clamp(2.4rem,4vw,4.4rem); line-height: .98;",
+    "styleLess": "max-width: 11ch; font-family: \"Manrope\",ui-sans-serif,system-ui,sans-serif; font-weight: 300; font-size: clamp(2.4rem,4vw,4.4rem); line-height: .98; color: #6b4a1e;",
     "variants": {},
     "children": [],
     "origin": null,

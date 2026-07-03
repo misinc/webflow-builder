@@ -125,7 +125,7 @@
     },
     "classes": [
      "ca4303f3-9c40-59e2-97bb-338591f75708",
-     "d73bb7e0-70ae-62fe-73bb-8336fed90b0a"
+     "52e0216a-0ab6-f43c-d0c6-9ece5470b248"
     ],
     "children": [
      "f764f02c-ea6c-11a2-7ce1-3666ed311ace"
@@ -796,8 +796,8 @@
     "styleLess": "display: flex; grid-row-gap: 16px; grid-column-gap: 16px; margin-bottom: 36px; max-width: 760px; align-content: stretch; flex-direction: column; align-items: center; position: relative; width: 100%; flex-shrink: 0; text-align: center;",
     "variants": {},
     "children": [
+     "52e0216a-0ab6-f43c-d0c6-9ece5470b248",
      "588812ff-4651-ae8b-51d2-dc042395a28d",
-     "d73bb7e0-70ae-62fe-73bb-8336fed90b0a",
      "f7142db6-a5f3-c102-ca0e-5944044645e6"
     ],
     "origin": null,
@@ -830,13 +830,13 @@
     "selector": null
    },
    {
-    "_id": "d73bb7e0-70ae-62fe-73bb-8336fed90b0a",
+    "_id": "52e0216a-0ab6-f43c-d0c6-9ece5470b248",
     "fake": false,
     "type": "class",
-    "name": "authority_content_v1tpvm",
+    "name": "authority_content_vlb04v",
     "namespace": "",
     "comb": "&",
-    "styleLess": "display: grid; padding: 24px; place-items: center; aspect-ratio: 1; background: radial-gradient(circle,rgba(255,170,29,.14),transparent 58%),radial-gradient(circle,rgba(255,255,255,.05),transparent 68%); border: 1px solid rgba(255,244,227,.12); border-radius: 999px;",
+    "styleLess": "display: grid; padding: 24px; place-items: center; aspect-ratio: 1; background: radial-gradient(circle,rgba(255,170,29,.14),transparent 58%),radial-gradient(circle,rgba(255,255,255,.05),transparent 68%); border: 1px solid rgba(255,244,227,.2); border-radius: 999px; animation: midnight-orbit-pulse 4.6s ease-out infinite; transform-origin: center;",
     "variants": {},
     "children": [],
     "origin": null,
@@ -862,7 +862,7 @@
     "name": "authority_icon",
     "namespace": "",
     "comb": "",
-    "styleLess": "align-items: center; display: flex; justify-content: space-between; position: relative;",
+    "styleLess": "align-items: center; display: flex; justify-content: space-between; position: relative; color: #fff4e3; font-size: .76rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase;",
     "variants": {},
     "children": [],
     "origin": null,

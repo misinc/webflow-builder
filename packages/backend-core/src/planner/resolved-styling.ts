@@ -186,6 +186,23 @@ export function buildResolvedStylingFromSkeleton(input: {
         });
       }
     }
+    // A heading with NO color of its own inherits the body ink in the browser —
+    // carry it explicitly, since Webflow's default heading color differs.
+    if (
+      node.type === "heading" &&
+      parsed.defaultTextColor &&
+      properties.color === undefined &&
+      Object.keys(properties).length > 0
+    ) {
+      properties.color = parsed.defaultTextColor.value;
+      if (parsed.defaultTextColor.variableName) {
+        bindings.push({
+          property: "color",
+          variableName: parsed.defaultTextColor.variableName,
+          value: parsed.defaultTextColor.value
+        });
+      }
+    }
     if (target && !isReservedStyleGuideClassName(target) && Object.keys(properties).length > 0) {
       if (isReusableBaseClass(target)) {
         // Shared base class (heading-style-h1, text-size-medium, …): never

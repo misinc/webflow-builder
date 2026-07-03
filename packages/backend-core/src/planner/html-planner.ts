@@ -572,6 +572,15 @@ function buildNodeFromElement(input: {
           !INLINE_PHRASING_TAGS.has(elementTag(grandchild as HTMLElement))
       );
       if (blockChildren.length === 0) {
+        // The span's text is absorbed into the parent's textContent — donate its
+        // classes too, so the label's typography/color (e.g. a button label's
+        // text-white) resolves onto the parent instead of being discarded.
+        for (const className of classNamesFor(childElement)) {
+          if (!sourceClasses.includes(className)) {
+            sourceClasses.push(className);
+          }
+          input.sourceClassNames.add(className);
+        }
         return;
       }
     }
