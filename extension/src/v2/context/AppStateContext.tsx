@@ -310,6 +310,9 @@ interface AppStateContextValue {
   ) => Promise<WorkflowClipboardResponse | null>;
   /** Approve every remaining section of the page (after a whole-page paste). */
   approveAllRemainingSections: () => Promise<boolean>;
+  /** Instructional message shown in the global bar at the top of the panel. */
+  uiHint: string | null;
+  setUiHint: (hint: string | null) => void;
   lastCompletedSection: SectionOutcomeSummary | null;
   activeSectionError: string | null;
   selectSection: (sectionId: string) => void;
@@ -392,6 +395,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [lastExecution, setLastExecution] = useState<ExecutionSummary | null>(null);
   const [currentTargetNodeId, setCurrentTargetNodeId] = useState<string | null>(null);
   const [lastCompletedSection, setLastCompletedSection] = useState<SectionOutcomeSummary | null>(null);
+  const [uiHint, setUiHint] = useState<string | null>(null);
   const [sectionErrorsById, setSectionErrorsById] = useState<Record<string, string>>({});
   const [activeAbortController, setActiveAbortController] = useState<AbortController | null>(null);
   const activeExecutionRecordRef = useRef<ExecutionRunRecord | null>(null);
@@ -2048,6 +2052,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       insertComponentInstance,
       buildClipboardPayload,
       approveAllRemainingSections,
+      uiHint,
+      setUiHint,
       lastCompletedSection,
       activeSectionError:
         (selectedSectionId ? sectionErrorsById[selectedSectionId] : null) ?? error,
@@ -2180,6 +2186,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       insertComponentInstance,
       buildClipboardPayload,
       approveAllRemainingSections,
+      uiHint,
       session,
       siteStylePlan,
       skeleton,

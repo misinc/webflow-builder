@@ -52,6 +52,7 @@ export function SectionListScreen() {
     selectedSection,
     selectSection,
     reinsertSection,
+    setUiHint,
     siteStylePlan
   } = useAppState();
   const builtCount =
@@ -69,7 +70,6 @@ export function SectionListScreen() {
   const [copyPageLabel, setCopyPageLabel] = useState("Copy page for Webflow");
   const [cleanupLabel, setCleanupLabel] = useState("Clean up paste");
   const [hasCopiedPage, setHasCopiedPage] = useState(false);
-  const [pasteHint, setPasteHint] = useState<string | null>(null);
   const [pendingPayload, setPendingPayload] = useState<string | null>(null);
 
   // Building a page payload takes seconds — longer than the browser's clipboard
@@ -139,13 +139,12 @@ export function SectionListScreen() {
       setPendingPayload(null);
       setHasCopiedPage(true);
       setCopyPageLabel(sectionCount ? `Copied ${sectionCount} sections` : "Copied");
-      setPasteHint(
+      setUiHint(
         componentizedIds.length > 0
           ? `Paste the main-wrapper between your navbar and footer, then Clean up paste. Skipped ${componentizedIds.length} section${componentizedIds.length === 1 ? "" : "s"} with existing components — use their Insert instance chips.`
           : "Select your navbar (inside page-wrapper), press Cmd+V — the main-wrapper lands after it, before the footer. Then Clean up paste."
       );
       window.setTimeout(() => setCopyPageLabel("Copy page for Webflow"), 3200);
-      window.setTimeout(() => setPasteHint(null), 12000);
     } catch {
       setPendingPayload(payload);
       setCopyPageLabel("Click again to copy");
@@ -160,11 +159,11 @@ export function SectionListScreen() {
       setCleanupLabel(
         `${deduped.swappedClasses.length} class${deduped.swappedClasses.length === 1 ? "" : "es"} · ${bound.boundProperties} token${bound.boundProperties === 1 ? "" : "s"}`
       );
+      setUiHint("Cleaned up. Compare against the live site, then Approve all (or mark sections individually).");
       window.setTimeout(() => setCleanupLabel("Clean up paste"), 3200);
     } catch (err) {
       setCleanupLabel("Clean up paste");
-      setPasteHint(err instanceof Error ? err.message : "Cleanup failed — select the pasted element first.");
-      window.setTimeout(() => setPasteHint(null), 6000);
+      setUiHint(err instanceof Error ? err.message : "Cleanup failed — select the pasted element first.");
     }
   };
 
@@ -356,11 +355,6 @@ export function SectionListScreen() {
           <Clock size={12} />
           Site progress
         </Button>
-        {pasteHint ? (
-          <span className="text-[11px] text-wb-text-primary min-w-0 truncate" title={pasteHint}>
-            {pasteHint}
-          </span>
-        ) : null}
         <div className="flex-1" />
         {isMapped && !isPageComplete ? (
           <Button

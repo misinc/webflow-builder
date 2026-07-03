@@ -9,6 +9,7 @@ export type ScreenName =
   | 'skeleton-review'
   | 'skeleton-edit'
   | 'applying-styles'
+  | 'paste-section'
   | 'section-complete'
   | 'page-complete'
   | 'site-progress'
@@ -40,6 +41,7 @@ export const SCREENS: Record<ScreenName, ScreenMeta> = {
   'section-list':         { num: '06', phase: 'Main',       title: 'Section list — home base' },
   'generating-skeleton':  { num: '07', phase: 'Build flow', title: 'Generating skeleton' },
   'skeleton-review':      { num: '08', phase: 'Build flow', title: 'Skeleton tree review' },
+  'paste-section':        { num: '08b', phase: 'Build flow', title: 'Paste into Webflow' },
   'skeleton-edit':        { num: '09', phase: 'Build flow', title: 'Edit skeleton tree' },
   'applying-styles':      { num: '10', phase: 'Build flow', title: 'Applying styles' },
   'section-complete':     { num: '11', phase: 'Build flow', title: 'Section complete' },

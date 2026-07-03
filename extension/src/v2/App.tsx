@@ -12,6 +12,7 @@ import { SkeletonReviewScreen } from './screens/SkeletonReviewScreen';
 import { SkeletonEditScreen } from './screens/SkeletonEditScreen';
 import { ApplyingStylesScreen } from './screens/ApplyingStylesScreen';
 import { SectionCompleteScreen } from './screens/SectionCompleteScreen';
+import { PasteScreen } from './screens/PasteScreen';
 import { PageCompleteScreen } from './screens/PageCompleteScreen';
 import { SiteProgressScreen } from './screens/SiteProgressScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
@@ -32,6 +33,7 @@ const SCREEN_COMPONENTS: Record<ScreenName, ComponentType> = {
   'skeleton-review': SkeletonReviewScreen,
   'skeleton-edit': SkeletonEditScreen,
   'applying-styles': ApplyingStylesScreen,
+  'paste-section': PasteScreen,
   'section-complete': SectionCompleteScreen,
   'page-complete': PageCompleteScreen,
   'site-progress': SiteProgressScreen,
@@ -66,10 +68,43 @@ export default function App() {
 
 function AppStateBoundScreens() {
   return (
-    <>
+    <div className="flex flex-col h-full min-h-0">
       <InitialRouteResolver />
-      <ScreenRenderer />
-    </>
+      <GlobalHintBar />
+      <div className="flex-1 min-h-0">
+        <ScreenRenderer />
+      </div>
+    </div>
+  );
+}
+
+/** Instructional message bar at the top of the panel — the visible home for
+ *  "what to do next" guidance (footer text was easy to miss). */
+function GlobalHintBar() {
+  const { uiHint, setUiHint } = useAppState();
+  if (!uiHint) {
+    return null;
+  }
+  return (
+    <div
+      className="px-4 py-2.5 flex items-center gap-2.5 flex-shrink-0 border-b text-[12.5px]"
+      style={{
+        background: "rgba(20,110,245,0.10)",
+        borderColor: "rgba(20,110,245,0.28)",
+        color: "#bcd7ff"
+      }}
+    >
+      <span aria-hidden className="text-[14px] leading-none">👉</span>
+      <span className="flex-1 min-w-0">{uiHint}</span>
+      <button
+        type="button"
+        aria-label="Dismiss"
+        onClick={() => setUiHint(null)}
+        className="w-5 h-5 rounded inline-flex items-center justify-center hover:bg-white/[0.08] flex-shrink-0"
+      >
+        ×
+      </button>
+    </div>
   );
 }
 
