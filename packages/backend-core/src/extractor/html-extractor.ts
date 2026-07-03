@@ -182,7 +182,8 @@ function findSectionElements(sourceCode: string): HTMLElement[] {
   const body = document.querySelector("body");
   const main = body?.querySelector("main") ?? document.querySelector("main");
   const scope = unwrapStructuralSingleChild((main ?? body ?? document) as HTMLElement, true);
-  const children = elementChildren(scope).map(unwrapStructuralSingleChild);
+  // Explicit lambda: .map(fn) would pass the array index as stopAtSections.
+  const children = elementChildren(scope).map((child) => unwrapStructuralSingleChild(child));
   const semantic = children.filter((child) => SECTION_TAGS.has(tagName(child)));
   if (semantic.length > 0) {
     return semantic;
