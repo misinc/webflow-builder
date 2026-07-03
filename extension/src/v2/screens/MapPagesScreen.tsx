@@ -51,12 +51,12 @@ export function MapPagesScreen() {
               if (hasUnsavedMappings) {
                 void savePageMappings().then((saved) => {
                   if (saved) {
-                    navigate("section-list");
+                    navigate("site-chrome");
                   }
                 });
                 return;
               }
-              navigate("section-list");
+              navigate("site-chrome");
             }}
           >
             {hasUnsavedMappings ? "Save & continue" : "Start building"}

@@ -334,29 +334,11 @@ export function SectionListScreen() {
         {isMapped ? (
           <div className="px-5 py-2 flex items-center gap-2 border-b border-white/[0.06]">
             <span className="text-[11px] text-wb-text-tertiary flex-1 min-w-0">
-              Site chrome (navbar + footer) is built once, then added to pages as Components.
+              Navbar &amp; footer live on every page — build them once as Components.
             </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={isMutating}
-              onClick={() => {
-                void copyChrome("header");
-              }}
-            >
-              <Clipboard size={11} />
-              {chromeLabels.header}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={isMutating}
-              onClick={() => {
-                void copyChrome("footer");
-              }}
-            >
-              <Clipboard size={11} />
-              {chromeLabels.footer}
+            <Button variant="ghost" size="sm" onClick={() => navigate("site-chrome")}>
+              Sitewide elements
+              <ChevronRight size={12} />
             </Button>
           </div>
         ) : null}

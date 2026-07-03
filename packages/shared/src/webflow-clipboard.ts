@@ -240,12 +240,6 @@ function nodeShapeFor(node: BuildNode, hasElementChildren: boolean): Omit<XscpNo
       }
     };
   }
-  if (tag === "ul" || tag === "ol") {
-    return { type: "List", tag, data: { tag, unstyled: false } };
-  }
-  if (tag === "li") {
-    return { type: "ListItem", tag: "li", data: { tag: "li" } };
-  }
   if (tag === "img") {
     return {
       type: "Image",
@@ -253,9 +247,27 @@ function nodeShapeFor(node: BuildNode, hasElementChildren: boolean): Omit<XscpNo
       data: { attr: { src: "", alt: node.label ?? "" }, img: {} }
     };
   }
-  // div/section/article/header/footer/aside/figure/span/… — a Block carrying the tag.
-  return { type: "Block", tag, data: { tag, text: false } };
+  // A Block may only carry tags Webflow's paste validator accepts — anything
+  // exotic (ul/li/form/fieldset/picture/…) becomes a div, keeping its classes.
+  // Guessed node shapes for unsupported types are exactly what gets a payload
+  // rejected wholesale ("the clipboard is empty").
+  const blockTag = SAFE_BLOCK_TAGS.has(tag) ? tag : "div";
+  return { type: "Block", tag: blockTag, data: { tag: blockTag, text: false } };
 }
+
+const SAFE_BLOCK_TAGS = new Set([
+  "div",
+  "section",
+  "article",
+  "aside",
+  "header",
+  "footer",
+  "nav",
+  "main",
+  "figure",
+  "address",
+  "span"
+]);
 
 export function buildWebflowClipboardPayload(input: WebflowClipboardInput): XscpData {
   const nodes: XscpNode[] = [];

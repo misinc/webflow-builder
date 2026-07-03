@@ -35,7 +35,20 @@ export interface HtmlBuildResult {
 const SKIPPED_TAGS = new Set(["script", "style", "noscript", "template", "br", "source", "track"]);
 // Media/embed elements Webflow can't render as generic Blocks — they become div
 // placeholders that keep the wrapper's classes (and therefore its styling).
-const MEDIA_PLACEHOLDER_TAGS = new Set(["video", "audio", "iframe", "canvas", "embed", "object"]);
+const MEDIA_PLACEHOLDER_TAGS = new Set([
+  "video",
+  "audio",
+  "iframe",
+  "canvas",
+  "embed",
+  "object",
+  // Form controls can't ride the paste — placeholders keep the layout slot;
+  // rebuild them with Webflow's native Form elements.
+  "form",
+  "input",
+  "select",
+  "textarea"
+]);
 const SVG_INTERNAL_TAGS = new Set([
   "svg",
   "path",

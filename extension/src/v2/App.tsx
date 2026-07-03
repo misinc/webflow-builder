@@ -7,6 +7,7 @@ import { DebugSkeletonScreen } from './screens/DebugSkeletonScreen';
 import { MapPagesScreen } from './screens/MapPagesScreen';
 import { CreatePageScreen } from './screens/CreatePageScreen';
 import { SectionListScreen } from './screens/SectionListScreen';
+import { SiteChromeScreen } from './screens/SiteChromeScreen';
 import { GeneratingSkeletonScreen } from './screens/GeneratingSkeletonScreen';
 import { SkeletonReviewScreen } from './screens/SkeletonReviewScreen';
 import { SkeletonEditScreen } from './screens/SkeletonEditScreen';
@@ -29,6 +30,7 @@ const SCREEN_COMPONENTS: Record<ScreenName, ComponentType> = {
   'map-pages': MapPagesScreen,
   'create-page': CreatePageScreen,
   'section-list': SectionListScreen,
+  'site-chrome': SiteChromeScreen,
   'generating-skeleton': GeneratingSkeletonScreen,
   'skeleton-review': SkeletonReviewScreen,
   'skeleton-edit': SkeletonEditScreen,
