@@ -34,7 +34,6 @@ export function SectionListScreen() {
   const {
     activeMapping,
     activeQueue,
-    approveAllRemainingSections,
     buildClipboardPayload,
     completeCurrentPage,
     componentBannerDismissed,
@@ -52,6 +51,7 @@ export function SectionListScreen() {
     selectedSection,
     selectSection,
     reinsertSection,
+    setPasteScope,
     setUiHint,
     siteStylePlan
   } = useAppState();
@@ -68,8 +68,6 @@ export function SectionListScreen() {
     totalCount > 0 ? Math.round(((builtCount + skippedCount) / totalCount) * 100) : 0;
 
   const [copyPageLabel, setCopyPageLabel] = useState("Copy page for Webflow");
-  const [cleanupLabel, setCleanupLabel] = useState("Clean up paste");
-  const [hasCopiedPage, setHasCopiedPage] = useState(false);
   const [pendingPayload, setPendingPayload] = useState<string | null>(null);
 
   // Building a page payload takes seconds — longer than the browser's clipboard
@@ -137,13 +135,14 @@ export function SectionListScreen() {
     try {
       copyWebflowPayloadToClipboard(payload);
       setPendingPayload(null);
-      setHasCopiedPage(true);
       setCopyPageLabel(sectionCount ? `Copied ${sectionCount} sections` : "Copied");
+      setPasteScope("page");
       setUiHint(
         componentizedIds.length > 0
-          ? `Paste the main-wrapper between your navbar and footer, then Clean up paste. Skipped ${componentizedIds.length} section${componentizedIds.length === 1 ? "" : "s"} with existing components — use their Insert instance chips.`
-          : "Select your navbar (inside page-wrapper), press Cmd+V — the main-wrapper lands after it, before the footer. Then Clean up paste."
+          ? `Paste the main-wrapper between your navbar and footer. Skipped ${componentizedIds.length} section${componentizedIds.length === 1 ? "" : "s"} with existing components — use their Insert instance chips.`
+          : "Select your navbar (inside page-wrapper), press Cmd+V — the main-wrapper lands after it, before the footer."
       );
+      navigate("paste-section");
       window.setTimeout(() => setCopyPageLabel("Copy page for Webflow"), 3200);
     } catch {
       setPendingPayload(payload);
@@ -173,11 +172,13 @@ export function SectionListScreen() {
       copyWebflowPayloadToClipboard(payload);
       setPendingChrome(null);
       setChromeLabels((current) => ({ ...current, [kind]: "Copied" }));
+      setPasteScope(kind === "header" ? "chrome-header" : "chrome-footer");
       setUiHint(
         kind === "header"
-          ? "Paste the navbar inside your page-wrapper (above main-wrapper), Clean up paste, then right-click it → Create Component to reuse it on every page."
-          : "Paste the footer inside your page-wrapper (below main-wrapper), Clean up paste, then right-click it → Create Component to reuse it on every page."
+          ? "Paste the navbar inside your page-wrapper, above main-wrapper."
+          : "Paste the footer inside your page-wrapper, below main-wrapper."
       );
+      navigate("paste-section");
       window.setTimeout(
         () => setChromeLabels((current) => ({ ...current, [kind]: kind === "header" ? "Copy navbar" : "Copy footer" })),
         2600
@@ -186,22 +187,6 @@ export function SectionListScreen() {
       setPendingChrome({ kind, payload });
       setChromeLabels((current) => ({ ...current, [kind]: "Click again to copy" }));
       void label;
-    }
-  };
-
-  const cleanupPaste = async () => {
-    setCleanupLabel("Cleaning…");
-    try {
-      const deduped = await bridge.dedupeSelectionStyles();
-      const bound = await bridge.bindTokensInSelection();
-      setCleanupLabel(
-        `${deduped.swappedClasses.length} class${deduped.swappedClasses.length === 1 ? "" : "es"} · ${bound.boundProperties} token${bound.boundProperties === 1 ? "" : "s"}`
-      );
-      setUiHint("Cleaned up. Compare against the live site, then Approve all (or mark sections individually).");
-      window.setTimeout(() => setCleanupLabel("Clean up paste"), 3200);
-    } catch (err) {
-      setCleanupLabel("Clean up paste");
-      setUiHint(err instanceof Error ? err.message : "Cleanup failed — select the pasted element first.");
     }
   };
 
@@ -424,30 +409,6 @@ export function SectionListScreen() {
           Site progress
         </Button>
         <div className="flex-1" />
-        {isMapped && !isPageComplete ? (
-          <Button
-            variant="ghost"
-            disabled={isMutating}
-            onClick={() => {
-              void cleanupPaste();
-            }}
-            title="Select the pasted element on the canvas first — swaps duplicated 'name 2' classes to your existing classes and relinks values to your variables."
-          >
-            {cleanupLabel}
-          </Button>
-        ) : null}
-        {isMapped && hasCopiedPage && !isPageComplete ? (
-          <Button
-            variant="ghost"
-            disabled={isMutating}
-            onClick={() => {
-              void approveAllRemainingSections();
-            }}
-            title="Mark every remaining section of this page as built (after pasting the whole page)."
-          >
-            Approve all
-          </Button>
-        ) : null}
         <Button
           variant={isMapped && !isPageComplete ? "ghost" : "primary"}
           disabled={!isMapped ? false : !canContinue && !isPageComplete}

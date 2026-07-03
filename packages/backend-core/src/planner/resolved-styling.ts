@@ -156,6 +156,11 @@ export function buildResolvedStylingFromSkeleton(input: {
 
   // Nearest ancestor's resolved color, for heading ink inheritance.
   const inheritedColorByNode = new Map<BuildNode, string>();
+  // Nodes that resolved NO styles of their own but share a scoped class name —
+  // if that class ends up styled by another node, these must not wear it (they
+  // would inherit e.g. an absolute bg layer's positioning with no combo to
+  // neutralize it). They paste as bare divs instead.
+  const styleLessNodesByTarget = new Map<string, BuildNode[]>();
 
   walk(input.skeleton.elementTree, new Set<string>(), (node, ancestors) => {
     const { base, modifiers } = splitBaseAndModifiers(node.sourceClassNames ?? []);
@@ -223,6 +228,18 @@ export function buildResolvedStylingFromSkeleton(input: {
           });
         }
       }
+    }
+    if (
+      target &&
+      !isReservedStyleGuideClassName(target) &&
+      !isReusableBaseClass(target) &&
+      Object.keys(properties).length === 0 &&
+      modifiers.length === 0 &&
+      !node.inlineStyles
+    ) {
+      const list = styleLessNodesByTarget.get(target) ?? [];
+      list.push(node);
+      styleLessNodesByTarget.set(target, list);
     }
     if (target && !isReservedStyleGuideClassName(target) && Object.keys(properties).length > 0) {
       if (isReusableBaseClass(target)) {
@@ -317,6 +334,16 @@ export function buildResolvedStylingFromSkeleton(input: {
       }
     }
   });
+
+  // Strip styled scoped classes from the nodes that contributed nothing to them.
+  for (const [target, nodes] of styleLessNodesByTarget) {
+    const definition = styleDefinitions.get(target);
+    if (definition && Object.keys(definition).length > 0) {
+      for (const node of nodes) {
+        node.classNames = node.classNames.filter((name) => name !== target);
+      }
+    }
+  }
 
   const suggestedNewClasses = [...styleDefinitions.keys()];
 

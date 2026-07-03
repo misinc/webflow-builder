@@ -19,16 +19,30 @@ const bridge = getWebflowBridge();
 export function PasteScreen() {
   const { navigate } = useNavigation();
   const {
+    approveAllRemainingSections,
     approveCurrentSection,
     buildClipboardPayload,
+    componentForSection,
     createComponentOnApprove,
+    currentSections,
     isMutating,
+    pasteScope,
     selectedSection,
     selectedSectionId,
     selectedSectionOpportunity,
     setCreateComponentOnApprove,
     setUiHint
   } = useAppState();
+  const isSection = pasteScope === "section";
+  const isPage = pasteScope === "page";
+  const isChrome = pasteScope === "chrome-header" || pasteScope === "chrome-footer";
+  const scopeTitle = isSection
+    ? selectedSection?.title ?? "Current section"
+    : isPage
+    ? "Whole page"
+    : pasteScope === "chrome-header"
+    ? "Navbar"
+    : "Footer";
   const [cleanupResult, setCleanupResult] = useState<string | null>(null);
   const [cleanupLabel, setCleanupLabel] = useState("Clean up paste");
   const [copyAgainLabel, setCopyAgainLabel] = useState("Copy again");
@@ -49,10 +63,26 @@ export function PasteScreen() {
   };
 
   const copyAgain = async () => {
-    if (!selectedSectionId) {
-      return;
+    let result = null;
+    if (isSection) {
+      if (!selectedSectionId) {
+        return;
+      }
+      result = await buildClipboardPayload(selectedSectionId);
+    } else if (isPage) {
+      const componentizedIds = currentSections
+        .filter(
+          (section) =>
+            (section.status === "pending" || section.status === "in-progress") &&
+            componentForSection(section)
+        )
+        .map((section) => section.id);
+      result = await buildClipboardPayload(undefined, componentizedIds);
+    } else {
+      result = await buildClipboardPayload(undefined, undefined, {
+        chrome: pasteScope === "chrome-header" ? "header" : "footer"
+      });
     }
-    const result = await buildClipboardPayload(selectedSectionId);
     if (!result) {
       return;
     }
@@ -65,12 +95,24 @@ export function PasteScreen() {
     }
   };
 
+  const pasteTarget = isSection
+    ? "Click where the section should go on the canvas"
+    : isPage
+    ? "Select your navbar (inside page-wrapper) so the main-wrapper lands after it"
+    : pasteScope === "chrome-header"
+    ? "Click inside your page-wrapper, above main-wrapper"
+    : "Click inside your page-wrapper, below main-wrapper";
+  const finishStep = isSection
+    ? "Compare with the live site, then Mark section built"
+    : isPage
+    ? "Compare with the live site, then Approve all sections"
+    : "Right-click the pasted element → Create Component, then Done";
   const steps: Array<{ label: string; done: boolean }> = [
-    { label: "Click where the section should go on the canvas", done: false },
+    { label: pasteTarget, done: false },
     { label: "Press Cmd+V (Ctrl+V on Windows) to paste", done: false },
-    { label: "Select the pasted section in the Navigator", done: false },
+    { label: "Select the pasted element in the Navigator", done: false },
     { label: "Clean up paste — reuses your classes, binds your variables", done: Boolean(cleanupResult) },
-    { label: "Compare with the live site, then Mark section built", done: false }
+    { label: finishStep, done: false }
   ];
 
   return (
@@ -78,8 +120,8 @@ export function PasteScreen() {
       onClose={() => navigate("section-list")}
       footer={
         <>
-          <Button variant="ghost" size="sm" onClick={() => navigate("skeleton-review")}>
-            Back to skeleton
+          <Button variant="ghost" size="sm" onClick={() => navigate(isSection ? "skeleton-review" : "section-list")}>
+            {isSection ? "Back to skeleton" : "Back to sections"}
           </Button>
           <Button
             variant="ghost"
@@ -93,7 +135,7 @@ export function PasteScreen() {
             {copyAgainLabel}
           </Button>
           <div className="flex-1" />
-          {selectedSectionOpportunity ? (
+          {isSection && selectedSectionOpportunity ? (
             <label
               className="inline-flex items-center gap-2 text-[11.5px] text-wb-text-secondary whitespace-nowrap mr-1"
               title={`This section is used on ${selectedSectionOpportunity.files} pages — marking it built also registers your selection as a Webflow Component so other pages can insert instances.`}
@@ -120,23 +162,35 @@ export function PasteScreen() {
             variant={cleanupResult ? "primary" : "ghost"}
             disabled={isMutating}
             onClick={() => {
-              void approveCurrentSection().then((approved) => {
-                if (approved) {
-                  setUiHint(null);
-                  navigate("section-complete");
-                }
-              });
+              if (isSection) {
+                void approveCurrentSection().then((approved) => {
+                  if (approved) {
+                    setUiHint(null);
+                    navigate("section-complete");
+                  }
+                });
+              } else if (isPage) {
+                void approveAllRemainingSections().then((approved) => {
+                  if (approved) {
+                    setUiHint(null);
+                    navigate("section-list");
+                  }
+                });
+              } else {
+                setUiHint(null);
+                navigate("section-list");
+              }
             }}
           >
-            Mark section built
+            {isSection ? "Mark section built" : isPage ? "Approve all sections" : "Done"}
           </Button>
         </>
       }
     >
       <SectionDetailHeader
         eyebrow="Build flow"
-        title={selectedSection?.title ?? "Current section"}
-        onBack={() => navigate("skeleton-review")}
+        title={scopeTitle}
+        onBack={() => navigate(isSection ? "skeleton-review" : "section-list")}
       />
 
       <Stepper steps={buildStepper("style")} />

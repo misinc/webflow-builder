@@ -82,9 +82,7 @@
       "url": "#"
      }
     },
-    "classes": [
-     "f732abd5-027f-a7ce-07f3-db97cfd300d4"
-    ],
+    "classes": [],
     "children": [
      "9845b1d9-1acd-b365-d6bc-58ec2f66d12b"
     ]
@@ -231,9 +229,7 @@
      "tag": "div",
      "text": false
     },
-    "classes": [
-     "b64b3304-7a11-b60f-acd1-054724f72ec5"
-    ],
+    "classes": [],
     "children": []
    },
    {
@@ -513,9 +509,7 @@
      "tag": "div",
      "text": false
     },
-    "classes": [
-     "b64b3304-7a11-b60f-acd1-054724f72ec5"
-    ],
+    "classes": [],
     "children": []
    },
    {
@@ -1250,9 +1244,7 @@
      "tag": "div",
      "text": false
     },
-    "classes": [
-     "b64b3304-7a11-b60f-acd1-054724f72ec5"
-    ],
+    "classes": [],
     "children": []
    },
    {
@@ -1454,9 +1446,7 @@
      "tag": "div",
      "text": false
     },
-    "classes": [
-     "b64b3304-7a11-b60f-acd1-054724f72ec5"
-    ],
+    "classes": [],
     "children": []
    },
    {
@@ -1658,9 +1648,7 @@
      "tag": "div",
      "text": false
     },
-    "classes": [
-     "b64b3304-7a11-b60f-acd1-054724f72ec5"
-    ],
+    "classes": [],
     "children": []
    },
    {
@@ -1903,9 +1891,7 @@
       "url": "#"
      }
     },
-    "classes": [
-     "f732abd5-027f-a7ce-07f3-db97cfd300d4"
-    ],
+    "classes": [],
     "children": [
      "86a50c64-574d-bb83-8ecb-14d3c09f9619"
     ]
@@ -1927,9 +1913,7 @@
       }
      }
     },
-    "classes": [
-     "0e1e5337-82a9-a22a-c820-a101e61e3e48"
-    ],
+    "classes": [],
     "children": []
    },
    {
@@ -2040,9 +2024,7 @@
      "tag": "header",
      "text": false
     },
-    "classes": [
-     "f5e0a3fe-a77c-7d15-cf63-e0a718fbd14b"
-    ],
+    "classes": [],
     "children": [
      "605976db-13cc-ff3d-bf9b-e09ef48b2237"
     ]
@@ -2162,23 +2144,6 @@
     "selector": null
    },
    {
-    "_id": "f732abd5-027f-a7ce-07f3-db97cfd300d4",
-    "fake": false,
-    "type": "class",
-    "name": "navbar_card",
-    "namespace": "",
-    "comb": "",
-    "styleLess": "align-content: stretch; display: flex; grid-row-gap: 2px; grid-column-gap: 2px; height: 42px; align-items: center; justify-content: center; position: relative; border-radius: 500px; flex-shrink: 0;",
-    "variants": {},
-    "children": [
-     "20ad42c0-3cff-2c0e-0b9c-f4a6acf2cdba",
-     "824f0ab2-26a3-fd28-126d-eee2025cae2c",
-     "e5e3480e-ee4d-f445-f14d-f58767f6155b"
-    ],
-    "origin": null,
-    "selector": null
-   },
-   {
     "_id": "f8b53cc4-f1f2-b4e4-7094-eea09542c35c",
     "fake": false,
     "type": "class",
@@ -2229,6 +2194,23 @@
     "styleLess": "position: static; z-index: auto;",
     "variants": {},
     "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "f732abd5-027f-a7ce-07f3-db97cfd300d4",
+    "fake": false,
+    "type": "class",
+    "name": "navbar_card",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "align-content: stretch; display: flex; grid-row-gap: 2px; grid-column-gap: 2px; height: 42px; align-items: center; justify-content: center; position: relative; border-radius: 500px; flex-shrink: 0;",
+    "variants": {},
+    "children": [
+     "20ad42c0-3cff-2c0e-0b9c-f4a6acf2cdba",
+     "824f0ab2-26a3-fd28-126d-eee2025cae2c",
+     "e5e3480e-ee4d-f445-f14d-f58767f6155b"
+    ],
     "origin": null,
     "selector": null
    },

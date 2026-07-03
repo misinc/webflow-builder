@@ -24,6 +24,7 @@ export function SkeletonReviewScreen() {
     regenerateSkeleton,
     selectedSection,
     selectedSectionId,
+    setPasteScope,
     setUiHint,
     skipCurrentSection,
     skeleton
@@ -71,6 +72,7 @@ export function SkeletonReviewScreen() {
     try {
       copyWebflowPayloadToClipboard(payload);
       setPendingPayload(null);
+      setPasteScope("section");
       setUiHint(
         "On the canvas: click where the section should go, press Cmd+V, then select the pasted section and Clean up paste."
       );

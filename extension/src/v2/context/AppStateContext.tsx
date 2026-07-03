@@ -313,6 +313,9 @@ interface AppStateContextValue {
   /** Instructional message shown in the global bar at the top of the panel. */
   uiHint: string | null;
   setUiHint: (hint: string | null) => void;
+  /** What the paste screen is cleaning up after: a section, a whole page, or site chrome. */
+  pasteScope: "section" | "page" | "chrome-header" | "chrome-footer";
+  setPasteScope: (scope: "section" | "page" | "chrome-header" | "chrome-footer") => void;
   lastCompletedSection: SectionOutcomeSummary | null;
   activeSectionError: string | null;
   selectSection: (sectionId: string) => void;
@@ -396,6 +399,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [currentTargetNodeId, setCurrentTargetNodeId] = useState<string | null>(null);
   const [lastCompletedSection, setLastCompletedSection] = useState<SectionOutcomeSummary | null>(null);
   const [uiHint, setUiHint] = useState<string | null>(null);
+  const [pasteScope, setPasteScope] = useState<"section" | "page" | "chrome-header" | "chrome-footer">("section");
   const [sectionErrorsById, setSectionErrorsById] = useState<Record<string, string>>({});
   const [activeAbortController, setActiveAbortController] = useState<AbortController | null>(null);
   const activeExecutionRecordRef = useRef<ExecutionRunRecord | null>(null);
@@ -2055,6 +2059,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       approveAllRemainingSections,
       uiHint,
       setUiHint,
+      pasteScope,
+      setPasteScope,
       lastCompletedSection,
       activeSectionError:
         (selectedSectionId ? sectionErrorsById[selectedSectionId] : null) ?? error,
@@ -2188,6 +2194,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       buildClipboardPayload,
       approveAllRemainingSections,
       uiHint,
+      pasteScope,
       session,
       siteStylePlan,
       skeleton,
