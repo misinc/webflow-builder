@@ -118,9 +118,47 @@ const LOGICAL_SIDES: Record<string, [string, string]> = {
   "margin-block": ["margin-top", "margin-bottom"]
 };
 
+// Declarations Webflow's paste validator is not known to accept — native
+// Designer copies never contain them (e.g. a hover-styled button captures with
+// NO transition-* in styleLess), and a payload carrying them can be rejected
+// wholesale ("the clipboard is empty"). Dropped until ground-truth captures
+// show Webflow's own encoding.
+const UNSAFE_STYLE_PROPS = new Set([
+  "transition",
+  "transition-property",
+  "transition-duration",
+  "transition-timing-function",
+  "transition-delay",
+  "isolation",
+  "content-visibility",
+  "will-change",
+  "contain"
+]);
+
 function stylePropertiesToStyleLess(properties: Record<string, string>): string {
   const declarations: string[] = [];
   for (const [prop, value] of Object.entries(properties)) {
+    if (UNSAFE_STYLE_PROPS.has(prop)) {
+      continue;
+    }
+    // Webflow stores flex as longhands; the `flex: 1 0 0` shorthand is not a
+    // known-safe styleLess declaration.
+    if (prop === "flex") {
+      const parts = value.trim().split(/\s+/);
+      if (parts.length === 3) {
+        declarations.push(
+          `flex-grow: ${parts[0]};`,
+          `flex-shrink: ${parts[1]};`,
+          `flex-basis: ${parts[2]};`
+        );
+        continue;
+      }
+      if (parts.length === 1 && /^[\d.]+$/.test(parts[0])) {
+        declarations.push(`flex-grow: ${parts[0]};`, "flex-shrink: 1;", "flex-basis: 0%;");
+        continue;
+      }
+      continue;
+    }
     const logical = LOGICAL_SIDES[prop];
     if (logical) {
       const [start, end = start] = value.trim().split(/\s+/);

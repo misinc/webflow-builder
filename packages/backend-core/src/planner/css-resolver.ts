@@ -79,7 +79,15 @@ function ruleBreakpointOrder(rule: postcss.Rule): number | null {
   return order;
 }
 
+// A page payload resolves every section against the SAME compiled stylesheet —
+// re-parsing ~500KB of CSS per section dominates the request time. Cache the
+// last parse (result is treated as read-only by all consumers).
+let parseCache: { cssText: string; parsed: ParsedCss } | null = null;
+
 export function parseCompiledCss(cssText: string): ParsedCss {
+  if (parseCache && parseCache.cssText === cssText) {
+    return parseCache.parsed;
+  }
   const classes = new Map<string, Record<string, string>>();
   const variables = new Map<string, string>();
   const descendantRules: DescendantRule[] = [];
@@ -198,7 +206,9 @@ export function parseCompiledCss(cssText: string): ParsedCss {
     }
   }
 
-  return { classes, idRules, variables, descendantRules, defaultTextColor };
+  const parsed: ParsedCss = { classes, idRules, variables, descendantRules, defaultTextColor };
+  parseCache = { cssText, parsed };
+  return parsed;
 }
 
 /**

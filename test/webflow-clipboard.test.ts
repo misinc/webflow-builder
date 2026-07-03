@@ -179,6 +179,32 @@ describe("webflow clipboard serializer", () => {
     expect(grid2.styleLess).toContain("grid-column-gap: 20px;");
   });
 
+  it("drops paste-unsafe declarations and expands the flex shorthand", () => {
+    const risky = buildWebflowClipboardPayload({
+      elementTree: { id: "r", type: "box", tag: "div", classNames: ["risky"], children: [] },
+      styleDefinitions: [
+        {
+          className: "risky",
+          properties: {
+            display: "flex",
+            flex: "1 0 0",
+            isolation: "isolate",
+            "transition-property": "all",
+            "transition-duration": ".15s",
+            "transition-timing-function": "cubic-bezier(.4,0,.2,1)",
+            color: "#111111"
+          }
+        }
+      ]
+    });
+    const style = risky.payload.styles.find((s) => s.name === "risky")!;
+    expect(style.styleLess).toContain("flex-grow: 1;");
+    expect(style.styleLess).toContain("flex-shrink: 0;");
+    expect(style.styleLess).toContain("flex-basis: 0;");
+    expect(style.styleLess).toContain("color: #111111;");
+    expect(style.styleLess).not.toMatch(/transition|isolation|(?:^|; )flex: /);
+  });
+
   it("maps a node label to the Navigator displayName", () => {
     const labeled = buildWebflowClipboardPayload({
       elementTree: {
