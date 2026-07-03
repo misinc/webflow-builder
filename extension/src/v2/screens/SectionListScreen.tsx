@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Home,
   RefreshCw,
@@ -73,25 +73,62 @@ export function SectionListScreen() {
   const [pasteHint, setPasteHint] = useState<string | null>(null);
   const [pendingPayload, setPendingPayload] = useState<string | null>(null);
 
-  const copyPageForWebflow = async () => {
-    // A slow payload fetch can outlive the click's user-activation window, in
-    // which case the clipboard write is blocked — we keep the payload and the
-    // second click copies it synchronously.
-    // Sections whose Webflow Component already exists are left OUT of the page
-    // payload — pasting would create a flattened duplicate; they get linked
-    // instances via their "Insert instance" chip instead.
-    const componentizedSections = currentSections.filter(
+  // Building a page payload takes seconds — longer than the browser's clipboard
+  // user-activation window after a click. Prefetch it in the background so the
+  // click copies prepared data synchronously.
+  const componentizedIds = currentSections
+    .filter(
       (section) =>
         (section.status === "pending" || section.status === "in-progress") &&
         componentForSection(section)
-    );
-    let payload = pendingPayload;
-    let sectionCount: number | null = null;
+    )
+    .map((section) => section.id);
+  const pageSignature = [
+    activeMapping?.webflowPageId ?? "",
+    ...currentSections.map((section) => `${section.id}:${section.status}`),
+    `x:${componentizedIds.join("|")}`
+  ].join(",");
+  const [preparedPage, setPreparedPage] = useState<{
+    signature: string;
+    payload: string;
+    sections: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!isMapped || isPageComplete || currentSections.length === 0) {
+      setPreparedPage(null);
+      return;
+    }
+    let cancelled = false;
+    setPreparedPage(null);
+    void buildClipboardPayload(
+      undefined,
+      componentizedIds,
+      { silent: true }
+    ).then((result) => {
+      if (!cancelled && result) {
+        setPreparedPage({
+          signature: pageSignature,
+          payload: result.payload,
+          sections: result.sections.length
+        });
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageSignature, isMapped, isPageComplete]);
+
+  const copyPageForWebflow = async () => {
+    // Preferred path: the background-prepared payload copies synchronously,
+    // safely inside the click's user-activation window.
+    let payload =
+      preparedPage && preparedPage.signature === pageSignature ? preparedPage.payload : pendingPayload;
+    let sectionCount: number | null =
+      preparedPage && preparedPage.signature === pageSignature ? preparedPage.sections : null;
     if (!payload) {
-      const result = await buildClipboardPayload(
-        undefined,
-        componentizedSections.map((section) => section.id)
-      );
+      const result = await buildClipboardPayload(undefined, componentizedIds);
       if (!result) {
         return;
       }
@@ -104,8 +141,8 @@ export function SectionListScreen() {
       setHasCopiedPage(true);
       setCopyPageLabel(sectionCount ? `Copied ${sectionCount} sections` : "Copied");
       setPasteHint(
-        componentizedSections.length > 0
-          ? `Paste the main-wrapper between your navbar and footer, then Clean up paste. Skipped ${componentizedSections.length} section${componentizedSections.length === 1 ? "" : "s"} with existing components — use their Insert instance chips.`
+        componentizedIds.length > 0
+          ? `Paste the main-wrapper between your navbar and footer, then Clean up paste. Skipped ${componentizedIds.length} section${componentizedIds.length === 1 ? "" : "s"} with existing components — use their Insert instance chips.`
           : "Select your navbar (inside page-wrapper), press Cmd+V — the main-wrapper lands after it, before the footer. Then Clean up paste."
       );
       window.setTimeout(() => setCopyPageLabel("Copy page for Webflow"), 3200);
@@ -404,7 +441,11 @@ export function SectionListScreen() {
             title="Builds the whole page (all remaining sections, full styles, SVG icons) as one Webflow paste payload."
           >
             <Clipboard size={12} />
-            {isMutating && loadingLabel === "Preparing page copy" ? "Preparing…" : copyPageLabel}
+            {isMutating && loadingLabel === "Preparing page copy"
+              ? "Preparing…"
+              : !preparedPage && copyPageLabel === "Copy page for Webflow"
+              ? "Preparing page copy…"
+              : copyPageLabel}
           </Button>
         ) : null}
       </div>

@@ -301,10 +301,12 @@ interface AppStateContextValue {
   componentForSection: (section: CurrentSectionRow) => { id: string; name: string } | null;
   /** Insert an instance of the section's existing Component and approve the section. */
   insertComponentInstance: (sectionId: string) => Promise<boolean>;
-  /** Webflow paste payload for one section, or the whole page when sectionId is omitted. */
+  /** Webflow paste payload for one section, or the whole page when sectionId is omitted.
+   *  { silent: true } skips the mutation spinner and error toasts (background prefetch). */
   buildClipboardPayload: (
     sectionId?: string,
-    excludeSectionIds?: string[]
+    excludeSectionIds?: string[],
+    options?: { silent?: boolean }
   ) => Promise<WorkflowClipboardResponse | null>;
   /** Approve every remaining section of the page (after a whole-page paste). */
   approveAllRemainingSections: () => Promise<boolean>;
@@ -1638,24 +1640,36 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const buildClipboardPayload = useCallback(
     async (
       sectionId?: string,
-      excludeSectionIds?: string[]
+      excludeSectionIds?: string[],
+      options?: { silent?: boolean }
     ): Promise<WorkflowClipboardResponse | null> => {
       if (!selectedRepoId || !session?.userId || !designerContext?.siteId || !designerContext.pageId) {
-        setError("Designer context is not ready.");
+        if (!options?.silent) {
+          setError("Designer context is not ready.");
+        }
         return null;
+      }
+      const request = {
+        repoId: selectedRepoId,
+        webflowSiteId: designerContext.siteId!,
+        webflowPageId: designerContext.pageId!,
+        sectionId,
+        excludeSectionIds: excludeSectionIds ?? [],
+        requestedBy: session.userId
+      };
+      if (options?.silent) {
+        // Background prefetch: no spinner, no error toast — the click handler
+        // falls back to the interactive path when nothing was prepared.
+        try {
+          return await backend.buildClipboardPayload(request);
+        } catch {
+          return null;
+        }
       }
       try {
         return await withMutation(
           sectionId ? "Preparing section copy" : "Preparing page copy",
-          async () =>
-            backend.buildClipboardPayload({
-              repoId: selectedRepoId,
-              webflowSiteId: designerContext.siteId!,
-              webflowPageId: designerContext.pageId!,
-              sectionId,
-              excludeSectionIds: excludeSectionIds ?? [],
-              requestedBy: session.userId
-            })
+          async () => backend.buildClipboardPayload(request)
         );
       } catch (err) {
         setError(

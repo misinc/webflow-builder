@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { ChevronDown, ChevronRight, Clipboard, ExternalLink, Pencil, Plus, RefreshCw } from "lucide-react";
 import { copyWebflowPayloadToClipboard } from "../../webflow/clipboard.js";
 import { Panel } from "../components/Panel";
@@ -38,6 +38,26 @@ export function SkeletonReviewScreen() {
   const [cleanupLabel, setCleanupLabel] = useState("Clean up paste");
   const [hasCopied, setHasCopied] = useState(false);
   const [pendingPayload, setPendingPayload] = useState<string | null>(null);
+  const [preparedSection, setPreparedSection] = useState<{ id: string; payload: string } | null>(null);
+
+  // Prefetch the section payload so the Copy click writes the clipboard
+  // synchronously (inside the browser's user-activation window).
+  useEffect(() => {
+    if (!selectedSectionId) {
+      setPreparedSection(null);
+      return;
+    }
+    let cancelled = false;
+    setPreparedSection(null);
+    void buildClipboardPayload(selectedSectionId, undefined, { silent: true }).then((result) => {
+      if (!cancelled && result) {
+        setPreparedSection({ id: selectedSectionId, payload: result.payload });
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedSectionId, buildClipboardPayload]);
 
   const cleanupPaste = async () => {
     setCleanupLabel("Cleaning…");
@@ -58,9 +78,11 @@ export function SkeletonReviewScreen() {
     if (!selectedSectionId) {
       return;
     }
-    // Keep the payload if the clipboard write misses the user-activation
-    // window (slow fetch) — the second click copies synchronously.
-    let payload = pendingPayload;
+    // Preferred path: the background-prepared payload copies synchronously.
+    let payload =
+      preparedSection && preparedSection.id === selectedSectionId
+        ? preparedSection.payload
+        : pendingPayload;
     if (!payload) {
       const result = await buildClipboardPayload(selectedSectionId);
       if (!result) {
