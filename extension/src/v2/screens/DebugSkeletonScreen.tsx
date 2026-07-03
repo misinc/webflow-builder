@@ -546,9 +546,19 @@ export function DebugSkeletonScreen() {
               }}
               onPaste={(event) => {
                 event.preventDefault();
-                const json = event.clipboardData.getData("application/json");
+                // Dump EVERY clipboard flavor — Webflow writes multiple
+                // representations (the application/json XscpData is the
+                // flattened fallback; same-site component pastes read a richer
+                // flavor we want to identify).
+                const types = Array.from(event.clipboardData.types);
+                const dump = types
+                  .map((type) => {
+                    const value = event.clipboardData.getData(type);
+                    return `=== ${type} · ${value.length} chars ===\n${value.slice(0, 6000)}`;
+                  })
+                  .join("\n\n");
                 setInspectedClipboard(
-                  json || "(no application/json flavor on the clipboard — copy an element inside the Webflow Designer first)"
+                  dump || "(clipboard exposed no readable flavors — copy an element inside the Webflow Designer first)"
                 );
               }}
               spellCheck={false}
