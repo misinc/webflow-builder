@@ -918,7 +918,14 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
     );
 
     const DUPLICATE_NAME = /^(.+?) (\d+)$/;
+    // Shared client-first classes the PROJECT owns — never restyle them from a
+    // paste. Everything else (our section-scoped classes like services_card,
+    // get-in-touch_content) adopts the freshly pasted properties, so re-pasting
+    // an improved section UPDATES the stale class instead of reverting to it.
+    const SHARED_BASE_CLASS =
+      /^(heading-style-|text-size-|text-weight-|text-style-|text-color-|container-|padding-global$|padding-section-|page-wrapper$|main-wrapper$|page-padding$|spacer-|margin-|max-width-|background-color-|button$|button-)/;
     const swappedClasses = new Set<string>();
+    const adoptedClasses = new Set<string>();
     let scanned = 0;
     let updatedElements = 0;
 
@@ -932,7 +939,16 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
           const name = await style.getName().catch(() => null);
           const match = name ? DUPLICATE_NAME.exec(name) : null;
           const base = match ? stylesByName.get(match[1]) : undefined;
-          if (name && base && base.id !== style.id) {
+          if (name && match && base && base.id !== style.id) {
+            if (!SHARED_BASE_CLASS.test(match[1]) && !adoptedClasses.has(match[1])) {
+              // Section-scoped class: the duplicate carries the newest resolved
+              // styles — copy them onto the existing class before swapping.
+              const freshProperties = await style.getProperties?.().catch(() => null);
+              if (freshProperties && Object.keys(freshProperties).length > 0) {
+                await base.setProperties(freshProperties).catch(() => undefined);
+                adoptedClasses.add(match[1]);
+              }
+            }
             mapped.push(base);
             swappedClasses.add(name);
             changed = true;
