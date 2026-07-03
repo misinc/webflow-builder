@@ -236,6 +236,38 @@ export function resolveValue(value: string, variables: Map<string, string>, dept
   return parsed.toString();
 }
 
+/**
+ * Evaluate simple two-operand calc() expressions to literal values. Tailwind v4
+ * emits ALL spacing as `calc(var(--spacing) * N)` and line-heights as ratios
+ * like `calc(1.75/1.125)` — Webflow silently drops calc() on paste, so gaps and
+ * paddings vanish unless we compute them. Anything more complex passes through.
+ */
+export function evaluateSimpleCalc(value: string): string {
+  if (!/calc\(/i.test(value)) {
+    return value;
+  }
+  return value.replace(/calc\(([^()]*)\)/gi, (whole, inner: string) => {
+    const match = /^\s*(-?[\d.]+)([a-z%]*)\s*([*/])\s*(-?[\d.]+)([a-z%]*)\s*$/i.exec(inner);
+    if (!match) {
+      return whole;
+    }
+    const a = Number(match[1]);
+    const b = Number(match[4]);
+    const aUnit = match[2];
+    const bUnit = match[5];
+    const op = match[3];
+    // Only one operand may carry a unit, and division by a unit or zero is out.
+    if (!Number.isFinite(a) || !Number.isFinite(b) || (aUnit && bUnit)) {
+      return whole;
+    }
+    if (op === "/" && (b === 0 || bUnit)) {
+      return whole;
+    }
+    const result = op === "*" ? a * b : a / b;
+    return `${Math.round(result * 10000) / 10000}${aUnit || bUnit}`;
+  });
+}
+
 /** Resolve a raw declaration map (substitute vars, drop empties). */
 export function resolveDeclarations(
   raw: Record<string, string>,
@@ -249,7 +281,7 @@ export function resolveDeclarations(
     if (prop.startsWith("-")) {
       continue;
     }
-    const value = resolveValue(rawValue, variables).trim();
+    const value = evaluateSimpleCalc(resolveValue(rawValue, variables).trim());
     if (value) {
       resolved[prop.toLowerCase()] = value;
     }
@@ -352,7 +384,7 @@ export function resolveDeclarationsWithBindings(
         continue;
       }
     }
-    const value = resolveValue(rawValue, variables).trim();
+    const value = evaluateSimpleCalc(resolveValue(rawValue, variables).trim());
     if (value) {
       properties[property] = value;
     }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   collectRawDeclarations,
+  evaluateSimpleCalc,
   normalizeResolvedLayout,
   parseCompiledCss,
   resolveClasses,
@@ -133,6 +134,29 @@ describe("css-resolver variable bindings", () => {
     expect(properties["--accent"]).toBeUndefined();
     expect(properties["-webkit-backdrop-filter"]).toBeUndefined();
     expect(properties.color).toBe("#111");
+  });
+});
+
+describe("css-resolver simple calc evaluation (Webflow drops calc on paste)", () => {
+  it("evaluates Tailwind spacing products and line-height ratios", () => {
+    expect(evaluateSimpleCalc("calc(0.25rem * 6)")).toBe("1.5rem");
+    expect(evaluateSimpleCalc("calc(.25rem * 24)")).toBe("6rem");
+    expect(evaluateSimpleCalc("calc(1.75/1.125)")).toBe("1.5556");
+    expect(evaluateSimpleCalc("calc(1/.75)")).toBe("1.3333");
+  });
+
+  it("resolves var() then calc in one pass", () => {
+    const parsed = parseCompiledCss(
+      ":root { --spacing: 0.25rem; } .gap-6 { gap: calc(var(--spacing) * 6); }"
+    );
+    expect(resolveClasses(["gap-6"], parsed).gap).toBe("1.5rem");
+  });
+
+  it("passes complex or unit-on-unit expressions through untouched", () => {
+    expect(evaluateSimpleCalc("calc(100% - 2rem)")).toBe("calc(100% - 2rem)");
+    expect(evaluateSimpleCalc("calc(2rem * 3px)")).toBe("calc(2rem * 3px)");
+    expect(evaluateSimpleCalc("calc(1rem / 0)")).toBe("calc(1rem / 0)");
+    expect(evaluateSimpleCalc("1.5rem")).toBe("1.5rem");
   });
 });
 
