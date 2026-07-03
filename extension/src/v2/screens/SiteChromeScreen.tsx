@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Clipboard, ChevronRight, Layout, PanelBottom } from "lucide-react";
 import { Panel, PanelContent } from "../components/Panel";
 import { Button } from "../components/Button";
@@ -11,20 +11,52 @@ import { copyWebflowPayloadToClipboard } from "../../webflow/clipboard.js";
  * Sitewide elements — the chrome that lives on EVERY page (announcement bar +
  * navbar, footer). Built once via paste, componentized, then reused as
  * instances on each page shell. Sits between page mapping and per-page work.
+ *
+ * Two paths, same as pages: click a row to review its skeleton and copy it
+ * alone, or Copy sitewide elements to paste navbar + footer in one gesture.
  */
 export function SiteChromeScreen() {
   const { navigate } = useNavigation();
-  const { buildClipboardPayload, isMutating, setPasteScope, setUiHint } = useAppState();
-  const [labels, setLabels] = useState<{ header: string; footer: string }>({
-    header: "Copy for Webflow",
-    footer: "Copy for Webflow"
-  });
-  const [pending, setPending] = useState<{ kind: "header" | "footer"; payload: string } | null>(null);
+  const {
+    activeMapping,
+    buildClipboardPayload,
+    isMutating,
+    loadingLabel,
+    setPasteScope,
+    setUiHint,
+    startChromeBuild
+  } = useAppState();
+  const [copyAllLabel, setCopyAllLabel] = useState("Copy sitewide elements");
+  const [pendingAll, setPendingAll] = useState<string | null>(null);
 
-  const copyChrome = async (kind: "header" | "footer") => {
-    let payload = pending?.kind === kind ? pending.payload : null;
+  // Building the combined payload takes seconds — longer than the browser's
+  // clipboard user-activation window after a click. Prefetch it in the
+  // background so the click copies prepared data synchronously.
+  const [preparedAll, setPreparedAll] = useState<string | null>(null);
+  const mappedPageId = activeMapping?.webflowPageId ?? null;
+  useEffect(() => {
+    if (!mappedPageId) {
+      setPreparedAll(null);
+      return;
+    }
+    let cancelled = false;
+    setPreparedAll(null);
+    void buildClipboardPayload(undefined, undefined, { chrome: "all", silent: true }).then(
+      (result) => {
+        if (!cancelled && result) {
+          setPreparedAll(result.payload);
+        }
+      }
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [mappedPageId, buildClipboardPayload]);
+
+  const copyAllForWebflow = async () => {
+    let payload = preparedAll ?? pendingAll;
     if (!payload) {
-      const result = await buildClipboardPayload(undefined, undefined, { chrome: kind });
+      const result = await buildClipboardPayload(undefined, undefined, { chrome: "all" });
       if (!result) {
         return;
       }
@@ -32,17 +64,17 @@ export function SiteChromeScreen() {
     }
     try {
       copyWebflowPayloadToClipboard(payload);
-      setPending(null);
-      setPasteScope(kind === "header" ? "chrome-header" : "chrome-footer");
+      setPendingAll(null);
+      setCopyAllLabel("Copied");
+      setPasteScope("chrome");
       setUiHint(
-        kind === "header"
-          ? "Paste the navbar inside your page-wrapper, above main-wrapper."
-          : "Paste the footer inside your page-wrapper, below main-wrapper."
+        "Paste inside your page-wrapper, then unwrap: navbar stays above, footer below — main-wrapper pastes between them later."
       );
       navigate("paste-section");
+      window.setTimeout(() => setCopyAllLabel("Copy sitewide elements"), 2600);
     } catch {
-      setPending({ kind, payload });
-      setLabels((current) => ({ ...current, [kind]: "Click again to copy" }));
+      setPendingAll(payload);
+      setCopyAllLabel("Click again to copy");
     }
   };
 
@@ -71,10 +103,25 @@ export function SiteChromeScreen() {
       onClose={() => navigate("section-list")}
       footer={
         <>
-          <div className="flex-1" />
-          <Button variant="primary" onClick={() => navigate("section-list")}>
+          <Button variant="ghost" size="sm" onClick={() => navigate("section-list")}>
             Continue to pages
             <ChevronRight size={13} />
+          </Button>
+          <div className="flex-1" />
+          <Button
+            variant="primary"
+            disabled={isMutating}
+            onClick={() => {
+              void copyAllForWebflow();
+            }}
+            title="Copies navbar + footer as ONE Webflow paste payload, then walks you through the paste."
+          >
+            <Clipboard size={12} />
+            {isMutating && loadingLabel === "Preparing page copy"
+              ? "Preparing…"
+              : !preparedAll && copyAllLabel === "Copy sitewide elements"
+              ? "Preparing copy…"
+              : copyAllLabel}
           </Button>
         </>
       }
@@ -84,16 +131,22 @@ export function SiteChromeScreen() {
         label="Site setup"
         name="Sitewide elements"
         progressDoneText="Built once, then added to every page as Components."
-        progressRemainingText="Copy → paste inside page-wrapper → Clean up paste → Create Component."
+        progressRemainingText="Review each element → Copy → paste inside page-wrapper → Clean up paste → Create Component."
       />
 
       <PanelContent>
         <ListHeader title="Chrome detected around <main>" count="2 elements" />
         <div className="px-3 py-2">
           {rows.map((row) => (
-            <div
+            <button
               key={row.kind}
-              className="w-full flex items-center gap-3 px-3 py-3 rounded-md border border-transparent hover:bg-wb-surface-1 hover:border-white/[0.09]"
+              type="button"
+              disabled={isMutating}
+              onClick={() => {
+                void startChromeBuild(row.kind);
+                navigate("chrome-detail");
+              }}
+              className="w-full flex items-center gap-3 px-3 py-3 rounded-md border text-left cursor-pointer border-transparent hover:bg-wb-surface-1 hover:border-white/[0.09]"
             >
               <div className="w-7 h-7 rounded-md inline-flex items-center justify-center flex-shrink-0 bg-wb-surface-2 text-wb-text-tertiary">
                 {row.icon}
@@ -102,23 +155,16 @@ export function SiteChromeScreen() {
                 <div className="text-[13px] font-medium text-wb-text-primary mb-0.5">{row.title}</div>
                 <div className="text-[11.5px] text-wb-text-tertiary font-mono">{row.detail}</div>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={isMutating}
-                onClick={() => {
-                  void copyChrome(row.kind);
-                }}
-              >
-                <Clipboard size={11} />
-                {labels[row.kind]}
-              </Button>
-            </div>
+              <div className="flex-shrink-0 text-wb-text-tertiary">
+                <ChevronRight size={16} />
+              </div>
+            </button>
           ))}
         </div>
         <div className="px-6 py-3 text-[11.5px] text-wb-text-tertiary">
-          Navbar and footer are copied separately because they paste into different spots
-          (above and below main-wrapper). Once each is a Component, pages only need instances.
+          Click an element to review its skeleton and copy it alone, or copy both at once below —
+          they paste inside page-wrapper (navbar above main-wrapper, footer below). Once each is a
+          Component, pages only need instances.
         </div>
       </PanelContent>
     </Panel>

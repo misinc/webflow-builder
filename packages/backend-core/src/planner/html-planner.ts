@@ -896,7 +896,14 @@ export function htmlToBuildNode(input: {
       pre: false
     }
   });
-  const rootElement = firstUsefulElement(document);
+  // Chrome sources are already exactly the chrome subtree (extractChromeHtml) —
+  // never descend to an inner semantic element, or the outer wrapper's own
+  // classes/styles would be dropped.
+  const rootElement = input.chrome
+    ? (document.childNodes.find(
+        (node): node is HTMLElement => node.nodeType === NodeType.ELEMENT_NODE
+      ) ?? firstUsefulElement(document))
+    : firstUsefulElement(document);
   if (!rootElement) {
     return null;
   }

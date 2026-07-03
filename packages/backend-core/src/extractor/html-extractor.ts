@@ -206,9 +206,16 @@ export function extractChromeHtml(sourceCode: string, kind: "header" | "footer")
   if (meaningful.length === 0) {
     return null;
   }
+  // A single chrome element (one navbar div, one <footer>) is returned as-is —
+  // a synthetic wrapper would double up with the `_component` class the planner
+  // gives the inner element, leaving a classless wrapper in the paste.
+  if (meaningful.length === 1) {
+    return meaningful[0].toString();
+  }
   const wrapperTag = kind === "header" ? "header" : "footer";
   return `<${wrapperTag}>${meaningful.map((child) => child.toString()).join("")}</${wrapperTag}>`;
 }
+
 
 function findSectionElements(sourceCode: string): HTMLElement[] {
   const document = parse(sourceCode, {
@@ -240,7 +247,8 @@ function findSectionElements(sourceCode: string): HTMLElement[] {
   return children.length > 0 ? children : [scope];
 }
 
-function fileByPath(snapshot: RepositorySnapshot, filePath: string): string {
+/** The raw content of a repo file in the snapshot ("" when absent). */
+export function fileByPath(snapshot: RepositorySnapshot, filePath: string): string {
   return snapshot.files.find((file) => file.path === filePath)?.content ?? "";
 }
 

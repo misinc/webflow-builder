@@ -750,4 +750,124 @@ describe("HTML repo support", () => {
     expect(normalized.treeText).not.toContain("reparsed-only");
     expect(normalized.treeText).toContain("md:py-[120px]");
   });
+
+  it("builds chrome payloads from the repo snapshot (page records carry no source, like D1)", async () => {
+    const pageHtml = `<html><body>
+      <div class="site-nav"><p>Announcement</p><a href="/">Home</a></div>
+      <main><section id="hero"><div><h1>Hello</h1></div></section></main>
+      <footer class="site-footer"><p>Footer text</p></footer>
+    </body></html>`;
+    const repository = new MemoryAppRepository();
+    const blobStore = new MemoryBlobStore();
+    const repo = await repository.createRepo({
+      owner: "local",
+      name: "html-site",
+      repoUrl: "https://github.com/local/html-site",
+      provider: "github",
+      requestedBy: "user-1",
+      defaultBranch: "main"
+    });
+    await repository.replaceRepoIndex(
+      repo.id,
+      [
+        {
+          // No sourceCode on the page record — the production D1 repository
+          // never returns it; chrome slicing must read the repo snapshot.
+          id: "page-1",
+          repoId: repo.id,
+          name: "Home",
+          route: "/",
+          sourceFile: "index.html",
+          sortOrder: 0,
+          metadata: { repoType: "html" }
+        }
+      ],
+      [
+        {
+          id: "section-1",
+          repoId: repo.id,
+          pageId: "page-1",
+          name: "Hero",
+          sectionKey: "hero",
+          sourceFile: "index.html",
+          importPath: "index.html",
+          sortOrder: 0,
+          componentName: "Hero",
+          metadata: { repoType: "html", inlineSourceCode: "<section><h1>Hello</h1></section>" }
+        }
+      ]
+    );
+    await repository.upsertSiteBinding({
+      repoId: repo.id,
+      webflowSiteId: "site-1",
+      requestedBy: "user-1",
+      sharedStyleContext
+    });
+    await repository.upsertPageMappings({
+      repoId: repo.id,
+      webflowSiteId: "site-1",
+      requestedBy: "user-1",
+      mappings: [
+        {
+          webflowPageId: "webflow-page-1",
+          webflowPageName: "Home",
+          webflowPageRoute: "/",
+          repoPageId: "page-1"
+        }
+      ]
+    });
+    await repository.replaceSectionWorkflowStates(
+      "user-1",
+      "site-1",
+      "webflow-page-1",
+      "page-1",
+      [{ repoSectionId: "section-1", sortOrder: 0 }]
+    );
+    await blobStore.putJson(`repos/${repo.id}/snapshots/latest.json`, {
+      owner: "local",
+      name: "html-site",
+      defaultBranch: "main",
+      commitSha: "abc",
+      files: [
+        { path: "index.html", content: pageHtml },
+        { path: "assets/index.css", content: ".site-nav { display: flex; } .site-footer { padding: 24px; }" }
+      ]
+    });
+    const workflow = new WorkflowService(
+      repository,
+      blobStore,
+      new HtmlRepoExtractor() as never,
+      fallbackOnlyProvider
+    );
+    const base = {
+      repoId: repo.id,
+      webflowSiteId: "site-1",
+      webflowPageId: "webflow-page-1",
+      excludeSectionIds: [],
+      requestedBy: "user-1"
+    };
+
+    const header = await workflow.buildClipboardPayload({ ...base, chrome: "header" });
+    expect(header.skeleton?.elementTree.classNames[0]).toBe("navbar_component");
+    expect(header.sourceCode).toContain("Announcement");
+    expect(JSON.parse(header.payload).payload.nodes.length).toBeGreaterThan(0);
+
+    const footer = await workflow.buildClipboardPayload({ ...base, chrome: "footer" });
+    expect(footer.skeleton?.elementTree.classNames[0]).toBe("footer_component");
+    // Single chrome element pastes unwrapped — the root IS the footer.
+    expect(footer.skeleton?.elementTree.tag).toBe("footer");
+
+    const all = await workflow.buildClipboardPayload({ ...base, chrome: "all" });
+    expect(all.sections.map((section) => section.sectionName)).toEqual(["Navbar", "Footer"]);
+    const allPayload = JSON.parse(all.payload).payload;
+    const childIds = new Set(
+      allPayload.nodes.flatMap((node: { children?: string[] }) => node.children ?? [])
+    );
+    const roots = allPayload.nodes.filter(
+      (node: { _id: string; text?: boolean }) => !childIds.has(node._id) && !node.text
+    );
+    expect(roots).toHaveLength(1);
+    expect(roots[0].data.displayName).toBe("Pasted chrome — unwrap me");
+    expect(roots[0].children).toHaveLength(2);
+  });
 });

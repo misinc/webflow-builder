@@ -512,9 +512,10 @@ export const workflowClipboardRequestSchema = z.object({
   /** Page mode: sections to leave out (e.g. ones whose Webflow Component already
    *  exists — those are inserted as linked instances instead of pasted copies). */
   excludeSectionIds: z.array(z.string().min(1)).default([]),
-  /** Site chrome mode: copy everything before <main> (announcement bar + navbar)
-   *  or after it (footer) from the mapped page — built once, then componentized. */
-  chrome: z.enum(["header", "footer"]).optional(),
+  /** Site chrome mode: copy everything before <main> (announcement bar + navbar),
+   *  after it (footer), or both in one paste ("all") from the mapped page —
+   *  built once, then componentized. */
+  chrome: z.enum(["header", "footer", "all"]).optional(),
   requestedBy: z.string().min(1)
 });
 
@@ -525,7 +526,12 @@ export const workflowClipboardResponseSchema = z.object({
     z.object({ sectionId: z.string().min(1), sectionName: z.string().min(1) })
   ),
   classCount: z.number().int().nonnegative(),
-  warnings: z.array(plannerWarningSchema).default([])
+  warnings: z.array(plannerWarningSchema).default([]),
+  /** Chrome header/footer requests: the skeleton behind the payload, for the
+   *  detail screen's tree view (one round trip serves review + copy). */
+  skeleton: skeletonPlanSchema.optional(),
+  /** Chrome header/footer requests: the sliced source markup, for review. */
+  sourceCode: z.string().optional()
 });
 
 export const workflowSectionRequestSchema = z.object({

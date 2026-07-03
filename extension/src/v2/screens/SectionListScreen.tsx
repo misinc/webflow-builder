@@ -150,46 +150,6 @@ export function SectionListScreen() {
     }
   };
 
-  const [chromeLabels, setChromeLabels] = useState<{ header: string; footer: string }>({
-    header: "Copy navbar",
-    footer: "Copy footer"
-  });
-  const [pendingChrome, setPendingChrome] = useState<{ kind: "header" | "footer"; payload: string } | null>(null);
-
-  // Site chrome (announcement bar + navbar / footer) is sliced from around
-  // <main> — built ONCE per site, then componentized and reused on every page.
-  const copyChrome = async (kind: "header" | "footer") => {
-    let payload = pendingChrome?.kind === kind ? pendingChrome.payload : null;
-    if (!payload) {
-      const result = await buildClipboardPayload(undefined, undefined, { chrome: kind });
-      if (!result) {
-        return;
-      }
-      payload = result.payload;
-    }
-    const label = kind === "header" ? "navbar" : "footer";
-    try {
-      copyWebflowPayloadToClipboard(payload);
-      setPendingChrome(null);
-      setChromeLabels((current) => ({ ...current, [kind]: "Copied" }));
-      setPasteScope(kind === "header" ? "chrome-header" : "chrome-footer");
-      setUiHint(
-        kind === "header"
-          ? "Paste the navbar inside your page-wrapper, above main-wrapper."
-          : "Paste the footer inside your page-wrapper, below main-wrapper."
-      );
-      navigate("paste-section");
-      window.setTimeout(
-        () => setChromeLabels((current) => ({ ...current, [kind]: kind === "header" ? "Copy navbar" : "Copy footer" })),
-        2600
-      );
-    } catch {
-      setPendingChrome({ kind, payload });
-      setChromeLabels((current) => ({ ...current, [kind]: "Click again to copy" }));
-      void label;
-    }
-  };
-
   return (
     <Panel>
       <PageHeader

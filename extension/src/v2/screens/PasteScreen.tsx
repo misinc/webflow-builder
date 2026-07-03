@@ -35,14 +35,17 @@ export function PasteScreen() {
   } = useAppState();
   const isSection = pasteScope === "section";
   const isPage = pasteScope === "page";
-  const isChrome = pasteScope === "chrome-header" || pasteScope === "chrome-footer";
+  const isChrome =
+    pasteScope === "chrome-header" || pasteScope === "chrome-footer" || pasteScope === "chrome";
   const scopeTitle = isSection
     ? selectedSection?.title ?? "Current section"
     : isPage
     ? "Whole page"
     : pasteScope === "chrome-header"
     ? "Navbar"
-    : "Footer";
+    : pasteScope === "chrome-footer"
+    ? "Footer"
+    : "Navbar + Footer";
   const [cleanupResult, setCleanupResult] = useState<string | null>(null);
   const [cleanupLabel, setCleanupLabel] = useState("Clean up paste");
   const [copyAgainLabel, setCopyAgainLabel] = useState("Copy again");
@@ -80,7 +83,12 @@ export function PasteScreen() {
       result = await buildClipboardPayload(undefined, componentizedIds);
     } else {
       result = await buildClipboardPayload(undefined, undefined, {
-        chrome: pasteScope === "chrome-header" ? "header" : "footer"
+        chrome:
+          pasteScope === "chrome-header"
+            ? "header"
+            : pasteScope === "chrome-footer"
+              ? "footer"
+              : "all"
       });
     }
     if (!result) {
@@ -101,17 +109,30 @@ export function PasteScreen() {
     ? "Select your navbar (inside page-wrapper) so the main-wrapper lands after it"
     : pasteScope === "chrome-header"
     ? "Click inside your page-wrapper, above main-wrapper"
-    : "Click inside your page-wrapper, below main-wrapper";
+    : pasteScope === "chrome-footer"
+    ? "Click inside your page-wrapper, below main-wrapper"
+    : "Click inside your page-wrapper";
   const finishStep = isSection
     ? "Compare with the live site, then Mark section built"
     : isPage
     ? "Compare with the live site, then Approve all sections"
+    : pasteScope === "chrome"
+    ? "Create a Component from the navbar and one from the footer, then Done"
     : "Right-click the pasted element → Create Component, then Done";
   const steps: Array<{ label: string; done: boolean }> = [
     { label: pasteTarget, done: false },
     { label: "Press Cmd+V (Ctrl+V on Windows) to paste", done: false },
     { label: "Select the pasted element in the Navigator", done: false },
     { label: "Clean up paste — reuses your classes, binds your variables", done: Boolean(cleanupResult) },
+    ...(pasteScope === "chrome"
+      ? [
+          {
+            label:
+              "Unwrap: move the navbar and footer out of the pasted wrapper, delete the wrapper (main-wrapper pastes between them later)",
+            done: false
+          }
+        ]
+      : []),
     { label: finishStep, done: false }
   ];
 
@@ -120,8 +141,18 @@ export function PasteScreen() {
       onClose={() => navigate("section-list")}
       footer={
         <>
-          <Button variant="ghost" size="sm" onClick={() => navigate(isSection ? "skeleton-review" : "section-list")}>
-            {isSection ? "Back to skeleton" : "Back to sections"}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() =>
+              navigate(isSection ? "skeleton-review" : isChrome ? "site-chrome" : "section-list")
+            }
+          >
+            {isSection
+              ? "Back to skeleton"
+              : isChrome
+              ? "Back to sitewide elements"
+              : "Back to sections"}
           </Button>
           <Button
             variant="ghost"
@@ -178,7 +209,7 @@ export function PasteScreen() {
                 });
               } else {
                 setUiHint(null);
-                navigate("section-list");
+                navigate(isChrome ? "site-chrome" : "section-list");
               }
             }}
           >
@@ -190,7 +221,9 @@ export function PasteScreen() {
       <SectionDetailHeader
         eyebrow="Build flow"
         title={scopeTitle}
-        onBack={() => navigate(isSection ? "skeleton-review" : "section-list")}
+        onBack={() =>
+          navigate(isSection ? "skeleton-review" : isChrome ? "site-chrome" : "section-list")
+        }
       />
 
       <Stepper steps={buildStepper("style")} />

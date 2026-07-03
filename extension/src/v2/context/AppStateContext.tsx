@@ -306,16 +306,23 @@ interface AppStateContextValue {
   buildClipboardPayload: (
     sectionId?: string,
     excludeSectionIds?: string[],
-    options?: { silent?: boolean; chrome?: "header" | "footer" }
+    options?: { silent?: boolean; chrome?: "header" | "footer" | "all" }
   ) => Promise<WorkflowClipboardResponse | null>;
   /** Approve every remaining section of the page (after a whole-page paste). */
   approveAllRemainingSections: () => Promise<boolean>;
   /** Instructional message shown in the global bar at the top of the panel. */
   uiHint: string | null;
   setUiHint: (hint: string | null) => void;
-  /** What the paste screen is cleaning up after: a section, a whole page, or site chrome. */
-  pasteScope: "section" | "page" | "chrome-header" | "chrome-footer";
-  setPasteScope: (scope: "section" | "page" | "chrome-header" | "chrome-footer") => void;
+  /** What the paste screen is cleaning up after: a section, a whole page, one
+   *  chrome element, or both chrome elements at once ("chrome"). */
+  pasteScope: PasteScope;
+  setPasteScope: (scope: PasteScope) => void;
+  /** The sitewide element open in the chrome detail screen, with everything the
+   *  screen needs (skeleton is mirrored into the shared `skeleton` slot so the
+   *  tree editor works on it too). */
+  selectedChrome: ChromeSelection | null;
+  /** Build one sitewide element's skeleton + paste payload and select it. */
+  startChromeBuild: (kind: "header" | "footer") => Promise<boolean>;
   lastCompletedSection: SectionOutcomeSummary | null;
   activeSectionError: string | null;
   selectSection: (sectionId: string) => void;
@@ -361,6 +368,18 @@ interface AppStateContextValue {
   applySuggestionToCurrentPage: (repoPageId: string) => Promise<boolean>;
 }
 
+export type PasteScope = "section" | "page" | "chrome-header" | "chrome-footer" | "chrome";
+
+export interface ChromeSelection {
+  kind: "header" | "footer";
+  title: string;
+  /** The sliced chrome markup, for the detail screen's source pane. */
+  sourceCode: string;
+  /** The prepared paste payload — lets the Copy click write the clipboard
+   *  synchronously (inside the browser's user-activation window). */
+  payload: string;
+}
+
 const AppStateContext = createContext<AppStateContextValue | null>(null);
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
@@ -399,7 +418,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [currentTargetNodeId, setCurrentTargetNodeId] = useState<string | null>(null);
   const [lastCompletedSection, setLastCompletedSection] = useState<SectionOutcomeSummary | null>(null);
   const [uiHint, setUiHint] = useState<string | null>(null);
-  const [pasteScope, setPasteScope] = useState<"section" | "page" | "chrome-header" | "chrome-footer">("section");
+  const [pasteScope, setPasteScope] = useState<PasteScope>("section");
+  const [selectedChrome, setSelectedChrome] = useState<ChromeSelection | null>(null);
   const [sectionErrorsById, setSectionErrorsById] = useState<Record<string, string>>({});
   const [activeAbortController, setActiveAbortController] = useState<AbortController | null>(null);
   const activeExecutionRecordRef = useRef<ExecutionRunRecord | null>(null);
@@ -1158,6 +1178,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       return await withMutation("Generating skeleton", async () => {
         const controller = new AbortController();
         setActiveAbortController(controller);
+        setSelectedChrome(null);
         if (!preserveState) {
           resetSectionRunState(nextSectionId);
         }
@@ -1649,7 +1670,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     async (
       sectionId?: string,
       excludeSectionIds?: string[],
-      options?: { silent?: boolean; chrome?: "header" | "footer" }
+      options?: { silent?: boolean; chrome?: "header" | "footer" | "all" }
     ): Promise<WorkflowClipboardResponse | null> => {
       if (!selectedRepoId || !session?.userId || !designerContext?.siteId || !designerContext.pageId) {
         if (!options?.silent) {
@@ -1688,6 +1709,43 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       }
     },
     [designerContext?.pageId, designerContext?.siteId, selectedRepoId, session?.userId, withMutation]
+  );
+
+  const startChromeBuild = useCallback(
+    async (kind: "header" | "footer"): Promise<boolean> => {
+      const title = kind === "header" ? "Navbar" : "Footer";
+      setSelectedChrome(null);
+      setSkeleton(null);
+      setSkeletonDraft("");
+      setIsEditingSkeleton(false);
+      try {
+        return await withMutation("Generating skeleton", async () => {
+          const result = await buildClipboardPayload(undefined, undefined, {
+            chrome: kind,
+            silent: true
+          });
+          if (!result) {
+            throw new Error(`Failed to build the ${title.toLowerCase()} for Webflow.`);
+          }
+          if (result.skeleton) {
+            const nextSkeleton = normalizeSkeletonPlan(result.skeleton, { siteStylePlan });
+            setSkeleton(nextSkeleton);
+            setSkeletonDraft(nextSkeleton.treeText);
+          }
+          setSelectedChrome({
+            kind,
+            title,
+            sourceCode: result.sourceCode ?? "",
+            payload: result.payload
+          });
+          return true;
+        });
+      } catch (err) {
+        setError(err instanceof Error ? err.message : `Failed to prepare the ${title.toLowerCase()}.`);
+        return false;
+      }
+    },
+    [buildClipboardPayload, siteStylePlan, withMutation]
   );
 
   const approveAllRemainingSections = useCallback(async (): Promise<boolean> => {
@@ -2061,6 +2119,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setUiHint,
       pasteScope,
       setPasteScope,
+      selectedChrome,
+      startChromeBuild,
       lastCompletedSection,
       activeSectionError:
         (selectedSectionId ? sectionErrorsById[selectedSectionId] : null) ?? error,
@@ -2195,11 +2255,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       approveAllRemainingSections,
       uiHint,
       pasteScope,
+      selectedChrome,
       session,
       siteStylePlan,
       skeleton,
       skeletonDraft,
       skipCurrentSection,
+      startChromeBuild,
       startSectionBuild,
       styling,
       syncDesignerContext,

@@ -15,20 +15,24 @@ export function SkeletonEditScreen() {
     hasSkeletonChanges,
     saveSkeletonChanges,
     saveSkeletonDraft,
+    selectedChrome,
     selectedSection,
     skeletonDraft
   } = useAppState();
+  // A chrome skeleton (navbar/footer) returns to its own detail screen.
+  const reviewScreen = selectedChrome ? "chrome-detail" : "skeleton-review";
+  const subjectTitle = selectedChrome?.title ?? selectedSection?.title ?? "Current section";
 
   return (
     <Panel
-      onClose={() => navigate("skeleton-review")}
+      onClose={() => navigate(reviewScreen)}
       footer={
         <>
           <Button
             variant="ghost"
             onClick={() => {
               discardSkeletonChanges();
-              navigate("skeleton-review");
+              navigate(reviewScreen);
             }}
           >
             Discard changes
@@ -45,7 +49,7 @@ export function SkeletonEditScreen() {
             variant="primary"
             onClick={() => {
               if (saveSkeletonChanges()) {
-                navigate("skeleton-review");
+                navigate(reviewScreen);
               }
             }}
           >
@@ -55,9 +59,9 @@ export function SkeletonEditScreen() {
       }
     >
       <SectionDetailHeader
-        eyebrow={`Editing skeleton · ${selectedSection?.title ?? "Current section"}`}
+        eyebrow={`Editing skeleton · ${subjectTitle}`}
         title="Edit skeleton tree"
-        onBack={() => navigate("skeleton-review")}
+        onBack={() => navigate(reviewScreen)}
         badge={
           <Badge tone="in-progress">
             <Pencil size={10} />

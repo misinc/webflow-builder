@@ -4,6 +4,7 @@ export type ScreenName =
   | 'debug-skeleton'
   | 'map-pages'
   | 'site-chrome'
+  | 'chrome-detail'
   | 'create-page'
   | 'section-list'
   | 'generating-skeleton'
@@ -42,6 +43,7 @@ export const SCREENS: Record<ScreenName, ScreenMeta> = {
   'section-list':         { num: '06', phase: 'Main',       title: 'Section list — home base' },
   'generating-skeleton':  { num: '07', phase: 'Build flow', title: 'Generating skeleton' },
   'site-chrome':          { num: '05b', phase: 'Onboarding', title: 'Sitewide elements' },
+  'chrome-detail':        { num: '05c', phase: 'Onboarding', title: 'Sitewide element detail' },
   'skeleton-review':      { num: '08', phase: 'Build flow', title: 'Skeleton tree review' },
   'paste-section':        { num: '08b', phase: 'Build flow', title: 'Paste into Webflow' },
   'skeleton-edit':        { num: '09', phase: 'Build flow', title: 'Edit skeleton tree' },

@@ -47,7 +47,7 @@ import { extractAssetReferencesFromSource } from "../extractor/asset-references.
 import { RepositorySnapshot } from "../github/client.js";
 import { HeuristicBuildPlanner } from "../planner/heuristic-planner.js";
 import { htmlToSkeletonPlan } from "../planner/html-planner.js";
-import { extractChromeHtml } from "../extractor/html-extractor.js";
+import { extractChromeHtml, fileByPath } from "../extractor/html-extractor.js";
 import { buildWebflowClipboardPayload } from "@wfb/shared/webflow-clipboard.js";
 import {
   workflowClipboardRequestSchema,
@@ -980,42 +980,23 @@ export class WorkflowService {
     );
 
     if (request.chrome) {
-      // Site chrome (announcement bar + navbar, or footer): sliced from around
-      // <main> on the mapped page, built ONCE per site, componentized after
-      // pasting. No section scaffold — it lives outside main-wrapper.
-      const pageSource = queue.repoPage?.sourceCode;
+      // Site chrome (announcement bar + navbar, footer, or both): sliced from
+      // around <main> on the mapped page, built ONCE per site, componentized
+      // after pasting. No section scaffold — it lives outside main-wrapper.
+      if (!queue.repoPage) {
+        throw new Error("This page has no repo mapping — map it first.");
+      }
+      // Page records in the DB don't carry source; slice it from the synced
+      // repo snapshot (same source of truth the section pipeline uses).
+      const pageSource =
+        queue.repoPage.sourceCode ??
+        fileByPath(await this.getSnapshot(request.repoId), queue.repoPage.sourceFile);
       if (!pageSource) {
         throw new Error("The mapped page's source is unavailable — Re-scan the repo first.");
-      }
-      const chromeHtml = extractChromeHtml(pageSource, request.chrome);
-      if (!chromeHtml) {
-        throw new Error(
-          request.chrome === "header"
-            ? "No navbar/header markup found before <main> on this page."
-            : "No footer markup found after <main> on this page."
-        );
       }
       const firstItem = queue.items[0];
       if (!firstItem) {
         throw new Error("No sections indexed for this page — Re-scan the repo first.");
-      }
-      const sectionName = request.chrome === "header" ? "Navbar" : "Footer";
-      const metadata = {
-        repoId: request.repoId,
-        pageId: queue.repoPage!.id,
-        sectionId: `chrome-${request.chrome}`,
-        pageName: queue.repoPage!.name,
-        sectionName,
-        sourceFile: queue.repoPage!.sourceFile,
-        repoType: "html" as const
-      };
-      const chromeSkeleton = htmlToSkeletonPlan({
-        metadata,
-        sourceCode: chromeHtml,
-        chrome: true
-      });
-      if (!chromeSkeleton) {
-        throw new Error(`Could not parse the ${sectionName.toLowerCase()} markup.`);
       }
       const chromeContext = await this.getSectionStateContext({
         repoId: request.repoId,
@@ -1029,21 +1010,90 @@ export class WorkflowService {
       const chromeCss = chromeContext.sectionContext.relevantStylesheets
         .map((sheet) => sheet.content)
         .join("\n");
-      const chromeStyling = buildResolvedStylingFromSkeleton({
-        metadata,
-        mode: "fullAssist",
-        skeleton: chromeSkeleton,
-        cssText: chromeCss
-      });
+
+      const buildOne = (kind: "header" | "footer") => {
+        const chromeHtml = extractChromeHtml(pageSource, kind);
+        if (!chromeHtml) {
+          return null;
+        }
+        const sectionName = kind === "header" ? "Navbar" : "Footer";
+        const metadata = {
+          repoId: request.repoId,
+          pageId: queue.repoPage!.id,
+          sectionId: `chrome-${kind}`,
+          pageName: queue.repoPage!.name,
+          sectionName,
+          sourceFile: queue.repoPage!.sourceFile,
+          repoType: "html" as const
+        };
+        const skeleton = htmlToSkeletonPlan({ metadata, sourceCode: chromeHtml, chrome: true });
+        if (!skeleton) {
+          throw new Error(`Could not parse the ${sectionName.toLowerCase()} markup.`);
+        }
+        const styling = buildResolvedStylingFromSkeleton({
+          metadata,
+          mode: "fullAssist",
+          skeleton,
+          cssText: chromeCss
+        });
+        return { kind, sectionName, metadata, skeleton, styling, sourceCode: chromeHtml };
+      };
+
+      const kinds: Array<"header" | "footer"> =
+        request.chrome === "all" ? ["header", "footer"] : [request.chrome];
+      const plans = kinds
+        .map(buildOne)
+        .filter((plan): plan is NonNullable<ReturnType<typeof buildOne>> => plan !== null);
+      if (plans.length === 0) {
+        throw new Error(
+          request.chrome === "header"
+            ? "No navbar/header markup found before <main> on this page."
+            : request.chrome === "footer"
+              ? "No footer markup found after <main> on this page."
+              : "No navbar or footer markup found around <main> on this page."
+        );
+      }
+
+      const chromeStyles = new Map<
+        string,
+        { className: string; properties: Record<string, string>; combo?: boolean }
+      >();
+      for (const plan of plans) {
+        for (const definition of plan.styling.styleDefinitions) {
+          if (!chromeStyles.has(definition.className)) {
+            chromeStyles.set(definition.className, definition);
+          }
+        }
+      }
+      // A paste payload has a single root: "all" wraps navbar + footer in a
+      // bare labeled div the user unwraps after pasting (navbar stays above,
+      // footer below, main-wrapper pastes between them later).
+      const chromeTree: BuildNode =
+        plans.length === 1
+          ? plans[0].skeleton.elementTree
+          : {
+              id: `chrome-all-${request.webflowPageId}`,
+              type: "box",
+              tag: "div",
+              classNames: [],
+              label: "Pasted chrome — unwrap me",
+              children: plans.map((plan) => plan.skeleton.elementTree)
+            };
       const chromePayload = buildWebflowClipboardPayload({
-        elementTree: chromeSkeleton.elementTree,
-        styleDefinitions: chromeStyling.styleDefinitions
+        elementTree: chromeTree,
+        styleDefinitions: [...chromeStyles.values()]
       });
       return workflowClipboardResponseSchema.parse({
         payload: JSON.stringify(chromePayload),
-        sections: [{ sectionId: metadata.sectionId, sectionName }],
-        classCount: chromeStyling.styleDefinitions.length,
-        warnings: chromeSkeleton.warnings
+        sections: plans.map((plan) => ({
+          sectionId: plan.metadata.sectionId,
+          sectionName: plan.sectionName
+        })),
+        classCount: chromeStyles.size,
+        warnings: plans.flatMap((plan) => plan.skeleton.warnings),
+        // Single-element requests feed the chrome detail screen (tree + source).
+        skeleton: plans.length === 1 ? plans[0].skeleton : undefined,
+        sourceCode: plans.length === 1 ? plans[0].sourceCode : undefined
       });
     }
     const targetItems = queue.items.filter((item) =>
