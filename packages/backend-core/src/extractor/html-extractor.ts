@@ -10,7 +10,7 @@ const SECTION_TAGS = new Set(["section", "header", "footer", "article"]);
 const LANDMARK_TAGS = new Set(["main", "aside", "nav"]);
 const WRAPPER_TAGS = new Set(["div", "main", "body"]);
 const HEADING_TAG_PATTERN = /^h[1-6]$/;
-export const HTML_REPO_INDEX_VERSION = 2;
+export const HTML_REPO_INDEX_VERSION = 3;
 
 function elementChildren(element: HTMLElement): HTMLElement[] {
   return element.childNodes.filter(
@@ -116,7 +116,7 @@ function sectionNameFor(element: HTMLElement, index: number): string {
   return `Section ${index + 1}`;
 }
 
-function unwrapStructuralSingleChild(element: HTMLElement): HTMLElement {
+function unwrapStructuralSingleChild(element: HTMLElement, stopAtSections = false): HTMLElement {
   let current = element;
   while (WRAPPER_TAGS.has(tagName(current))) {
     const children = elementChildren(current);
@@ -124,7 +124,17 @@ function unwrapStructuralSingleChild(element: HTMLElement): HTMLElement {
       break;
     }
     const child = children[0];
-    if (SECTION_TAGS.has(tagName(child)) || LANDMARK_TAGS.has(tagName(child)) || WRAPPER_TAGS.has(tagName(child))) {
+    if (SECTION_TAGS.has(tagName(child))) {
+      // When unwrapping the page SCOPE, a lone <section> child is the section
+      // we're looking for — descending into it would discard the section root
+      // (its padding classes) and slice at its inner content instead.
+      if (stopAtSections) {
+        break;
+      }
+      current = child;
+      continue;
+    }
+    if (LANDMARK_TAGS.has(tagName(child)) || WRAPPER_TAGS.has(tagName(child))) {
       current = child;
       continue;
     }
@@ -171,7 +181,7 @@ function findSectionElements(sourceCode: string): HTMLElement[] {
   });
   const body = document.querySelector("body");
   const main = body?.querySelector("main") ?? document.querySelector("main");
-  const scope = unwrapStructuralSingleChild(main ?? body ?? document);
+  const scope = unwrapStructuralSingleChild((main ?? body ?? document) as HTMLElement, true);
   const children = elementChildren(scope).map(unwrapStructuralSingleChild);
   const semantic = children.filter((child) => SECTION_TAGS.has(tagName(child)));
   if (semantic.length > 0) {
