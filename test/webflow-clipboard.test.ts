@@ -143,6 +143,42 @@ describe("webflow clipboard serializer", () => {
     expect(JSON.stringify(again)).toBe(JSON.stringify(payload));
   });
 
+  it("emits gaps as Webflow's legacy grid-*-gap names (modern gap is dropped on paste)", () => {
+    const withGap = buildWebflowClipboardPayload({
+      elementTree: {
+        id: "g",
+        type: "box",
+        tag: "div",
+        classNames: ["stack"],
+        children: []
+      },
+      styleDefinitions: [
+        {
+          className: "stack",
+          properties: {
+            display: "flex",
+            "flex-direction": "column",
+            gap: "1.5rem",
+            "column-gap": "2rem"
+          }
+        }
+      ]
+    });
+    const stack = withGap.payload.styles.find((s) => s.name === "stack")!;
+    expect(stack.styleLess).toContain("grid-row-gap: 1.5rem;");
+    expect(stack.styleLess).toContain("grid-column-gap: 2rem;");
+    // no bare `gap:` declaration remains (grid-row-gap contains "gap:" as a substring)
+    expect(stack.styleLess).not.toMatch(/(?:^|; )gap: /);
+    // two-value gap splits row/column
+    const twoValue = buildWebflowClipboardPayload({
+      elementTree: { id: "g2", type: "box", tag: "div", classNames: ["grid2"], children: [] },
+      styleDefinitions: [{ className: "grid2", properties: { gap: "10px 20px" } }]
+    });
+    const grid2 = twoValue.payload.styles.find((s) => s.name === "grid2")!;
+    expect(grid2.styleLess).toContain("grid-row-gap: 10px;");
+    expect(grid2.styleLess).toContain("grid-column-gap: 20px;");
+  });
+
   it("maps a node label to the Navigator displayName", () => {
     const labeled = buildWebflowClipboardPayload({
       elementTree: {

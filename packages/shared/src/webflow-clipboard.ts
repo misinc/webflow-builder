@@ -110,9 +110,26 @@ function stableHexId(seed: string): string {
 }
 
 function stylePropertiesToStyleLess(properties: Record<string, string>): string {
-  return Object.entries(properties)
-    .map(([prop, value]) => `${prop}: ${value};`)
-    .join(" ");
+  const declarations: string[] = [];
+  for (const [prop, value] of Object.entries(properties)) {
+    // Webflow stores flex/grid gaps under the legacy grid-*-gap names and
+    // silently drops a modern `gap:` declaration on paste.
+    if (prop === "gap") {
+      const [row, column = row] = value.trim().split(/\s+/);
+      declarations.push(`grid-row-gap: ${row};`, `grid-column-gap: ${column};`);
+      continue;
+    }
+    if (prop === "row-gap") {
+      declarations.push(`grid-row-gap: ${value};`);
+      continue;
+    }
+    if (prop === "column-gap") {
+      declarations.push(`grid-column-gap: ${value};`);
+      continue;
+    }
+    declarations.push(`${prop}: ${value};`);
+  }
+  return declarations.join(" ");
 }
 
 const HEADING_TAGS = new Set(["h1", "h2", "h3", "h4", "h5", "h6"]);
