@@ -278,6 +278,22 @@ export function evaluateSimpleCalc(value: string): string {
   });
 }
 
+
+/** Assign a resolved declaration, expanding the `inset` shorthand to physical
+ *  offsets so positioning logic downstream sees uniform keys. */
+function assignResolved(target: Record<string, string>, prop: string, value: string): void {
+  if (prop === "inset") {
+    const parts = value.trim().split(/\s+/);
+    const [t, r = t, b = t, l = r] = parts;
+    target.top = t;
+    target.right = r;
+    target.bottom = b;
+    target.left = l;
+    return;
+  }
+  target[prop] = value;
+}
+
 /** Resolve a raw declaration map (substitute vars, drop empties). */
 export function resolveDeclarations(
   raw: Record<string, string>,
@@ -293,7 +309,7 @@ export function resolveDeclarations(
     }
     const value = evaluateSimpleCalc(resolveValue(rawValue, variables).trim());
     if (value) {
-      resolved[prop.toLowerCase()] = value;
+      assignResolved(resolved, prop.toLowerCase(), value);
     }
   }
   return resolved;
@@ -396,7 +412,7 @@ export function resolveDeclarationsWithBindings(
     }
     const value = evaluateSimpleCalc(resolveValue(rawValue, variables).trim());
     if (value) {
-      properties[property] = value;
+      assignResolved(properties, property, value);
     }
   }
   return { properties, bindings };

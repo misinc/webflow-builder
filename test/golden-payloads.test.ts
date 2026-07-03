@@ -74,7 +74,7 @@ describe("golden payloads (site chrome)", () => {
 });
 
 describe("golden payloads (whole-section outcomes)", () => {
-  for (const page of ["index", "contact"]) {
+  for (const page of ["index", "contact", "case-studies"]) {
     for (const section of sectionsOf(page)) {
       it(`${page} · ${section.sectionKey}`, async () => {
         const metadata = {

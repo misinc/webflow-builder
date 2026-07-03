@@ -3,12 +3,12 @@
  "payload": {
   "nodes": [
    {
-    "_id": "17752296-5a56-c130-7294-f55e9de761cc",
+    "_id": "ec347b44-d27c-02ab-0e0f-b07bd9d85d11",
     "text": true,
     "v": "Recent Client Success Stories"
    },
    {
-    "_id": "00c01c15-549a-cef1-9cac-a134982cc367",
+    "_id": "ba240733-f142-7212-b2c4-add5bf879478",
     "type": "Heading",
     "tag": "h2",
     "data": {
@@ -19,11 +19,11 @@
      "b9cc1d81-0b59-b609-0822-f3289a233207"
     ],
     "children": [
-     "17752296-5a56-c130-7294-f55e9de761cc"
+     "ec347b44-d27c-02ab-0e0f-b07bd9d85d11"
     ]
    },
    {
-    "_id": "b20a4766-c532-6e51-30e1-ea635484a6e7",
+    "_id": "00901c14-4895-015a-df36-15269e9b47a6",
     "type": "Block",
     "tag": "div",
     "data": {
@@ -31,14 +31,14 @@
      "text": false
     },
     "classes": [
-     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6"
+     "85e98f58-a2e1-7a99-4e16-0ef56502bf23"
     ],
     "children": [
-     "00c01c15-549a-cef1-9cac-a134982cc367"
+     "ba240733-f142-7212-b2c4-add5bf879478"
     ]
    },
    {
-    "_id": "48799166-7412-5721-6e72-4eb37fb91797",
+    "_id": "c5c47544-b166-650a-bede-642609423876",
     "type": "Image",
     "tag": "img",
     "data": {
@@ -49,12 +49,12 @@
      "img": {}
     },
     "classes": [
-     "9a6f2b8e-4b5a-261b-bad1-15d97d218ee9"
+     "a44afb14-09a1-7734-c941-c2a0d40b100c"
     ],
     "children": []
    },
    {
-    "_id": "7f43f0a1-65a7-a9c9-c05b-328820721787",
+    "_id": "6156a2d7-4635-d1da-98d3-a7b130ce86f8",
     "type": "Block",
     "tag": "div",
     "data": {
@@ -62,20 +62,20 @@
      "text": false
     },
     "classes": [
-     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6",
-     "45577068-9433-3d06-b8e0-cbc623a94672"
+     "85e98f58-a2e1-7a99-4e16-0ef56502bf23",
+     "0f5d7176-0d6e-7c84-3e50-5f1a789d7a70"
     ],
     "children": [
-     "48799166-7412-5721-6e72-4eb37fb91797"
+     "c5c47544-b166-650a-bede-642609423876"
     ]
    },
    {
-    "_id": "e7e87935-8712-3e90-0b3c-fb29b58aa742",
+    "_id": "d1c5df7b-19c3-7553-90d8-6a4833418bcd",
     "text": true,
     "v": "Healthcare"
    },
    {
-    "_id": "a874b83e-ebb1-ebd9-8b7f-60d3f5e7351f",
+    "_id": "3b3243e4-857d-6752-a3e2-4daea14fbfce",
     "type": "Paragraph",
     "tag": "p",
     "data": {
@@ -86,11 +86,11 @@
      "18599019-c698-77a9-61fe-9770feee0527"
     ],
     "children": [
-     "e7e87935-8712-3e90-0b3c-fb29b58aa742"
+     "d1c5df7b-19c3-7553-90d8-6a4833418bcd"
     ]
    },
    {
-    "_id": "0c90e9f5-6283-7161-5aab-2ea4cc50f717",
+    "_id": "545da1cb-621c-cd22-ff93-ea3d53840d78",
     "type": "Block",
     "tag": "div",
     "data": {
@@ -98,15 +98,15 @@
      "text": false
     },
     "classes": [
-     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6",
-     "9d28a133-0d77-ae05-ff90-da2efda3b1cf"
+     "85e98f58-a2e1-7a99-4e16-0ef56502bf23",
+     "0ebe18f8-5db3-a89e-72a6-d91e3ffaa40a"
     ],
     "children": [
-     "a874b83e-ebb1-ebd9-8b7f-60d3f5e7351f"
+     "3b3243e4-857d-6752-a3e2-4daea14fbfce"
     ]
    },
    {
-    "_id": "17c4c296-4daa-1b21-202b-74e3273a4237",
+    "_id": "a88d17bc-720c-088a-9f7e-2a2ecb5ae7f6",
     "type": "Block",
     "tag": "div",
     "data": {
@@ -114,20 +114,20 @@
      "text": false
     },
     "classes": [
-     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6",
-     "1ff3d6f3-3d55-e269-6b3d-8fe282db681b"
+     "85e98f58-a2e1-7a99-4e16-0ef56502bf23",
+     "e062f7c0-f4d7-815f-98bf-a0eb7a1b0065"
     ],
     "children": [
-     "0c90e9f5-6283-7161-5aab-2ea4cc50f717"
+     "545da1cb-621c-cd22-ff93-ea3d53840d78"
     ]
    },
    {
-    "_id": "fc182a65-6d98-c388-ff79-84115e9d59aa",
+    "_id": "fe88fe8b-ff6c-284b-bfd6-f5c0c3fab2c5",
     "text": true,
     "v": "Regional Medical Practice"
    },
    {
-    "_id": "e642f25e-a12c-2ae1-9412-b18b4f23fac7",
+    "_id": "035d58b4-b8fd-068a-5b5d-a6d6b1309856",
     "type": "Heading",
     "tag": "h3",
     "data": {
@@ -138,16 +138,16 @@
      "bc263d77-2167-6fd6-6aa1-8955371ac374"
     ],
     "children": [
-     "fc182a65-6d98-c388-ff79-84115e9d59aa"
+     "fe88fe8b-ff6c-284b-bfd6-f5c0c3fab2c5"
     ]
    },
    {
-    "_id": "77a00b99-0147-fe08-e7c0-65055eedb702",
+    "_id": "adefc873-6b0c-518b-de35-7058db13c645",
     "text": true,
     "v": "300% increase in online appointment bookings within 6 months"
    },
    {
-    "_id": "6b2db8d2-edd2-8121-dd30-294fc224cf0f",
+    "_id": "b9bdf414-a741-e68a-6cb3-3eb6cdafc116",
     "type": "Paragraph",
     "tag": "p",
     "data": {
@@ -158,11 +158,11 @@
      "c78c032f-bc5b-c1a0-ef56-799b996a5716"
     ],
     "children": [
-     "77a00b99-0147-fe08-e7c0-65055eedb702"
+     "adefc873-6b0c-518b-de35-7058db13c645"
     ]
    },
    {
-    "_id": "a8165efd-bc67-cf49-23b3-82442cab05ef",
+    "_id": "2d856b93-dabe-61da-c8f8-bf1d3c196650",
     "type": "Block",
     "tag": "div",
     "data": {
@@ -170,16 +170,16 @@
      "text": false
     },
     "classes": [
-     "1db29782-85ac-5a7f-624c-9b617c8cb8ad"
+     "0b308268-511f-e08e-f0f3-cd9ecf18331a"
     ],
     "children": [
-     "17c4c296-4daa-1b21-202b-74e3273a4237",
-     "e642f25e-a12c-2ae1-9412-b18b4f23fac7",
-     "6b2db8d2-edd2-8121-dd30-294fc224cf0f"
+     "a88d17bc-720c-088a-9f7e-2a2ecb5ae7f6",
+     "035d58b4-b8fd-068a-5b5d-a6d6b1309856",
+     "b9bdf414-a741-e68a-6cb3-3eb6cdafc116"
     ]
    },
    {
-    "_id": "ae93997e-1776-8129-0d77-2c039f1badaf",
+    "_id": "67b9eebc-d036-69a2-3d69-5d367a9a176e",
     "type": "Block",
     "tag": "div",
     "data": {
@@ -187,16 +187,16 @@
      "text": false
     },
     "classes": [
-     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6",
-     "3a7c09f5-9005-ace4-a132-ba850e7a1066"
+     "85e98f58-a2e1-7a99-4e16-0ef56502bf23",
+     "5ca68572-8e97-d38e-808e-4a2c18202802"
     ],
     "children": [
-     "7f43f0a1-65a7-a9c9-c05b-328820721787",
-     "a8165efd-bc67-cf49-23b3-82442cab05ef"
+     "6156a2d7-4635-d1da-98d3-a7b130ce86f8",
+     "2d856b93-dabe-61da-c8f8-bf1d3c196650"
     ]
    },
    {
-    "_id": "08147fe9-cf18-f831-de1c-efb89ce0498f",
+    "_id": "db5f703f-59b5-36d2-417f-c511892b39b0",
     "type": "Block",
     "tag": "div",
     "data": {
@@ -204,14 +204,14 @@
      "text": false
     },
     "classes": [
-     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6"
+     "85e98f58-a2e1-7a99-4e16-0ef56502bf23"
     ],
     "children": [
-     "ae93997e-1776-8129-0d77-2c039f1badaf"
+     "67b9eebc-d036-69a2-3d69-5d367a9a176e"
     ]
    },
    {
-    "_id": "01ebd286-47d3-0b21-11d2-9193198b5397",
+    "_id": "84d11b2c-0791-cc8a-fc6b-795e5ec1f356",
     "type": "Image",
     "tag": "img",
     "data": {
@@ -222,12 +222,12 @@
      "img": {}
     },
     "classes": [
-     "9a6f2b8e-4b5a-261b-bad1-15d97d218ee9"
+     "a44afb14-09a1-7734-c941-c2a0d40b100c"
     ],
     "children": []
    },
    {
-    "_id": "a52448ad-2774-3049-835b-ff34fedcbd4f",
+    "_id": "8ac713a3-a752-135a-15a4-718dc2c083d0",
     "type": "Block",
     "tag": "div",
     "data": {
@@ -235,20 +235,20 @@
      "text": false
     },
     "classes": [
-     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6",
-     "45577068-9433-3d06-b8e0-cbc623a94672"
+     "85e98f58-a2e1-7a99-4e16-0ef56502bf23",
+     "0f5d7176-0d6e-7c84-3e50-5f1a789d7a70"
     ],
     "children": [
-     "01ebd286-47d3-0b21-11d2-9193198b5397"
+     "84d11b2c-0791-cc8a-fc6b-795e5ec1f356"
     ]
    },
    {
-    "_id": "ecfafeb5-a38b-3350-7fbb-466915c13a82",
+    "_id": "1427afa3-3bff-5613-5e01-5170623fa37d",
     "text": true,
     "v": "Nonprofit"
    },
    {
-    "_id": "f0144dfe-29fc-4799-1dba-2953368342df",
+    "_id": "8a57f67c-445b-a852-688e-c386bcc3fc5e",
     "type": "Paragraph",
     "tag": "p",
     "data": {
@@ -259,11 +259,11 @@
      "18599019-c698-77a9-61fe-9770feee0527"
     ],
     "children": [
-     "ecfafeb5-a38b-3350-7fbb-466915c13a82"
+     "1427afa3-3bff-5613-5e01-5170623fa37d"
     ]
    },
    {
-    "_id": "c2326fa9-1f58-ad61-668e-436840d57b1f",
+    "_id": "ca23c2bf-90d8-c2a2-7e34-bc01bb998540",
     "type": "Block",
     "tag": "div",
     "data": {
@@ -271,15 +271,15 @@
      "text": false
     },
     "classes": [
-     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6",
-     "9d28a133-0d77-ae05-ff90-da2efda3b1cf"
+     "85e98f58-a2e1-7a99-4e16-0ef56502bf23",
+     "0ebe18f8-5db3-a89e-72a6-d91e3ffaa40a"
     ],
     "children": [
-     "f0144dfe-29fc-4799-1dba-2953368342df"
+     "8a57f67c-445b-a852-688e-c386bcc3fc5e"
     ]
    },
    {
-    "_id": "948995b6-427d-8da1-96e6-9ec3dcf8b537",
+    "_id": "81543654-fe4c-4b8a-b5fa-f2f649b78296",
     "type": "Block",
     "tag": "div",
     "data": {
@@ -287,20 +287,20 @@
      "text": false
     },
     "classes": [
-     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6",
-     "1ff3d6f3-3d55-e269-6b3d-8fe282db681b"
+     "85e98f58-a2e1-7a99-4e16-0ef56502bf23",
+     "e062f7c0-f4d7-815f-98bf-a0eb7a1b0065"
     ],
     "children": [
-     "c2326fa9-1f58-ad61-668e-436840d57b1f"
+     "ca23c2bf-90d8-c2a2-7e34-bc01bb998540"
     ]
    },
    {
-    "_id": "dbaed6fd-6698-81c8-e860-13f9be24f52a",
+    "_id": "0ed3fc0b-04b3-294b-bd7d-a6404613a4c5",
     "text": true,
     "v": "Community Foundation"
    },
    {
-    "_id": "b533eb66-fb1d-7b61-4866-93737c827cd7",
+    "_id": "375635b4-a27a-b88a-5b55-61d6f5e48056",
     "type": "Heading",
     "tag": "h3",
     "data": {
@@ -311,16 +311,16 @@
      "bc263d77-2167-6fd6-6aa1-8955371ac374"
     ],
     "children": [
-     "dbaed6fd-6698-81c8-e860-13f9be24f52a"
+     "0ed3fc0b-04b3-294b-bd7d-a6404613a4c5"
     ]
    },
    {
-    "_id": "20f22221-ffc4-d148-60d3-c2bdd644cec2",
+    "_id": "415f5d7b-cc05-368b-a5f5-78b041c8cae5",
     "text": true,
     "v": "Streamlined donation process increased contributions by 85%"
    },
    {
-    "_id": "aab3e80a-1275-3ba1-27ee-0c67fbb39bbf",
+    "_id": "c9c915ec-e673-e98a-c42f-951e7ff194d6",
     "type": "Paragraph",
     "tag": "p",
     "data": {
@@ -331,11 +331,11 @@
      "c78c032f-bc5b-c1a0-ef56-799b996a5716"
     ],
     "children": [
-     "20f22221-ffc4-d148-60d3-c2bdd644cec2"
+     "415f5d7b-cc05-368b-a5f5-78b041c8cae5"
     ]
    },
    {
-    "_id": "baf01151-77ca-d349-91c6-7ef8476b8067",
+    "_id": "722081e7-7103-78da-a044-0fa1eeae8ff8",
     "type": "Block",
     "tag": "div",
     "data": {
@@ -343,16 +343,16 @@
      "text": false
     },
     "classes": [
-     "1db29782-85ac-5a7f-624c-9b617c8cb8ad"
+     "0b308268-511f-e08e-f0f3-cd9ecf18331a"
     ],
     "children": [
-     "948995b6-427d-8da1-96e6-9ec3dcf8b537",
-     "b533eb66-fb1d-7b61-4866-93737c827cd7",
-     "aab3e80a-1275-3ba1-27ee-0c67fbb39bbf"
+     "81543654-fe4c-4b8a-b5fa-f2f649b78296",
+     "375635b4-a27a-b88a-5b55-61d6f5e48056",
+     "c9c915ec-e673-e98a-c42f-951e7ff194d6"
     ]
    },
    {
-    "_id": "e87e767e-f99e-aca9-9fc9-70837a15542f",
+    "_id": "714381e4-d82e-b662-7685-92bee8037fbe",
     "type": "Block",
     "tag": "div",
     "data": {
@@ -360,16 +360,16 @@
      "text": false
     },
     "classes": [
-     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6",
-     "3a7c09f5-9005-ace4-a132-ba850e7a1066"
+     "85e98f58-a2e1-7a99-4e16-0ef56502bf23",
+     "5ca68572-8e97-d38e-808e-4a2c18202802"
     ],
     "children": [
-     "a52448ad-2774-3049-835b-ff34fedcbd4f",
-     "baf01151-77ca-d349-91c6-7ef8476b8067"
+     "8ac713a3-a752-135a-15a4-718dc2c083d0",
+     "722081e7-7103-78da-a044-0fa1eeae8ff8"
     ]
    },
    {
-    "_id": "2610eb95-eb50-e7f1-6c36-88b4de515c67",
+    "_id": "d38fd2cb-dcf4-6952-b081-d4ad6b58e708",
     "type": "Block",
     "tag": "div",
     "data": {
@@ -377,14 +377,14 @@
      "text": false
     },
     "classes": [
-     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6"
+     "85e98f58-a2e1-7a99-4e16-0ef56502bf23"
     ],
     "children": [
-     "e87e767e-f99e-aca9-9fc9-70837a15542f"
+     "714381e4-d82e-b662-7685-92bee8037fbe"
     ]
    },
    {
-    "_id": "321db1be-7461-e2a1-61ca-476bae436187",
+    "_id": "807f2938-099a-fb0a-cc36-805a82eb27ce",
     "type": "Image",
     "tag": "img",
     "data": {
@@ -395,12 +395,12 @@
      "img": {}
     },
     "classes": [
-     "9a6f2b8e-4b5a-261b-bad1-15d97d218ee9"
+     "a44afb14-09a1-7734-c941-c2a0d40b100c"
     ],
     "children": []
    },
    {
-    "_id": "eb586589-0905-e049-edc5-30c098d79a67",
+    "_id": "9afee29b-8a0a-a3da-281d-b075467eaff0",
     "type": "Block",
     "tag": "div",
     "data": {
@@ -408,20 +408,20 @@
      "text": false
     },
     "classes": [
-     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6",
-     "45577068-9433-3d06-b8e0-cbc623a94672"
+     "85e98f58-a2e1-7a99-4e16-0ef56502bf23",
+     "0f5d7176-0d6e-7c84-3e50-5f1a789d7a70"
     ],
     "children": [
-     "321db1be-7461-e2a1-61ca-476bae436187"
+     "807f2938-099a-fb0a-cc36-805a82eb27ce"
     ]
    },
    {
-    "_id": "6dd7de4d-a5d2-9890-beeb-e1c116d51c92",
+    "_id": "becf20cf-b874-f553-ce8b-414c4702cbf5",
     "text": true,
     "v": "Professional Services"
    },
    {
-    "_id": "3b6dec7e-7061-bed9-efd8-9e9374b0231f",
+    "_id": "3ede87b8-bf76-8552-6477-a672b9fb07b6",
     "type": "Paragraph",
     "tag": "p",
     "data": {
@@ -432,11 +432,11 @@
      "18599019-c698-77a9-61fe-9770feee0527"
     ],
     "children": [
-     "6dd7de4d-a5d2-9890-beeb-e1c116d51c92"
+     "becf20cf-b874-f553-ce8b-414c4702cbf5"
     ]
    },
    {
-    "_id": "fd0c4445-d79d-48e1-78a7-15f4a5f3e377",
+    "_id": "3276c96f-5b67-5222-0dbd-7cf1adb30ba0",
     "type": "Block",
     "tag": "div",
     "data": {
@@ -444,15 +444,15 @@
      "text": false
     },
     "classes": [
-     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6",
-     "9d28a133-0d77-ae05-ff90-da2efda3b1cf"
+     "85e98f58-a2e1-7a99-4e16-0ef56502bf23",
+     "0ebe18f8-5db3-a89e-72a6-d91e3ffaa40a"
     ],
     "children": [
-     "3b6dec7e-7061-bed9-efd8-9e9374b0231f"
+     "3ede87b8-bf76-8552-6477-a672b9fb07b6"
     ]
    },
    {
-    "_id": "0f927ad6-187a-ed21-e22f-5823f4744eb7",
+    "_id": "7bc498f0-4b64-220a-c630-a1c2f24f2cae",
     "type": "Block",
     "tag": "div",
     "data": {
@@ -460,20 +460,20 @@
      "text": false
     },
     "classes": [
-     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6",
-     "1ff3d6f3-3d55-e269-6b3d-8fe282db681b"
+     "85e98f58-a2e1-7a99-4e16-0ef56502bf23",
+     "e062f7c0-f4d7-815f-98bf-a0eb7a1b0065"
     ],
     "children": [
-     "fd0c4445-d79d-48e1-78a7-15f4a5f3e377"
+     "3276c96f-5b67-5222-0dbd-7cf1adb30ba0"
     ]
    },
    {
-    "_id": "38c680c5-7c7b-b308-32eb-0f716bb30bea",
+    "_id": "4001edbf-7343-bbcb-b826-be04d79f89cd",
     "text": true,
     "v": "Legal Association"
    },
    {
-    "_id": "28abb676-1101-40e1-06fd-af43acae7ff7",
+    "_id": "476d4a48-1314-d00a-69e9-cbaa8a8a2d6e",
     "type": "Heading",
     "tag": "h3",
     "data": {
@@ -484,16 +484,16 @@
      "bc263d77-2167-6fd6-6aa1-8955371ac374"
     ],
     "children": [
-     "38c680c5-7c7b-b308-32eb-0f716bb30bea"
+     "4001edbf-7343-bbcb-b826-be04d79f89cd"
     ]
    },
    {
-    "_id": "118dca21-cef8-c588-c963-1bfd784fc982",
+    "_id": "40b678bf-2cab-848b-87c8-8ec498b3a20d",
     "text": true,
     "v": "Custom member portal reduced admin time by 60%"
    },
    {
-    "_id": "78aca1b2-9f32-9c21-b7d2-a96fffaa160f",
+    "_id": "dd76f6c0-fcef-2c0a-bc03-97d2fd4832ce",
     "type": "Paragraph",
     "tag": "p",
     "data": {
@@ -504,11 +504,11 @@
      "c78c032f-bc5b-c1a0-ef56-799b996a5716"
     ],
     "children": [
-     "118dca21-cef8-c588-c963-1bfd784fc982"
+     "40b678bf-2cab-848b-87c8-8ec498b3a20d"
     ]
    },
    {
-    "_id": "9091c84d-e37d-f249-ee1e-bad4e91b5e0f",
+    "_id": "72547577-37f6-795a-201d-1b5180612cb8",
     "type": "Block",
     "tag": "div",
     "data": {
@@ -516,16 +516,16 @@
      "text": false
     },
     "classes": [
-     "1db29782-85ac-5a7f-624c-9b617c8cb8ad"
+     "0b308268-511f-e08e-f0f3-cd9ecf18331a"
     ],
     "children": [
-     "0f927ad6-187a-ed21-e22f-5823f4744eb7",
-     "28abb676-1101-40e1-06fd-af43acae7ff7",
-     "78aca1b2-9f32-9c21-b7d2-a96fffaa160f"
+     "7bc498f0-4b64-220a-c630-a1c2f24f2cae",
+     "476d4a48-1314-d00a-69e9-cbaa8a8a2d6e",
+     "dd76f6c0-fcef-2c0a-bc03-97d2fd4832ce"
     ]
    },
    {
-    "_id": "7d35c4d6-2ec0-4829-8ef9-82cb7bc2f18f",
+    "_id": "8c841f30-8f29-4ea2-ebd7-1f3ab0d3c376",
     "type": "Block",
     "tag": "div",
     "data": {
@@ -533,16 +533,16 @@
      "text": false
     },
     "classes": [
-     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6",
-     "3a7c09f5-9005-ace4-a132-ba850e7a1066"
+     "85e98f58-a2e1-7a99-4e16-0ef56502bf23",
+     "5ca68572-8e97-d38e-808e-4a2c18202802"
     ],
     "children": [
-     "eb586589-0905-e049-edc5-30c098d79a67",
-     "9091c84d-e37d-f249-ee1e-bad4e91b5e0f"
+     "9afee29b-8a0a-a3da-281d-b075467eaff0",
+     "72547577-37f6-795a-201d-1b5180612cb8"
     ]
    },
    {
-    "_id": "39da0311-6643-39b1-f3d1-e32046723dff",
+    "_id": "4b3eb5e3-610f-6a52-4d6f-9da5f34f2df8",
     "type": "Block",
     "tag": "div",
     "data": {
@@ -550,14 +550,14 @@
      "text": false
     },
     "classes": [
-     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6"
+     "85e98f58-a2e1-7a99-4e16-0ef56502bf23"
     ],
     "children": [
-     "7d35c4d6-2ec0-4829-8ef9-82cb7bc2f18f"
+     "8c841f30-8f29-4ea2-ebd7-1f3ab0d3c376"
     ]
    },
    {
-    "_id": "3f018cb6-b1c9-93d1-7864-82532dfe05a7",
+    "_id": "d3f2db54-928c-9b9a-8a6b-6ea63a4012e6",
     "type": "Block",
     "tag": "div",
     "data": {
@@ -565,17 +565,17 @@
      "text": false
     },
     "classes": [
-     "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6",
-     "7a3876bb-43f5-2494-480b-f5bb45d83baa"
+     "85e98f58-a2e1-7a99-4e16-0ef56502bf23",
+     "050f028b-3c0f-7711-961b-04e2d2cc6c03"
     ],
     "children": [
-     "08147fe9-cf18-f831-de1c-efb89ce0498f",
-     "2610eb95-eb50-e7f1-6c36-88b4de515c67",
-     "39da0311-6643-39b1-f3d1-e32046723dff"
+     "db5f703f-59b5-36d2-417f-c511892b39b0",
+     "d38fd2cb-dcf4-6952-b081-d4ad6b58e708",
+     "4b3eb5e3-610f-6a52-4d6f-9da5f34f2df8"
     ]
    },
    {
-    "_id": "1d5b97fd-f869-9c19-83f9-6e3442df1dff",
+    "_id": "e58e09fb-8d31-ceca-ab29-8b257618c0e0",
     "type": "Block",
     "tag": "div",
     "data": {
@@ -583,15 +583,15 @@
      "text": false
     },
     "classes": [
-     "aeb05bc4-9c81-4a54-1438-82d06ba2b92c"
+     "cd7febca-e8b1-2e8f-d1dd-bd4925227b7d"
     ],
     "children": [
-     "b20a4766-c532-6e51-30e1-ea635484a6e7",
-     "3f018cb6-b1c9-93d1-7864-82532dfe05a7"
+     "00901c14-4895-015a-df36-15269e9b47a6",
+     "d3f2db54-928c-9b9a-8a6b-6ea63a4012e6"
     ]
    },
    {
-    "_id": "8f38497c-14b4-2e30-0d1f-0abc24b7de48",
+    "_id": "4f7e699a-f22c-44e3-5d0d-a80d51378aa9",
     "type": "Block",
     "tag": "div",
     "data": {
@@ -602,11 +602,11 @@
      "171a7779-815a-5ffe-32b2-25f332830ad4"
     ],
     "children": [
-     "1d5b97fd-f869-9c19-83f9-6e3442df1dff"
+     "e58e09fb-8d31-ceca-ab29-8b257618c0e0"
     ]
    },
    {
-    "_id": "ebf30bf4-86b7-f6d3-1676-eb135a03c749",
+    "_id": "ea1cd6ce-af33-8194-70c0-41a2f0c64c90",
     "type": "Block",
     "tag": "div",
     "data": {
@@ -617,11 +617,11 @@
      "cc0befdd-524c-2e6e-def8-c40faa76ac54"
     ],
     "children": [
-     "8f38497c-14b4-2e30-0d1f-0abc24b7de48"
+     "4f7e699a-f22c-44e3-5d0d-a80d51378aa9"
     ]
    },
    {
-    "_id": "14d3bf66-6326-3f6e-c868-f1a816445b92",
+    "_id": "49145f14-7831-2667-3d44-4ecfa6e34dad",
     "type": "Block",
     "tag": "div",
     "data": {
@@ -632,11 +632,11 @@
      "3099fbbb-3f97-cd20-34d4-a817d799d98e"
     ],
     "children": [
-     "ebf30bf4-86b7-f6d3-1676-eb135a03c749"
+     "ea1cd6ce-af33-8194-70c0-41a2f0c64c90"
     ]
    },
    {
-    "_id": "0841e0c8-c3a4-b11a-1c1a-ac7aab51851e",
+    "_id": "53d3d57e-79ae-7d65-8d0c-2797aed5bddb",
     "type": "Block",
     "tag": "section",
     "data": {
@@ -644,11 +644,11 @@
      "text": false
     },
     "classes": [
-     "71c1d83c-0c1d-8de4-3126-95b87fab2bcc",
-     "4d66bf9e-b9f3-9c57-34f5-069d53ad8dd5"
+     "743cdfda-97b4-7697-0fe7-62f1c9149c45",
+     "c2686e07-dcf5-557f-7e68-dfd87e9500f1"
     ],
     "children": [
-     "14d3bf66-6326-3f6e-c868-f1a816445b92"
+     "49145f14-7831-2667-3d44-4ecfa6e34dad"
     ]
    }
   ],
@@ -682,29 +682,29 @@
     "selector": null
    },
    {
-    "_id": "74ea124e-0ab3-6ff2-e0b4-cfecbfdec6a6",
+    "_id": "85e98f58-a2e1-7a99-4e16-0ef56502bf23",
     "fake": false,
     "type": "class",
-    "name": "case-studies_content",
+    "name": "case-studies-showcase_content",
     "namespace": "",
     "comb": "",
     "styleLess": "align-content: stretch; display: flex; flex-direction: column; grid-row-gap: 16px; grid-column-gap: 16px; align-items: flex-start; position: relative; width: 100%; flex-shrink: 0;",
     "variants": {},
     "children": [
-     "1ff3d6f3-3d55-e269-6b3d-8fe282db681b",
-     "3a7c09f5-9005-ace4-a132-ba850e7a1066",
-     "45577068-9433-3d06-b8e0-cbc623a94672",
-     "7a3876bb-43f5-2494-480b-f5bb45d83baa",
-     "9d28a133-0d77-ae05-ff90-da2efda3b1cf"
+     "050f028b-3c0f-7711-961b-04e2d2cc6c03",
+     "0ebe18f8-5db3-a89e-72a6-d91e3ffaa40a",
+     "0f5d7176-0d6e-7c84-3e50-5f1a789d7a70",
+     "5ca68572-8e97-d38e-808e-4a2c18202802",
+     "e062f7c0-f4d7-815f-98bf-a0eb7a1b0065"
     ],
     "origin": null,
     "selector": null
    },
    {
-    "_id": "9a6f2b8e-4b5a-261b-bad1-15d97d218ee9",
+    "_id": "a44afb14-09a1-7734-c941-c2a0d40b100c",
     "fake": false,
     "type": "class",
-    "name": "case-studies_image",
+    "name": "case-studies-showcase_image",
     "namespace": "",
     "comb": "",
     "styleLess": "position: absolute; top: 0rem; right: 0rem; bottom: 0rem; left: 0rem; width: 100%; height: 100%; object-fit: cover;",
@@ -714,10 +714,10 @@
     "selector": null
    },
    {
-    "_id": "45577068-9433-3d06-b8e0-cbc623a94672",
+    "_id": "0f5d7176-0d6e-7c84-3e50-5f1a789d7a70",
     "fake": false,
     "type": "class",
-    "name": "case-studies_content_vky5kg",
+    "name": "case-studies-showcase_content_v1ldiq",
     "namespace": "",
     "comb": "&",
     "styleLess": "height: 240px; overflow: hidden; background-color: oklch(96.7% .003 264.542);",
@@ -756,10 +756,10 @@
     "selector": null
    },
    {
-    "_id": "9d28a133-0d77-ae05-ff90-da2efda3b1cf",
+    "_id": "0ebe18f8-5db3-a89e-72a6-d91e3ffaa40a",
     "fake": false,
     "type": "class",
-    "name": "case-studies_content_vxpye4",
+    "name": "case-studies-showcase_content_v1hdwi",
     "namespace": "",
     "comb": "&",
     "styleLess": "align-items: center; padding-left: 10px; padding-right: 10px; padding-top: 4px; padding-bottom: 4px; border-radius: 500px; background-color: #ffaa1d1a;",
@@ -769,10 +769,10 @@
     "selector": null
    },
    {
-    "_id": "1ff3d6f3-3d55-e269-6b3d-8fe282db681b",
+    "_id": "e062f7c0-f4d7-815f-98bf-a0eb7a1b0065",
     "fake": false,
     "type": "class",
-    "name": "case-studies_content_v1xbng",
+    "name": "case-studies-showcase_content_v10lo9",
     "namespace": "",
     "comb": "&",
     "styleLess": "align-items: center; grid-row-gap: 8px; grid-column-gap: 8px; position: static;",
@@ -823,10 +823,10 @@
     "selector": null
    },
    {
-    "_id": "1db29782-85ac-5a7f-624c-9b617c8cb8ad",
+    "_id": "0b308268-511f-e08e-f0f3-cd9ecf18331a",
     "fake": false,
     "type": "class",
-    "name": "case-studies_item",
+    "name": "case-studies-showcase_item",
     "namespace": "",
     "comb": "",
     "styleLess": "padding: 32px; display: flex; flex-direction: column; grid-row-gap: 12px; grid-column-gap: 12px;",
@@ -836,10 +836,10 @@
     "selector": null
    },
    {
-    "_id": "3a7c09f5-9005-ace4-a132-ba850e7a1066",
+    "_id": "5ca68572-8e97-d38e-808e-4a2c18202802",
     "fake": false,
     "type": "class",
-    "name": "case-studies_content_v5ryw7",
+    "name": "case-studies-showcase_content_vceiie",
     "namespace": "",
     "comb": "&",
     "styleLess": "position: static; background-color: #fff; overflow: hidden; border-radius: 28px; cursor: pointer;",
@@ -849,10 +849,10 @@
     "selector": null
    },
    {
-    "_id": "7a3876bb-43f5-2494-480b-f5bb45d83baa",
+    "_id": "050f028b-3c0f-7711-961b-04e2d2cc6c03",
     "fake": false,
     "type": "class",
-    "name": "case-studies_content_v197lk",
+    "name": "case-studies-showcase_content_vxiapn",
     "namespace": "",
     "comb": "&",
     "styleLess": "display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); grid-row-gap: 32px; grid-column-gap: 32px; position: static;",
@@ -862,10 +862,10 @@
     "selector": null
    },
    {
-    "_id": "aeb05bc4-9c81-4a54-1438-82d06ba2b92c",
+    "_id": "cd7febca-e8b1-2e8f-d1dd-bd4925227b7d",
     "fake": false,
     "type": "class",
-    "name": "case-studies_component",
+    "name": "case-studies-showcase_component",
     "namespace": "",
     "comb": "",
     "styleLess": "align-content: stretch; display: flex; flex-direction: column; grid-row-gap: 64px; grid-column-gap: 64px; align-items: flex-start; position: relative; width: 100%; max-width: 1200px; flex-shrink: 0; padding-left: 3rem; padding-right: 3rem;",
@@ -914,28 +914,28 @@
     "selector": null
    },
    {
-    "_id": "71c1d83c-0c1d-8de4-3126-95b87fab2bcc",
+    "_id": "743cdfda-97b4-7697-0fe7-62f1c9149c45",
     "fake": false,
     "type": "class",
-    "name": "section_case-studies",
+    "name": "section_case-studies-showcase",
     "namespace": "",
     "comb": "",
-    "styleLess": "align-content: stretch; display: flex; flex-direction: column; align-items: center; position: relative; width: 100%; padding-top: 120px; padding-bottom: 120px; flex-shrink: 0; background: #fff7ea;",
+    "styleLess": "align-content: stretch; display: flex; flex-direction: column; align-items: center; position: relative; width: 100%; padding-top: 120px; padding-bottom: 120px; flex-shrink: 0;",
     "variants": {},
     "children": [
-     "4d66bf9e-b9f3-9c57-34f5-069d53ad8dd5"
+     "c2686e07-dcf5-557f-7e68-dfd87e9500f1"
     ],
     "origin": null,
     "selector": null
    },
    {
-    "_id": "4d66bf9e-b9f3-9c57-34f5-069d53ad8dd5",
+    "_id": "c2686e07-dcf5-557f-7e68-dfd87e9500f1",
     "fake": false,
     "type": "class",
-    "name": "section_case-studies_v1shor",
+    "name": "section_case-studies-showcase_vtqge9",
     "namespace": "",
     "comb": "&",
-    "styleLess": "background-color: rgb(250, 250, 250);",
+    "styleLess": "background-color: rgb(246, 239, 227);",
     "variants": {},
     "children": [],
     "origin": null,

@@ -154,6 +154,9 @@ export function buildResolvedStylingFromSkeleton(input: {
     return name;
   };
 
+  // Nearest ancestor's resolved color, for heading ink inheritance.
+  const inheritedColorByNode = new Map<BuildNode, string>();
+
   walk(input.skeleton.elementTree, new Set<string>(), (node, ancestors) => {
     const { base, modifiers } = splitBaseAndModifiers(node.sourceClassNames ?? []);
     const target = targetClassFor(node);
@@ -186,21 +189,39 @@ export function buildResolvedStylingFromSkeleton(input: {
         });
       }
     }
-    // A heading with NO color of its own inherits the body ink in the browser —
-    // carry it explicitly, since Webflow's default heading color differs.
+    // Record this node's resolved color so descendants can inherit it.
+    if (typeof properties.color === "string") {
+      for (const child of node.children ?? []) {
+        inheritedColorByNode.set(child, properties.color);
+      }
+    } else {
+      const inherited = inheritedColorByNode.get(node);
+      if (inherited) {
+        for (const child of node.children ?? []) {
+          inheritedColorByNode.set(child, inherited);
+        }
+      }
+    }
+    // A heading with NO color of its own inherits ink in the browser — from the
+    // nearest colored ancestor when the section defines one, else the body ink.
+    // Carry it explicitly, since Webflow's default heading color differs.
     if (
       node.type === "heading" &&
-      parsed.defaultTextColor &&
       properties.color === undefined &&
       Object.keys(properties).length > 0
     ) {
-      properties.color = parsed.defaultTextColor.value;
-      if (parsed.defaultTextColor.variableName) {
-        bindings.push({
-          property: "color",
-          variableName: parsed.defaultTextColor.variableName,
-          value: parsed.defaultTextColor.value
-        });
+      const ancestorInk = inheritedColorByNode.get(node);
+      if (ancestorInk) {
+        properties.color = ancestorInk;
+      } else if (parsed.defaultTextColor) {
+        properties.color = parsed.defaultTextColor.value;
+        if (parsed.defaultTextColor.variableName) {
+          bindings.push({
+            property: "color",
+            variableName: parsed.defaultTextColor.variableName,
+            value: parsed.defaultTextColor.value
+          });
+        }
       }
     }
     if (target && !isReservedStyleGuideClassName(target) && Object.keys(properties).length > 0) {
@@ -234,6 +255,25 @@ export function buildResolvedStylingFromSkeleton(input: {
         for (const [property, value] of Object.entries(properties)) {
           if (existing[property] !== value) {
             overrides[property] = value;
+          }
+        }
+        // A combo can only ADD declarations — it cannot unset the base. If the
+        // base carries positioning this node does not define (e.g. the base was
+        // claimed by an absolute bg layer while this node is a normal in-flow
+        // wrapper), neutralize it explicitly or the node inherits the overlay
+        // positioning and everything stacks at the top-left.
+        const POSITION_NEUTRAL: Record<string, string> = {
+          position: "static",
+          top: "auto",
+          right: "auto",
+          bottom: "auto",
+          left: "auto",
+          inset: "auto",
+          "z-index": "auto"
+        };
+        for (const [key, neutral] of Object.entries(POSITION_NEUTRAL)) {
+          if (existing[key] !== undefined && properties[key] === undefined) {
+            overrides[key] = neutral;
           }
         }
         if (Object.keys(overrides).length > 0) {

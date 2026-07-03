@@ -159,6 +159,13 @@ function stylePropertiesToStyleLess(properties: Record<string, string>): string 
       }
       continue;
     }
+    // Webflow doesn't know the `inset` shorthand — expand to physical offsets.
+    if (prop === "inset") {
+      const parts = value.trim().split(/\s+/);
+      const [t, r = t, btm = t, l = r] = parts;
+      declarations.push(`top: ${t};`, `right: ${r};`, `bottom: ${btm};`, `left: ${l};`);
+      continue;
+    }
     const logical = LOGICAL_SIDES[prop];
     if (logical) {
       const [start, end = start] = value.trim().split(/\s+/);

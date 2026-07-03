@@ -3,7 +3,7 @@
  "payload": {
   "nodes": [
    {
-    "_id": "ed4a0600-9cc8-9611-4bc5-61859aff186b",
+    "_id": "6ab36a49-9209-6f20-4332-7cbd333fec1a",
     "type": "Block",
     "tag": "div",
     "data": {
@@ -11,12 +11,12 @@
      "text": false
     },
     "classes": [
-     "29ffd2b6-fccd-7aa2-97a2-642417aa3006"
+     "d57b8b95-21b2-a635-63e9-3220b087fb3b"
     ],
     "children": []
    },
    {
-    "_id": "524db76f-bb00-8015-cf85-6842396e4c7f",
+    "_id": "adf5ca82-3a07-5ae8-1113-f1f2bed8154c",
     "type": "Block",
     "tag": "div",
     "data": {
@@ -24,14 +24,14 @@
      "text": false
     },
     "classes": [
-     "29ffd2b6-fccd-7aa2-97a2-642417aa3006"
+     "d57b8b95-21b2-a635-63e9-3220b087fb3b"
     ],
     "children": [
-     "ed4a0600-9cc8-9611-4bc5-61859aff186b"
+     "6ab36a49-9209-6f20-4332-7cbd333fec1a"
     ]
    },
    {
-    "_id": "9e8dc93f-ca34-edd5-601f-b072be22d27f",
+    "_id": "10b173ba-74af-9fe8-340a-a8fa7df2810c",
     "type": "Block",
     "tag": "div",
     "data": {
@@ -39,13 +39,13 @@
      "text": false
     },
     "classes": [
-     "29ffd2b6-fccd-7aa2-97a2-642417aa3006",
-     "36bc15a2-6118-42de-a4b4-64acb4840e52"
+     "d57b8b95-21b2-a635-63e9-3220b087fb3b",
+     "aadc9969-5758-0ce6-f588-289b37e94abc"
     ],
     "children": []
    },
    {
-    "_id": "4790af73-bb77-ff95-20cc-139e712c6b1f",
+    "_id": "1eabe156-aea9-4a68-4e0d-97d644b8a314",
     "type": "Block",
     "tag": "div",
     "data": {
@@ -53,18 +53,38 @@
      "text": false
     },
     "classes": [
-     "29ffd2b6-fccd-7aa2-97a2-642417aa3006",
-     "8aa4bf92-a9ad-dcb6-d95b-fe74518a651a"
+     "d57b8b95-21b2-a635-63e9-3220b087fb3b",
+     "5526e39c-fcee-d7bb-0b03-4e133146c421"
     ],
     "children": []
    },
    {
-    "_id": "f4c03157-6093-15ac-24df-41f771b6c552",
+    "_id": "fc0f8d82-9bfe-aa19-6d9e-8d178f155517",
     "text": true,
-    "v": "Strategic Web Design & AI Solutions That Drive Business Growth"
+    "v": "Client Case Studies"
    },
    {
-    "_id": "f5d2d938-e85f-2229-12dc-8885526f70b3",
+    "_id": "e063ea31-5b50-7dc8-301b-b48d957e8ee2",
+    "type": "Paragraph",
+    "tag": "p",
+    "data": {
+     "tag": "p"
+    },
+    "classes": [
+     "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
+     "7b05b611-dd67-6f44-2948-c499afca9336"
+    ],
+    "children": [
+     "fc0f8d82-9bfe-aa19-6d9e-8d178f155517"
+    ]
+   },
+   {
+    "_id": "15d0b4ae-9cc0-c9d9-006e-dba34939d9df",
+    "text": true,
+    "v": "Real Results from Strategic Client Partnerships"
+   },
+   {
+    "_id": "4b8f1ec5-a08f-7348-f796-84314e38bd2a",
     "type": "Heading",
     "tag": "h1",
     "data": {
@@ -75,16 +95,16 @@
      "74cacab1-c1aa-7a4a-89d5-3df76a73ced8"
     ],
     "children": [
-     "f4c03157-6093-15ac-24df-41f771b6c552"
+     "15d0b4ae-9cc0-c9d9-006e-dba34939d9df"
     ]
    },
    {
-    "_id": "ee8a803b-0777-59ac-b470-ae4332233322",
+    "_id": "cca4fc7a-ec8f-e219-1e6a-947f6f2430b7",
     "text": true,
-    "v": "We design websites, build custom tools, and use AI to help you attract more customers and grow your business."
+    "v": "See how focused strategy, better systems, and disciplined execution have helped clients improve visibility, increase conversion, and build more durable growth."
    },
    {
-    "_id": "3ac91814-a72f-8ea9-749b-ab216d957dbb",
+    "_id": "8ac44451-abb9-de48-651f-e52d0b524822",
     "type": "Paragraph",
     "tag": "p",
     "data": {
@@ -95,11 +115,11 @@
      "57b42051-14b9-2467-941a-932e07e48951"
     ],
     "children": [
-     "ee8a803b-0777-59ac-b470-ae4332233322"
+     "cca4fc7a-ec8f-e219-1e6a-947f6f2430b7"
     ]
    },
    {
-    "_id": "9418c4b3-babb-9fbd-9b71-5de67dd2cd17",
+    "_id": "c02a7216-62b5-5ec0-3439-bc4e7bca505c",
     "type": "Block",
     "tag": "div",
     "data": {
@@ -107,21 +127,22 @@
      "text": false
     },
     "classes": [
-     "29ffd2b6-fccd-7aa2-97a2-642417aa3006",
-     "f0bf16f0-1684-1913-e0dc-93ff5869c6e1"
+     "d57b8b95-21b2-a635-63e9-3220b087fb3b",
+     "43aa27d5-55f8-3029-1084-3f2c80e6d42f"
     ],
     "children": [
-     "f5d2d938-e85f-2229-12dc-8885526f70b3",
-     "3ac91814-a72f-8ea9-749b-ab216d957dbb"
+     "e063ea31-5b50-7dc8-301b-b48d957e8ee2",
+     "4b8f1ec5-a08f-7348-f796-84314e38bd2a",
+     "8ac44451-abb9-de48-651f-e52d0b524822"
     ]
    },
    {
-    "_id": "fb83d233-8ec6-b8ac-1665-24eb5b75e882",
+    "_id": "e7b315e5-a309-8f49-f35a-ed9ca29e0faf",
     "text": true,
-    "v": "Book a Free Strategy Call"
+    "v": "Schedule a Strategy Call"
    },
    {
-    "_id": "6e8cf19c-beb1-c069-1af9-ddb9a577179b",
+    "_id": "3722f8d6-1719-3288-4148-c97682146ff4",
     "type": "Link",
     "tag": "a",
     "data": {
@@ -132,14 +153,14 @@
      }
     },
     "classes": [
-     "910c4985-7c55-7bef-256f-7bf2c6897dd9"
+     "dbeb3280-9730-ebfa-0228-f2424218d59e"
     ],
     "children": [
-     "fb83d233-8ec6-b8ac-1665-24eb5b75e882"
+     "e7b315e5-a309-8f49-f35a-ed9ca29e0faf"
     ]
    },
    {
-    "_id": "7afa8adb-70b7-8ff5-f173-568631646bcf",
+    "_id": "2135f725-df66-f648-a9f1-61919b605b6a",
     "type": "Block",
     "tag": "div",
     "data": {
@@ -147,18 +168,33 @@
      "text": false
     },
     "classes": [
-     "29ffd2b6-fccd-7aa2-97a2-642417aa3006",
-     "15dad747-8cb0-ed40-9d4c-c573612c8426"
+     "d57b8b95-21b2-a635-63e9-3220b087fb3b"
+    ],
+    "children": [
+     "3722f8d6-1719-3288-4148-c97682146ff4"
+    ]
+   },
+   {
+    "_id": "882e3c16-973b-e3c8-320c-3cf6efca3d34",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "d57b8b95-21b2-a635-63e9-3220b087fb3b",
+     "b16d3c7e-4c68-8033-8fb6-51f176330b61"
     ],
     "children": []
    },
    {
-    "_id": "3acf567e-66e5-c24d-b701-588fe7c51263",
+    "_id": "3d036675-492e-c34a-b792-080b15dec980",
     "text": true,
-    "v": "View Case Studies"
+    "v": "View Featured Case Studies"
    },
    {
-    "_id": "a9cacbef-66d6-e846-de92-3ffd4676d454",
+    "_id": "00c81fc4-cc81-bded-29f8-707dfa9a26ef",
     "type": "Paragraph",
     "tag": "p",
     "data": {
@@ -166,11 +202,11 @@
     },
     "classes": [],
     "children": [
-     "3acf567e-66e5-c24d-b701-588fe7c51263"
+     "3d036675-492e-c34a-b792-080b15dec980"
     ]
    },
    {
-    "_id": "a972d808-5181-4b69-140b-7115ae510b53",
+    "_id": "c56f6b59-5636-5bc8-c74b-9c05f1f1a442",
     "type": "Link",
     "tag": "a",
     "data": {
@@ -181,15 +217,15 @@
      }
     },
     "classes": [
-     "a272d213-8874-5ed1-09eb-002a2abb9833"
+     "74a2c62e-8ee6-10f4-31dc-a72240fd81b0"
     ],
     "children": [
-     "7afa8adb-70b7-8ff5-f173-568631646bcf",
-     "a9cacbef-66d6-e846-de92-3ffd4676d454"
+     "882e3c16-973b-e3c8-320c-3cf6efca3d34",
+     "00c81fc4-cc81-bded-29f8-707dfa9a26ef"
     ]
    },
    {
-    "_id": "9dde2dbb-b413-acfd-4415-577e0934c877",
+    "_id": "fef95cce-a89f-0080-c02a-20265147eccc",
     "type": "Block",
     "tag": "div",
     "data": {
@@ -197,15 +233,16 @@
      "text": false
     },
     "classes": [
-     "a840491d-2a42-1085-ff11-dc78f2f8ad5b"
+     "d57b8b95-21b2-a635-63e9-3220b087fb3b",
+     "b6b66213-c09d-31f9-96b5-6b72a197d26b"
     ],
     "children": [
-     "6e8cf19c-beb1-c069-1af9-ddb9a577179b",
-     "a972d808-5181-4b69-140b-7115ae510b53"
+     "2135f725-df66-f648-a9f1-61919b605b6a",
+     "c56f6b59-5636-5bc8-c74b-9c05f1f1a442"
     ]
    },
    {
-    "_id": "7e164ab0-3dc7-90d1-0652-2415eaff2d2b",
+    "_id": "de8cf6b9-abad-d360-8a78-53ed3ef7167a",
     "type": "Block",
     "tag": "div",
     "data": {
@@ -213,16 +250,16 @@
      "text": false
     },
     "classes": [
-     "29ffd2b6-fccd-7aa2-97a2-642417aa3006",
-     "fa348de3-96f2-2d5b-b64c-5618c1cd4415"
+     "d57b8b95-21b2-a635-63e9-3220b087fb3b",
+     "ededbad6-f6bf-9f79-4f4c-bf3b98de041f"
     ],
     "children": [
-     "9418c4b3-babb-9fbd-9b71-5de67dd2cd17",
-     "9dde2dbb-b413-acfd-4415-577e0934c877"
+     "c02a7216-62b5-5ec0-3439-bc4e7bca505c",
+     "fef95cce-a89f-0080-c02a-20265147eccc"
     ]
    },
    {
-    "_id": "0d4a8a5b-acd8-e9d5-c7b5-20669b83846f",
+    "_id": "354a142e-6175-aa68-1d31-f87eb6d83794",
     "type": "Block",
     "tag": "div",
     "data": {
@@ -230,15 +267,15 @@
      "text": false
     },
     "classes": [
-     "29ffd2b6-fccd-7aa2-97a2-642417aa3006",
-     "8233b6f4-f509-ba19-ba97-c311c181fdeb"
+     "d57b8b95-21b2-a635-63e9-3220b087fb3b",
+     "d3555a59-8db5-1122-c943-3a77bcde4230"
     ],
     "children": [
-     "7e164ab0-3dc7-90d1-0652-2415eaff2d2b"
+     "de8cf6b9-abad-d360-8a78-53ed3ef7167a"
     ]
    },
    {
-    "_id": "62b0118a-12e1-9f95-ff09-7e6bd21b54fb",
+    "_id": "2e3a7433-f573-0eb0-cc91-671f4ba98a0e",
     "type": "Block",
     "tag": "div",
     "data": {
@@ -246,17 +283,17 @@
      "text": false
     },
     "classes": [
-     "6cdd4a6c-04a7-6a84-54f6-800854caa74c"
+     "7c39b53f-6510-26cb-3fd3-79840ed496cd"
     ],
     "children": [
-     "524db76f-bb00-8015-cf85-6842396e4c7f",
-     "9e8dc93f-ca34-edd5-601f-b072be22d27f",
-     "4790af73-bb77-ff95-20cc-139e712c6b1f",
-     "0d4a8a5b-acd8-e9d5-c7b5-20669b83846f"
+     "adf5ca82-3a07-5ae8-1113-f1f2bed8154c",
+     "10b173ba-74af-9fe8-340a-a8fa7df2810c",
+     "1eabe156-aea9-4a68-4e0d-97d644b8a314",
+     "354a142e-6175-aa68-1d31-f87eb6d83794"
     ]
    },
    {
-    "_id": "c1e21938-30d8-0fab-8494-966fca548ca9",
+    "_id": "ec3e0999-55fe-9fae-7b36-7b637927be44",
     "type": "Block",
     "tag": "div",
     "data": {
@@ -267,11 +304,11 @@
      "171a7779-815a-5ffe-32b2-25f332830ad4"
     ],
     "children": [
-     "62b0118a-12e1-9f95-ff09-7e6bd21b54fb"
+     "2e3a7433-f573-0eb0-cc91-671f4ba98a0e"
     ]
    },
    {
-    "_id": "5d0bde04-3fa3-ae90-584b-e6a44fc352d8",
+    "_id": "69651bdd-58fe-6b45-6565-9f7826936b9b",
     "type": "Block",
     "tag": "div",
     "data": {
@@ -282,11 +319,11 @@
      "cc0befdd-524c-2e6e-def8-c40faa76ac54"
     ],
     "children": [
-     "c1e21938-30d8-0fab-8494-966fca548ca9"
+     "ec3e0999-55fe-9fae-7b36-7b637927be44"
     ]
    },
    {
-    "_id": "74211eea-7ac5-a5ef-5ff2-1e0916b7419d",
+    "_id": "cb21b6a9-8e47-2d38-28cc-c305f89310f2",
     "type": "Block",
     "tag": "div",
     "data": {
@@ -297,11 +334,11 @@
      "3099fbbb-3f97-cd20-34d4-a817d799d98e"
     ],
     "children": [
-     "5d0bde04-3fa3-ae90-584b-e6a44fc352d8"
+     "69651bdd-58fe-6b45-6565-9f7826936b9b"
     ]
    },
    {
-    "_id": "d0791c18-6b4d-9d11-fbd4-d4ddec6423fb",
+    "_id": "bdd946b1-5427-39a0-a7df-dc85030808ea",
     "type": "Block",
     "tag": "section",
     "data": {
@@ -309,39 +346,40 @@
      "text": false
     },
     "classes": [
-     "88391204-830e-9f7c-6217-d9d8238e4164"
+     "9f3c46bf-048d-193b-3c6c-7e5459a09f7d"
     ],
     "children": [
-     "74211eea-7ac5-a5ef-5ff2-1e0916b7419d"
+     "cb21b6a9-8e47-2d38-28cc-c305f89310f2"
     ]
    }
   ],
   "styles": [
    {
-    "_id": "29ffd2b6-fccd-7aa2-97a2-642417aa3006",
+    "_id": "d57b8b95-21b2-a635-63e9-3220b087fb3b",
     "fake": false,
     "type": "class",
-    "name": "hero_content",
+    "name": "case-studies-hero_content",
     "namespace": "",
     "comb": "",
     "styleLess": "position: absolute; top: 0; right: 0; bottom: 0; left: 0; z-index: 0; overflow: hidden;",
     "variants": {},
     "children": [
-     "15dad747-8cb0-ed40-9d4c-c573612c8426",
-     "36bc15a2-6118-42de-a4b4-64acb4840e52",
-     "8233b6f4-f509-ba19-ba97-c311c181fdeb",
-     "8aa4bf92-a9ad-dcb6-d95b-fe74518a651a",
-     "f0bf16f0-1684-1913-e0dc-93ff5869c6e1",
-     "fa348de3-96f2-2d5b-b64c-5618c1cd4415"
+     "43aa27d5-55f8-3029-1084-3f2c80e6d42f",
+     "5526e39c-fcee-d7bb-0b03-4e133146c421",
+     "aadc9969-5758-0ce6-f588-289b37e94abc",
+     "b16d3c7e-4c68-8033-8fb6-51f176330b61",
+     "b6b66213-c09d-31f9-96b5-6b72a197d26b",
+     "d3555a59-8db5-1122-c943-3a77bcde4230",
+     "ededbad6-f6bf-9f79-4f4c-bf3b98de041f"
     ],
     "origin": null,
     "selector": null
    },
    {
-    "_id": "36bc15a2-6118-42de-a4b4-64acb4840e52",
+    "_id": "aadc9969-5758-0ce6-f588-289b37e94abc",
     "fake": false,
     "type": "class",
-    "name": "hero_content_va19fd",
+    "name": "case-studies-hero_content_vu8n4t",
     "namespace": "",
     "comb": "&",
     "styleLess": "z-index: 1;",
@@ -351,13 +389,42 @@
     "selector": null
    },
    {
-    "_id": "8aa4bf92-a9ad-dcb6-d95b-fe74518a651a",
+    "_id": "5526e39c-fcee-d7bb-0b03-4e133146c421",
     "fake": false,
     "type": "class",
-    "name": "hero_content_vjupxh",
+    "name": "case-studies-hero_content_v8gerb",
     "namespace": "",
     "comb": "&",
     "styleLess": "top: 0rem; right: 0rem; bottom: 0rem; left: 0rem; opacity: .03; pointer-events: none; z-index: 2;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
+    "fake": false,
+    "type": "class",
+    "name": "text-size-medium",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [
+     "57b42051-14b9-2467-941a-932e07e48951",
+     "7b05b611-dd67-6f44-2948-c499afca9336"
+    ],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "7b05b611-dd67-6f44-2948-c499afca9336",
+    "fake": false,
+    "type": "class",
+    "name": "text-size-medium_vp8yum",
+    "namespace": "",
+    "comb": "&",
+    "styleLess": "font-size: 12px; font-weight: 400; text-transform: uppercase; letter-spacing: 1px; color: #9b3139;",
     "variants": {},
     "children": [],
     "origin": null,
@@ -392,21 +459,6 @@
     "selector": null
    },
    {
-    "_id": "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
-    "fake": false,
-    "type": "class",
-    "name": "text-size-medium",
-    "namespace": "",
-    "comb": "",
-    "styleLess": "",
-    "variants": {},
-    "children": [
-     "57b42051-14b9-2467-941a-932e07e48951"
-    ],
-    "origin": null,
-    "selector": null
-   },
-   {
     "_id": "57b42051-14b9-2467-941a-932e07e48951",
     "fake": false,
     "type": "class",
@@ -420,10 +472,10 @@
     "selector": null
    },
    {
-    "_id": "f0bf16f0-1684-1913-e0dc-93ff5869c6e1",
+    "_id": "43aa27d5-55f8-3029-1084-3f2c80e6d42f",
     "fake": false,
     "type": "class",
-    "name": "hero_content_vu2vuq",
+    "name": "case-studies-hero_content_v1eiec",
     "namespace": "",
     "comb": "&",
     "styleLess": "align-content: stretch; display: flex; flex-direction: column; grid-row-gap: 20px; grid-column-gap: 20px; align-items: flex-start; position: relative; width: 100%; top: auto; right: auto; bottom: auto; left: auto; font-weight: 300; flex-shrink: 0; color: #2a2420; z-index: 2;",
@@ -433,10 +485,10 @@
     "selector": null
    },
    {
-    "_id": "910c4985-7c55-7bef-256f-7bf2c6897dd9",
+    "_id": "dbeb3280-9730-ebfa-0228-f2424218d59e",
     "fake": false,
     "type": "class",
-    "name": "hero_link",
+    "name": "case-studies-hero_link",
     "namespace": "",
     "comb": "",
     "styleLess": "align-content: stretch; display: flex; align-items: center; justify-content: center; position: relative; background-color: #9b3139; padding-left: 28px; padding-right: 28px; padding-top: 16px; padding-bottom: 16px; border-radius: 500px; flex-shrink: 0; z-index: 1; font-weight: 500; line-height: 1.4; font-size: 15px; color: #fff; letter-spacing: 1px;",
@@ -446,10 +498,10 @@
     "selector": null
    },
    {
-    "_id": "15dad747-8cb0-ed40-9d4c-c573612c8426",
+    "_id": "b16d3c7e-4c68-8033-8fb6-51f176330b61",
     "fake": false,
     "type": "class",
-    "name": "hero_content_vdz251",
+    "name": "case-studies-hero_content_vf4f2h",
     "namespace": "",
     "comb": "&",
     "styleLess": "top: 0rem; right: 0rem; bottom: 0rem; left: 0rem; border-style: solid; border-width: 1px; pointer-events: none; border-radius: 500px; z-index: auto;",
@@ -459,10 +511,10 @@
     "selector": null
    },
    {
-    "_id": "a272d213-8874-5ed1-09eb-002a2abb9833",
+    "_id": "74a2c62e-8ee6-10f4-31dc-a72240fd81b0",
     "fake": false,
     "type": "class",
-    "name": "hero_card",
+    "name": "case-studies-hero_card",
     "namespace": "",
     "comb": "",
     "styleLess": "align-content: stretch; display: flex; align-items: center; justify-content: center; position: relative; padding-left: 28px; padding-right: 28px; padding-top: 16px; padding-bottom: 16px; border-radius: 500px; flex-shrink: 0; font-weight: 500; line-height: 1.4; color: #151515; font-size: 15px; letter-spacing: 1px;",
@@ -472,23 +524,23 @@
     "selector": null
    },
    {
-    "_id": "a840491d-2a42-1085-ff11-dc78f2f8ad5b",
+    "_id": "b6b66213-c09d-31f9-96b5-6b72a197d26b",
     "fake": false,
     "type": "class",
-    "name": "hero_list",
+    "name": "case-studies-hero_content_v1s4hu",
     "namespace": "",
-    "comb": "",
-    "styleLess": "display: flex; flex-direction: row; grid-row-gap: 16px; grid-column-gap: 16px; align-items: flex-start;",
+    "comb": "&",
+    "styleLess": "display: flex; flex-direction: row; grid-row-gap: 16px; grid-column-gap: 16px; align-items: flex-start; position: static; top: auto; right: auto; bottom: auto; left: auto; z-index: auto;",
     "variants": {},
     "children": [],
     "origin": null,
     "selector": null
    },
    {
-    "_id": "fa348de3-96f2-2d5b-b64c-5618c1cd4415",
+    "_id": "ededbad6-f6bf-9f79-4f4c-bf3b98de041f",
     "fake": false,
     "type": "class",
-    "name": "hero_content_v1xwc9",
+    "name": "case-studies-hero_content_vpq3zd",
     "namespace": "",
     "comb": "&",
     "styleLess": "align-content: stretch; display: flex; flex-grow: 1; flex-shrink: 0; flex-basis: 0; flex-direction: column; grid-row-gap: 40px; grid-column-gap: 40px; align-items: flex-start; min-height: 1px; min-width: 0rem; position: relative; width: 100%; top: auto; right: auto; bottom: auto; left: auto; z-index: auto;",
@@ -498,10 +550,10 @@
     "selector": null
    },
    {
-    "_id": "8233b6f4-f509-ba19-ba97-c311c181fdeb",
+    "_id": "d3555a59-8db5-1122-c943-3a77bcde4230",
     "fake": false,
     "type": "class",
-    "name": "hero_content_v6yhgs",
+    "name": "case-studies-hero_content_v1mgpn",
     "namespace": "",
     "comb": "&",
     "styleLess": "align-content: stretch; display: flex; align-items: flex-start; position: relative; width: 100%; max-width: 1200px; top: auto; right: auto; bottom: auto; left: auto; flex-shrink: 0; padding-left: 3rem; padding-right: 3rem; z-index: 10;",
@@ -511,10 +563,10 @@
     "selector": null
    },
    {
-    "_id": "6cdd4a6c-04a7-6a84-54f6-800854caa74c",
+    "_id": "7c39b53f-6510-26cb-3fd3-79840ed496cd",
     "fake": false,
     "type": "class",
-    "name": "hero_component",
+    "name": "case-studies-hero_component",
     "namespace": "",
     "comb": "",
     "styleLess": "",
@@ -563,10 +615,10 @@
     "selector": null
    },
    {
-    "_id": "88391204-830e-9f7c-6217-d9d8238e4164",
+    "_id": "9f3c46bf-048d-193b-3c6c-7e5459a09f7d",
     "fake": false,
     "type": "class",
-    "name": "section_hero",
+    "name": "section_case-studies-hero",
     "namespace": "",
     "comb": "",
     "styleLess": "align-content: stretch; display: flex; flex-direction: column; align-items: center; padding-bottom: 120px; padding-top: 100px; position: relative; width: 100%; flex-shrink: 0; overflow: hidden;",

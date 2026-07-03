@@ -1,0 +1,438 @@
+{
+ "type": "@webflow/XscpData",
+ "payload": {
+  "nodes": [
+   {
+    "_id": "8de6aae5-ba63-ec81-cdf7-8ab48ab34a17",
+    "text": true,
+    "v": "Founded in 1995"
+   },
+   {
+    "_id": "54f94d4e-cadf-435c-07f5-25ba6dff7678",
+    "type": "Paragraph",
+    "tag": "p",
+    "data": {
+     "tag": "p"
+    },
+    "classes": [
+     "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
+     "eb3b7561-1ed6-d9c9-d25e-eec8ba3e0687"
+    ],
+    "children": [
+     "8de6aae5-ba63-ec81-cdf7-8ab48ab34a17"
+    ]
+   },
+   {
+    "_id": "07692929-83ae-f441-182d-86889585bc7f",
+    "text": true,
+    "v": "30 Years of Innovation. Built for What's Next."
+   },
+   {
+    "_id": "5d7fc6ca-3f2a-105c-93eb-610e971f98a8",
+    "type": "Heading",
+    "tag": "h2",
+    "data": {
+     "tag": "h2"
+    },
+    "classes": [
+     "4356e6ab-8d67-5e6e-3edb-26c9a999f44c",
+     "a5c006bd-27fb-44ed-f8f7-1a908df4cc23"
+    ],
+    "children": [
+     "07692929-83ae-f441-182d-86889585bc7f"
+    ]
+   },
+   {
+    "_id": "9101b9b9-18b0-e401-a95b-771886ffd15f",
+    "text": true,
+    "v": "Since 1995, we’ve helped businesses navigate every major shift in web technology — from the early web to mobile-first design to AI-powered optimization."
+   },
+   {
+    "_id": "0f05650a-3bde-045c-e75f-9aceba4640a8",
+    "type": "Paragraph",
+    "tag": "p",
+    "data": {
+     "tag": "p"
+    },
+    "classes": [
+     "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
+     "60b52225-9470-49da-3194-adcb602e7d10"
+    ],
+    "children": [
+     "9101b9b9-18b0-e401-a95b-771886ffd15f"
+    ]
+   },
+   {
+    "_id": "a896fba5-8093-1374-90c9-4145f85dfcf6",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "42156a72-7732-527b-7176-b7dd0ca4d181"
+    ],
+    "children": [
+     "54f94d4e-cadf-435c-07f5-25ba6dff7678",
+     "5d7fc6ca-3f2a-105c-93eb-610e971f98a8",
+     "0f05650a-3bde-045c-e75f-9aceba4640a8"
+    ]
+   },
+   {
+    "_id": "070fa358-cdac-9f11-2387-191d1490007b",
+    "text": true,
+    "v": "Years of innovation"
+   },
+   {
+    "_id": "c2ef49d7-58ed-142c-0ce4-0ef716ea67d2",
+    "type": "Paragraph",
+    "tag": "p",
+    "data": {
+     "tag": "p"
+    },
+    "classes": [
+     "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
+     "e23ee49d-5a50-27cf-6ab4-2bfafee6a8b9"
+    ],
+    "children": [
+     "070fa358-cdac-9f11-2387-191d1490007b"
+    ]
+   },
+   {
+    "_id": "56cd6d2f-5752-e1bc-ebca-046f67f1e602",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "42156a72-7732-527b-7176-b7dd0ca4d181",
+     "f2d132b3-a928-b667-a658-97e441b0ceb9"
+    ],
+    "children": [
+     "c2ef49d7-58ed-142c-0ce4-0ef716ea67d2"
+    ]
+   },
+   {
+    "_id": "a98d9c2d-6e89-31f4-b503-7bed794b4ac6",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "42156a72-7732-527b-7176-b7dd0ca4d181",
+     "be465f02-6b3b-36a5-74e4-6193d206225b"
+    ],
+    "children": [
+     "56cd6d2f-5752-e1bc-ebca-046f67f1e602"
+    ]
+   },
+   {
+    "_id": "0cfcf1c6-256b-c604-2d18-672a794fa410",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "8d3af290-75cf-3c01-201c-52056d5e5e5b"
+    ],
+    "children": [
+     "a896fba5-8093-1374-90c9-4145f85dfcf6",
+     "a98d9c2d-6e89-31f4-b503-7bed794b4ac6"
+    ]
+   },
+   {
+    "_id": "758858ff-5103-fb91-7879-99c68a5a692b",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "171a7779-815a-5ffe-32b2-25f332830ad4"
+    ],
+    "children": [
+     "0cfcf1c6-256b-c604-2d18-672a794fa410"
+    ]
+   },
+   {
+    "_id": "22394773-525f-14d6-04c3-7729c89032a4",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "cc0befdd-524c-2e6e-def8-c40faa76ac54"
+    ],
+    "children": [
+     "758858ff-5103-fb91-7879-99c68a5a692b"
+    ]
+   },
+   {
+    "_id": "451659bf-055d-0819-1282-bb5e82807f53",
+    "type": "Block",
+    "tag": "div",
+    "data": {
+     "tag": "div",
+     "text": false
+    },
+    "classes": [
+     "3099fbbb-3f97-cd20-34d4-a817d799d98e"
+    ],
+    "children": [
+     "22394773-525f-14d6-04c3-7729c89032a4"
+    ]
+   },
+   {
+    "_id": "8e57bfeb-af27-0913-b122-7158d3238c4d",
+    "type": "Block",
+    "tag": "section",
+    "data": {
+     "tag": "section",
+     "text": false
+    },
+    "classes": [
+     "e277a798-dc4a-78d1-8354-d81dbeaa993b",
+     "b937211e-d210-5f7b-734f-d0e98bbedc49"
+    ],
+    "children": [
+     "451659bf-055d-0819-1282-bb5e82807f53"
+    ]
+   }
+  ],
+  "styles": [
+   {
+    "_id": "313ba3e9-c3d2-f10e-9345-2bd3fe07b784",
+    "fake": false,
+    "type": "class",
+    "name": "text-size-medium",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [
+     "60b52225-9470-49da-3194-adcb602e7d10",
+     "e23ee49d-5a50-27cf-6ab4-2bfafee6a8b9",
+     "eb3b7561-1ed6-d9c9-d25e-eec8ba3e0687"
+    ],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "eb3b7561-1ed6-d9c9-d25e-eec8ba3e0687",
+    "fake": false,
+    "type": "class",
+    "name": "text-size-medium_v1591o",
+    "namespace": "",
+    "comb": "&",
+    "styleLess": "margin: 0; color: #fff4e3; font-size: .82rem; font-weight: 700; letter-spacing: .18em; text-transform: uppercase;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "4356e6ab-8d67-5e6e-3edb-26c9a999f44c",
+    "fake": false,
+    "type": "class",
+    "name": "heading-style-h2",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [
+     "a5c006bd-27fb-44ed-f8f7-1a908df4cc23"
+    ],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "a5c006bd-27fb-44ed-f8f7-1a908df4cc23",
+    "fake": false,
+    "type": "class",
+    "name": "heading-style-h2_vbodz0",
+    "namespace": "",
+    "comb": "&",
+    "styleLess": "margin: 0; max-width: none; color: #fff4e3; font-family: Manrope,sans-serif; font-size: clamp(2.6rem,4.8vw,4.8rem); font-weight: 300; letter-spacing: -.05em; line-height: .96; white-space: nowrap;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "60b52225-9470-49da-3194-adcb602e7d10",
+    "fake": false,
+    "type": "class",
+    "name": "text-size-medium_vyr2sc",
+    "namespace": "",
+    "comb": "&",
+    "styleLess": "margin: 0; max-width: 36rem; color: #fff4e3; font-size: clamp(1rem,1.6vw,1.15rem); line-height: 1.7;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "42156a72-7732-527b-7176-b7dd0ca4d181",
+    "fake": false,
+    "type": "class",
+    "name": "case-studies-authority_content",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "display: grid; grid-row-gap: 16px; grid-column-gap: 16px;",
+    "variants": {},
+    "children": [
+     "be465f02-6b3b-36a5-74e4-6193d206225b",
+     "f2d132b3-a928-b667-a658-97e441b0ceb9"
+    ],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "e23ee49d-5a50-27cf-6ab4-2bfafee6a8b9",
+    "fake": false,
+    "type": "class",
+    "name": "text-size-medium_v2d8az",
+    "namespace": "",
+    "comb": "&",
+    "styleLess": "margin: 0; color: #fff4e3; font-size: .88rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "f2d132b3-a928-b667-a658-97e441b0ceb9",
+    "fake": false,
+    "type": "class",
+    "name": "case-studies-authority_content_von97g",
+    "namespace": "",
+    "comb": "&",
+    "styleLess": "align-items: center; grid-row-gap: 6px; grid-column-gap: 6px; height: 210px; justify-items: center; width: 210px; background: #fff8ed0f; border: 1px solid rgba(255,244,227,.14); border-radius: 999px;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "be465f02-6b3b-36a5-74e4-6193d206225b",
+    "fake": false,
+    "type": "class",
+    "name": "case-studies-authority_content_v9kixh",
+    "namespace": "",
+    "comb": "&",
+    "styleLess": "align-items: center; justify-self: center; max-width: 460px; padding: 24px; place-items: center; width: 100%; aspect-ratio: 1; background: radial-gradient(circle,rgba(255,170,29,.14),transparent 58%),radial-gradient(circle,rgba(255,255,255,.05),transparent 68%); border: 1px solid rgba(255,244,227,.2); border-radius: 999px; animation: aos-orbit-pulse 4.6s ease-out infinite; transform-origin: center;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "8d3af290-75cf-3c01-201c-52056d5e5e5b",
+    "fake": false,
+    "type": "class",
+    "name": "case-studies-authority_component",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "align-items: center; display: grid; grid-row-gap: 32px; grid-column-gap: 32px; grid-template-columns: minmax(0,1.05fr) minmax(320px,.95fr); margin: 0 auto; max-width: 1200px;",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "171a7779-815a-5ffe-32b2-25f332830ad4",
+    "fake": false,
+    "type": "class",
+    "name": "padding-section-medium",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "cc0befdd-524c-2e6e-def8-c40faa76ac54",
+    "fake": false,
+    "type": "class",
+    "name": "container-large",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "3099fbbb-3f97-cd20-34d4-a817d799d98e",
+    "fake": false,
+    "type": "class",
+    "name": "padding-global",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "e277a798-dc4a-78d1-8354-d81dbeaa993b",
+    "fake": false,
+    "type": "class",
+    "name": "section_case-studies-authority",
+    "namespace": "",
+    "comb": "",
+    "styleLess": "padding: 88px 20px;",
+    "variants": {},
+    "children": [
+     "b937211e-d210-5f7b-734f-d0e98bbedc49"
+    ],
+    "origin": null,
+    "selector": null
+   },
+   {
+    "_id": "b937211e-d210-5f7b-734f-d0e98bbedc49",
+    "fake": false,
+    "type": "class",
+    "name": "section_case-studies-authority_vtx77q",
+    "namespace": "",
+    "comb": "&",
+    "styleLess": "background: radial-gradient(circle at left top, rgba(255, 153, 2, 0.16), transparent 18%), linear-gradient(rgb(69, 27, 23) 0%, rgb(38, 22, 20) 100%);",
+    "variants": {},
+    "children": [],
+    "origin": null,
+    "selector": null
+   }
+  ],
+  "assets": [],
+  "ix1": [],
+  "ix2": {
+   "interactions": [],
+   "events": [],
+   "actionLists": []
+  }
+ },
+ "meta": {
+  "droppedLinks": 0,
+  "dynBindRemovedCount": 0,
+  "dynListBindRemovedCount": 0,
+  "paginationRemovedCount": 0,
+  "universalBindingsRemovedCount": 0,
+  "unlinkedSymbolCount": 0,
+  "codeComponentsRemovedCount": 0,
+  "richTextComponentsStripped": false
+ }
+}
