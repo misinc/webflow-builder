@@ -6,11 +6,49 @@ import pixelmatch from "pixelmatch";
 import { chromium } from "playwright";
 import type { Browser, Page } from "playwright";
 import { PNG } from "pngjs";
-import {
-  visualQaCompareRequestSchema,
-  type VisualQaCompareResponse,
-  type VisualQaViewportResult
-} from "@wfb/shared/contracts.js";
+import { z } from "zod";
+
+const visualQaViewportSchema = z.object({
+  name: z.string().min(1),
+  width: z.number().int().positive(),
+  height: z.number().int().positive()
+});
+
+const visualQaCompareRequestSchema = z.object({
+  originalUrl: z.string().url(),
+  webflowUrl: z.string().url(),
+  selector: z.string().min(1).optional(),
+  threshold: z.number().min(0).max(1).default(0.12),
+  viewports: z.array(visualQaViewportSchema).min(1).default([
+    { name: "desktop", width: 1440, height: 1200 },
+    { name: "tablet", width: 991, height: 1200 },
+    { name: "mobile", width: 390, height: 1200 }
+  ])
+});
+
+interface VisualQaViewportResult {
+  name: string;
+  width: number;
+  height: number;
+  mismatchRatio: number;
+  passed: boolean;
+  originalScreenshot: string;
+  webflowScreenshot: string;
+  diffScreenshot: string;
+  notes: string[];
+}
+
+interface VisualQaCompareResponse {
+  generatedAt: string;
+  originalUrl: string;
+  webflowUrl: string;
+  selector?: string;
+  threshold: number;
+  passed: boolean;
+  averageMismatchRatio: number;
+  results: VisualQaViewportResult[];
+  warnings: string[];
+}
 
 const app = express();
 const artifactDir =
