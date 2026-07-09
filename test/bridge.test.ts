@@ -3,7 +3,7 @@ import { getWebflowBridge } from "../extension/src/webflow/bridge.js";
 
 describe("Webflow bridge image insertion", () => {
   it("imports repo tokens as Webflow variables and reuses existing matches", async () => {
-    const variables: Array<{
+    const colorVariables: Array<{
       id: string;
       name: string;
       type: string;
@@ -13,28 +13,29 @@ describe("Webflow bridge image insertion", () => {
     }> = [
       {
         id: "var-existing",
-        name: "Colors/green/primary",
+        name: "green/primary",
         type: "color",
         value: "#8EC441",
-        getName: async () => "Colors/green/primary",
+        getName: async () => "green/primary",
         get: async () => "#8EC441"
       }
     ];
-    const collection = {
-      getAllVariables: vi.fn(async () => variables),
+    const colorsCollection = {
+      getName: vi.fn(async () => "Colors"),
+      getAllVariables: vi.fn(async () => colorVariables),
       getVariableByName: vi.fn(async (name: string) =>
-        variables.find((variable) => variable.name === name) ?? null
+        colorVariables.find((variable) => variable.name === name) ?? null
       ),
       createColorVariable: vi.fn(async (name: string, value: string) => {
         const variable = {
-          id: `var-${variables.length + 1}`,
+          id: `var-${colorVariables.length + 1}`,
           name,
           type: "color",
           value,
           getName: async () => name,
           get: async () => value
         };
-        variables.push(variable);
+        colorVariables.push(variable);
         return variable;
       })
     };
@@ -55,7 +56,10 @@ describe("Webflow bridge image insertion", () => {
             setProperties: async () => undefined
           }),
           removeStyle: async () => undefined,
-          getDefaultVariableCollection: async () => collection,
+          getDefaultVariableCollection: async () => null,
+          getAllVariableCollections: async () => [colorsCollection],
+          getVariableCollectionByName: async (name: string) =>
+            name === "Colors" ? colorsCollection : null,
           getAllAssets: async () => []
         }
       },
@@ -83,7 +87,7 @@ describe("Webflow bridge image insertion", () => {
     expect(result.reused.map((token) => token.name)).toEqual(["green/primary"]);
     expect(result.created.map((token) => token.name)).toEqual(["navy/dark"]);
     expect(result.missingAfterImport).toEqual([]);
-    expect(collection.createColorVariable).toHaveBeenCalledWith("Colors/navy/dark", "#001235");
+    expect(colorsCollection.createColorVariable).toHaveBeenCalledWith("navy/dark", "#001235");
   });
 
   it("uses setAltText instead of reserved alt attributes for image nodes", async () => {

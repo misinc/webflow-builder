@@ -151,6 +151,8 @@ interface WebflowVariable {
 }
 
 interface WebflowVariableCollection {
+  id?: string;
+  getName?(): Promise<string>;
   getAllVariables(): Promise<WebflowVariable[]>;
   getVariableByName(name: string): Promise<WebflowVariable | null>;
   createVariable?(name: string, value: unknown, type?: string): Promise<WebflowVariable>;
@@ -255,6 +257,9 @@ interface WebflowApi {
   createStyle(name: string, options?: { parent?: WebflowStyle }): Promise<WebflowStyle>;
   removeStyle(style: WebflowStyle): Promise<void>;
   getDefaultVariableCollection(): Promise<WebflowVariableCollection | null>;
+  getAllVariableCollections?(): Promise<WebflowVariableCollection[]>;
+  getVariableCollectionByName?(name: string): Promise<WebflowVariableCollection | null>;
+  createVariableCollection?(name: string): Promise<WebflowVariableCollection>;
   getAllAssets(): Promise<WebflowAsset[]>;
   createAsset?(fileBlob: File): Promise<WebflowAsset>;
 }
@@ -397,7 +402,7 @@ function categorizeVariable(name: string, variableType?: string): string {
 }
 
 function tokenVariableName(token: RepoToken): string {
-  return `${token.group}/${token.name}`;
+  return token.name;
 }
 
 function tokenDesignerValue(token: RepoToken): unknown {
@@ -421,19 +426,15 @@ async function findVariableByToken(
   collection: WebflowVariableCollection,
   token: RepoToken
 ): Promise<WebflowVariable | null> {
-  const fullName = tokenVariableName(token);
-  const direct = await collection.getVariableByName(fullName).catch(() => null);
+  const name = tokenVariableName(token);
+  const direct = await collection.getVariableByName(name).catch(() => null);
   if (direct) {
     return direct;
   }
-  const fallback = await collection.getVariableByName(token.name).catch(() => null);
-  if (fallback) {
-    return fallback;
-  }
   const variables = await collection.getAllVariables().catch(() => []);
   for (const variable of variables) {
-    const name = await variable.getName().catch(() => null);
-    if (name === fullName || name === token.name) {
+    const variableName = await variable.getName().catch(() => null);
+    if (variableName === name) {
       return variable;
     }
   }
@@ -1041,29 +1042,31 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
       return this.tokenValueMap;
     }
     const map = new Map<string, { variable: WebflowVariable; name: string; kind: TokenKind }>();
-    const collection = await this.api.getDefaultVariableCollection();
-    for (const variable of (await collection?.getAllVariables()) ?? []) {
-      const [name, value] = await Promise.all([
-        variable.getName().catch(() => null),
-        variable.get ? variable.get().catch(() => undefined) : Promise.resolve(undefined)
-      ]);
-      const literal = normalizeTokenLiteral(value);
-      if (!name || !literal) {
-        continue;
-      }
-      const declared = variable.type?.toLowerCase().replace(/[^a-z]/g, "");
-      const kind: TokenKind =
-        declared === "color"
-          ? "color"
-          : declared === "size"
-            ? "size"
-            : declared === "fontfamily"
-              ? "fontFamily"
-              : declared === "number" || declared === "percentage"
-                ? "other"
-                : literal.kind;
-      if (!map.has(literal.normalized)) {
-        map.set(literal.normalized, { variable, name, kind });
+    const collections = await this.getInspectableVariableCollections();
+    for (const collection of collections) {
+      for (const variable of await collection.getAllVariables()) {
+        const [name, value] = await Promise.all([
+          variable.getName().catch(() => null),
+          variable.get ? variable.get().catch(() => undefined) : Promise.resolve(undefined)
+        ]);
+        const literal = normalizeTokenLiteral(value);
+        if (!name || !literal) {
+          continue;
+        }
+        const declared = variable.type?.toLowerCase().replace(/[^a-z]/g, "");
+        const kind: TokenKind =
+          declared === "color"
+            ? "color"
+            : declared === "size"
+              ? "size"
+              : declared === "fontfamily"
+                ? "fontFamily"
+                : declared === "number" || declared === "percentage"
+                  ? "other"
+                  : literal.kind;
+        if (!map.has(literal.normalized)) {
+          map.set(literal.normalized, { variable, name, kind });
+        }
       }
     }
     this.tokenValueMap = map;
@@ -1176,8 +1179,28 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
     return null;
   }
 
+  private async getVariableCollectionForToken(
+    token: RepoToken
+  ): Promise<WebflowVariableCollection | null> {
+    const byName = await this.api.getVariableCollectionByName?.(token.group).catch(() => null);
+    if (byName) {
+      return byName;
+    }
+    const collections = await this.api.getAllVariableCollections?.().catch(() => []);
+    for (const collection of collections ?? []) {
+      const name = await collection.getName?.().catch(() => null);
+      if (name === token.group) {
+        return collection;
+      }
+    }
+    const created = await this.api.createVariableCollection?.(token.group).catch(() => null);
+    if (created) {
+      return created;
+    }
+    return null;
+  }
+
   async importVariables(tokens: RepoToken[]): Promise<ImportVariablesResult> {
-    const collection = await this.api.getDefaultVariableCollection();
     const result: ImportVariablesResult = {
       created: [],
       reused: [],
@@ -1186,17 +1209,16 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
       failed: [],
       warnings: []
     };
-    if (!collection) {
-      return {
-        ...result,
-        skipped: tokens.map((token) => ({
-          token,
-          reason: "This site does not expose a default variable collection."
-        }))
-      };
-    }
 
     for (const token of tokens) {
+      const collection = await this.getVariableCollectionForToken(token);
+      if (!collection) {
+        result.skipped.push({
+          token,
+          reason: `Could not find or create a "${token.group}" variable collection.`
+        });
+        continue;
+      }
       const existing = await findVariableByToken(collection, token);
       if (existing) {
         result.reused.push(token);
@@ -1222,6 +1244,11 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
 
     this.tokenValueMap = null;
     for (const token of [...result.created, ...result.reused]) {
+      const collection = await this.getVariableCollectionForToken(token);
+      if (!collection) {
+        result.missingAfterImport.push(token);
+        continue;
+      }
       const exists = await findVariableByToken(collection, token);
       if (!exists) {
         result.missingAfterImport.push(token);
@@ -1230,10 +1257,19 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
     return result;
   }
 
+  private async getInspectableVariableCollections(): Promise<WebflowVariableCollection[]> {
+    const all = await this.api.getAllVariableCollections?.().catch(() => null);
+    if (all?.length) {
+      return all;
+    }
+    const fallback = await this.api.getDefaultVariableCollection().catch(() => null);
+    return fallback ? [fallback] : [];
+  }
+
   async inspectSharedStyles(siteId: string): Promise<SharedStyleContext> {
-    const [styles, collection] = await Promise.all([
+    const [styles, collections] = await Promise.all([
       this.api.getAllStyles(),
-      this.api.getDefaultVariableCollection()
+      this.getInspectableVariableCollections()
     ]);
 
     for (const style of styles) {
@@ -1251,25 +1287,30 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
       })
     );
 
-    const variables = collection
-      ? await Promise.all(
-          (await collection.getAllVariables()).map(async (variable) => {
-            const [name, value] = await Promise.all([
-              variable.getName(),
-              variable.get ? variable.get().catch(() => undefined) : Promise.resolve(undefined)
-            ]);
-            return {
-              name,
-              category: categorizeVariable(name, variable.type),
-              group: name.includes("/") ? name.split("/")[0] : undefined,
-              value:
-                typeof value === "string" || typeof value === "number"
-                  ? String(value)
-                  : undefined
-            };
-          })
-        )
-      : [];
+    const variables = (
+      await Promise.all(
+        collections.map(async (collection) => {
+          const group = await collection.getName?.().catch(() => undefined);
+          return Promise.all(
+            (await collection.getAllVariables()).map(async (variable) => {
+              const [name, value] = await Promise.all([
+                variable.getName(),
+                variable.get ? variable.get().catch(() => undefined) : Promise.resolve(undefined)
+              ]);
+              return {
+                name,
+                category: categorizeVariable(name, variable.type),
+                group,
+                value:
+                  typeof value === "string" || typeof value === "number"
+                    ? String(value)
+                    : undefined
+              };
+            })
+          );
+        })
+      )
+    ).flat();
 
     return {
       siteId,
@@ -1737,7 +1778,7 @@ class MockWebflowDesignerBridge implements WebflowDesignerBridge {
     const created: RepoToken[] = [];
     const reused: RepoToken[] = [];
     for (const token of tokens) {
-      const key = tokenVariableName(token);
+      const key = `${token.group}/${token.name}`;
       if (this.importedVariables.has(key)) {
         reused.push(token);
       } else {

@@ -268,17 +268,14 @@ function tokenKey(token: RepoToken): string {
 }
 
 function tokenExistsInWebflow(token: RepoToken, variables: SharedVariable[]): boolean {
-  const fullName = tokenKey(token);
-  const lowerFullName = fullName.toLowerCase();
   const lowerName = token.name.toLowerCase();
   const lowerGroup = token.group.toLowerCase();
   return variables.some((variable) => {
     const variableName = variable.name.toLowerCase();
     const variableGroup = variable.group?.toLowerCase();
     return (
-      variableName === lowerFullName ||
-      variableName === lowerName ||
-      (variableGroup === lowerGroup && variableName === lowerName)
+      (variableGroup === lowerGroup && variableName === lowerName) ||
+      (!variableGroup && variableName === lowerName)
     );
   });
 }
