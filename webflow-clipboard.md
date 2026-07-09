@@ -20,6 +20,10 @@ Reference implementation in this repo:
 [`packages/shared/src/webflow-clipboard.ts`](packages/shared/src/webflow-clipboard.ts)
 (serializer) and [`test/webflow-clipboard.test.ts`](test/webflow-clipboard.test.ts).
 
+> **Companion doc:** [`webflow-client-first-naming.md`](webflow-client-first-naming.md)
+> covers *how to name classes and structure the section tree* (the client-first
+> scaffold, shared-vs-combo classes) that feeds into this wire format.
+
 ---
 
 ## 1. The envelope
