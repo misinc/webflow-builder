@@ -31,6 +31,10 @@ import {
   stylingPlanSchema,
   V2BootstrapResponse,
   v2BootstrapResponseSchema,
+  VisualQaCompareRequest,
+  VisualQaCompareResponse,
+  visualQaCompareRequestSchema,
+  visualQaCompareResponseSchema,
   workflowClipboardResponseSchema,
   WorkflowClipboardRequest,
   WorkflowClipboardResponse,
@@ -674,6 +678,34 @@ export class BackendClient {
       input.requestedBy
     );
     return workflowQueueResponseSchema.parse(response);
+  }
+}
+
+export class VisualQaClient {
+  constructor(
+    private readonly baseUrl =
+      (import.meta.env.VITE_VISUAL_QA_BASE_URL as string | undefined) ?? ""
+  ) {}
+
+  isConfigured(): boolean {
+    return Boolean(this.baseUrl.trim());
+  }
+
+  async compare(input: VisualQaCompareRequest): Promise<VisualQaCompareResponse> {
+    if (!this.isConfigured()) {
+      throw new Error(
+        "Visual QA is not configured. Set VITE_VISUAL_QA_BASE_URL to your Render Playwright service URL."
+      );
+    }
+    const validated = visualQaCompareRequestSchema.parse(input);
+    const response = await request<VisualQaCompareResponse>(
+      `${stripTrailingSlash(this.baseUrl)}/visual-qa/compare`,
+      {
+        method: "POST",
+        body: JSON.stringify(validated)
+      }
+    );
+    return visualQaCompareResponseSchema.parse(response);
   }
 }
 

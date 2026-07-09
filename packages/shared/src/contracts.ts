@@ -79,6 +79,48 @@ export const importVariablesResultSchema = z.object({
   warnings: z.array(z.string())
 });
 
+export const visualQaViewportSchema = z.object({
+  name: z.string().min(1),
+  width: z.number().int().positive(),
+  height: z.number().int().positive()
+});
+
+export const visualQaCompareRequestSchema = z.object({
+  originalUrl: z.string().url(),
+  webflowUrl: z.string().url(),
+  selector: z.string().min(1).optional(),
+  threshold: z.number().min(0).max(1).default(0.12),
+  viewports: z.array(visualQaViewportSchema).min(1).default([
+    { name: "desktop", width: 1440, height: 1200 },
+    { name: "tablet", width: 991, height: 1200 },
+    { name: "mobile", width: 390, height: 1200 }
+  ])
+});
+
+export const visualQaViewportResultSchema = z.object({
+  name: z.string().min(1),
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
+  mismatchRatio: z.number().min(0).max(1),
+  passed: z.boolean(),
+  originalScreenshot: z.string().min(1),
+  webflowScreenshot: z.string().min(1),
+  diffScreenshot: z.string().min(1),
+  notes: z.array(z.string())
+});
+
+export const visualQaCompareResponseSchema = z.object({
+  generatedAt: z.string().datetime(),
+  originalUrl: z.string().url(),
+  webflowUrl: z.string().url(),
+  selector: z.string().optional(),
+  threshold: z.number().min(0).max(1),
+  passed: z.boolean(),
+  averageMismatchRatio: z.number().min(0).max(1),
+  results: z.array(visualQaViewportResultSchema),
+  warnings: z.array(z.string())
+});
+
 export const sharedStyleContextSchema = z.object({
   siteId: z.string().min(1),
   capturedAt: z.string().datetime(),
@@ -761,6 +803,10 @@ export type RepoToken = z.infer<typeof repoTokenSchema>;
 export type RepoTokensResponse = z.infer<typeof repoTokensResponseSchema>;
 export type ImportVariablesInput = z.infer<typeof importVariablesInputSchema>;
 export type ImportVariablesResult = z.infer<typeof importVariablesResultSchema>;
+export type VisualQaViewport = z.infer<typeof visualQaViewportSchema>;
+export type VisualQaCompareRequest = z.infer<typeof visualQaCompareRequestSchema>;
+export type VisualQaViewportResult = z.infer<typeof visualQaViewportResultSchema>;
+export type VisualQaCompareResponse = z.infer<typeof visualQaCompareResponseSchema>;
 export type SiteStylePlanClassDecision = z.infer<
   typeof siteStylePlanClassDecisionSchema
 >;

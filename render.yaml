@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: webflow-builder-visual-qa
+    runtime: node
+    rootDir: visual-qa
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    plan: starter
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: VISUAL_QA_MAX_VIEWPORTS
+        value: 3
+      - key: VISUAL_QA_NAVIGATION_TIMEOUT_MS
+        value: 45000
+      - key: VISUAL_QA_ARTIFACT_DIR
+        value: /tmp/webflow-builder-visual-qa
+      - key: VISUAL_QA_ARTIFACT_BASE_URL
+        sync: false
+      - key: VISUAL_QA_ALLOWED_HOSTS
+        sync: false

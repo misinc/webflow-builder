@@ -36,6 +36,7 @@ LOCAL_MIS_REPO_PATH=/absolute/path/to/mis-repo
 CANONICAL_WEBFLOW_SITE_ID=6a2db2a041dabacd48068930
 VITE_API_BASE_URL=https://misinc-ai-builder.webflow.io/api
 VITE_API_RUNTIME=cloud
+VITE_VISUAL_QA_BASE_URL=https://your-render-visual-qa-service.onrender.com
 ```
 
 ## Commands
