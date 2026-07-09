@@ -275,8 +275,8 @@ function isPrivateHost(host: string): boolean {
   if (/^10\./.test(host) || /^127\./.test(host) || /^192\.168\./.test(host)) {
     return true;
   }
-  const172Match = host.match(/^172\.(\d+)\./);
-  return Boolean(172Match && Number(172Match[1]) >= 16 && Number(172Match[1]) <= 31);
+  const match172 = host.match(/^172\.(\d+)\./);
+  return Boolean(match172 && Number(match172[1]) >= 16 && Number(match172[1]) <= 31);
 }
 
 const port = Number.parseInt(process.env.PORT ?? "8788", 10);

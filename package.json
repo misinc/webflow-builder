@@ -5,12 +5,15 @@
   "type": "module",
   "workspaces": [
     "packages/shared",
-    "packages/backend-core"
+    "packages/backend-core",
+    "visual-qa"
   ],
   "scripts": {
+    "start": "npm --workspace webflow-builder-visual-qa start",
     "build": "npm run build:backend && npm run build:extension",
     "build:backend": "tsc -p tsconfig.node.json",
     "build:extension": "vite build --config vite.extension.config.ts",
+    "build:visual-qa": "npm --workspace webflow-builder-visual-qa run build",
     "bundle:extension": "npm run build && webflow extension bundle",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.extension.json",
     "test": "vitest run"
