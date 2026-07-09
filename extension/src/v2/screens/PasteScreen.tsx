@@ -13,6 +13,25 @@ import type { VisualQaCompareResponse } from "@wfb/shared/contracts.js";
 
 const bridge = getWebflowBridge();
 const visualQaClient = new VisualQaClient();
+type CleanupStatus = "idle" | "running" | "done" | "failed";
+
+async function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  let timeoutId: number | null = null;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_resolve, reject) => {
+        timeoutId = window.setTimeout(() => {
+          reject(new Error(`${label} timed out. Select the pasted element and try again.`));
+        }, ms);
+      })
+    ]);
+  } finally {
+    if (timeoutId !== null) {
+      window.clearTimeout(timeoutId);
+    }
+  }
+}
 
 function firstSectionSelector(sourceCode: string | null | undefined): string {
   if (!sourceCode) {
@@ -71,6 +90,7 @@ export function PasteScreen() {
     ? "Footer"
     : "Navbar + Footer";
   const [cleanupResult, setCleanupResult] = useState<string | null>(null);
+  const [cleanupStatus, setCleanupStatus] = useState<CleanupStatus>("idle");
   const [cleanupLabel, setCleanupLabel] = useState("Clean up paste");
   const [copyAgainLabel, setCopyAgainLabel] = useState("Copy again");
   const defaultWebflowUrl = useMemo(() => {
@@ -106,17 +126,40 @@ export function PasteScreen() {
   }, [defaultSelector, selector]);
 
   const cleanupPaste = async () => {
+    setCleanupStatus("running");
+    setCleanupResult(null);
     setCleanupLabel("Cleaning…");
     try {
-      const deduped = await bridge.dedupeSelectionStyles();
-      const bound = await bridge.bindTokensInSelection();
-      const summary = `${deduped.swappedClasses.length} class${deduped.swappedClasses.length === 1 ? "" : "es"} fixed · ${bound.boundProperties} token${bound.boundProperties === 1 ? "" : "s"} bound`;
+      const deduped = await withTimeout(
+        bridge.dedupeSelectionStyles(),
+        15000,
+        "Clean up paste"
+      );
+      let boundProperties = 0;
+      let tokenWarning = "";
+      try {
+        const bound = await withTimeout(
+          bridge.bindTokensInSelection(),
+          15000,
+          "Token binding"
+        );
+        boundProperties = bound.boundProperties;
+      } catch (error) {
+        tokenWarning = error instanceof Error ? ` · tokens skipped: ${error.message}` : "";
+      }
+      const summary = `${deduped.swappedClasses.length} class${deduped.swappedClasses.length === 1 ? "" : "es"} fixed · ${boundProperties} token${boundProperties === 1 ? "" : "s"} bound${tokenWarning}`;
       setCleanupResult(summary);
+      setCleanupStatus("done");
       setCleanupLabel("Clean up again");
       setUiHint("Cleaned up. Check the section against the live site, then Mark section built.");
-    } catch {
+    } catch (error) {
+      setCleanupStatus("failed");
       setCleanupLabel("Clean up paste");
-      setUiHint("Select the pasted section on the canvas first, then click Clean up paste.");
+      setUiHint(
+        error instanceof Error
+          ? error.message
+          : "Select the pasted section on the canvas first, then click Clean up paste."
+      );
     }
   };
 
@@ -207,7 +250,7 @@ export function PasteScreen() {
     { label: pasteTarget, done: false },
     { label: "Press Cmd+V (Ctrl+V on Windows) to paste", done: false },
     { label: "Select the pasted element in the Navigator", done: false },
-    { label: "Clean up paste — reuses your classes, binds your variables", done: Boolean(cleanupResult) },
+    { label: "Clean up paste — reuses your classes, binds your variables", done: cleanupStatus === "done" },
     ...(pasteScope === "chrome"
       ? [
           {
@@ -265,7 +308,7 @@ export function PasteScreen() {
             </label>
           ) : null}
           <Button
-            variant={cleanupResult ? "ghost" : "primary"}
+            variant={cleanupStatus === "done" ? "ghost" : "primary"}
             disabled={isMutating}
             onClick={() => {
               void cleanupPaste();
@@ -274,7 +317,7 @@ export function PasteScreen() {
             {cleanupLabel}
           </Button>
           <Button
-            variant={cleanupResult ? "primary" : "ghost"}
+            variant={cleanupStatus === "done" ? "primary" : "ghost"}
             disabled={isMutating}
             onClick={() => {
               if (isSection) {
@@ -347,8 +390,7 @@ export function PasteScreen() {
               {cleanupResult}
             </div>
           ) : null}
-          {cleanupResult ? (
-            <div className="mt-5 rounded-lg border border-white/[0.09] bg-wb-surface-1 p-4 text-left">
+          <div className="mt-5 rounded-lg border border-white/[0.09] bg-wb-surface-1 p-4 text-left">
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div>
                   <div className="text-[13px] font-semibold text-wb-text-primary">
@@ -463,8 +505,7 @@ export function PasteScreen() {
                   ) : null}
                 </div>
               ) : null}
-            </div>
-          ) : null}
+          </div>
         </div>
       </div>
     </Panel>
