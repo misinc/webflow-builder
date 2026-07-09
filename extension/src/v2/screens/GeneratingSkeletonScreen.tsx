@@ -24,7 +24,10 @@ export function GeneratingSkeletonScreen() {
   } = useAppState();
 
   useEffect(() => {
-    if (skeleton) {
+    const skeletonMatchesSelection =
+      Boolean(skeleton) &&
+      (!selectedSection || skeleton?.sectionMetadata.sectionId === selectedSection.id);
+    if (skeletonMatchesSelection) {
       navigate("skeleton-review");
       return;
     }
@@ -35,7 +38,7 @@ export function GeneratingSkeletonScreen() {
     if (!isMutating) {
       void startSectionBuild();
     }
-  }, [activeSectionError, error, isMutating, navigate, skeleton, startSectionBuild]);
+  }, [activeSectionError, error, isMutating, navigate, selectedSection, skeleton, startSectionBuild]);
 
   return (
     <Panel

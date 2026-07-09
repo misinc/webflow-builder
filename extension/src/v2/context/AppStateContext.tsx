@@ -1322,6 +1322,16 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     return startSectionBuild(selectedSectionId ?? undefined, { preserveState: true });
   }, [selectedSectionId, startSectionBuild]);
 
+  const selectSectionForBuild = useCallback((sectionId: string) => {
+    if (sectionId !== selectedSectionId) {
+      resetSectionRunState(sectionId);
+      setSelectedChrome(null);
+      setUiHint(null);
+      return;
+    }
+    setSelectedSectionId(sectionId);
+  }, [resetSectionRunState, selectedSectionId]);
+
   const beginSkeletonEdit = useCallback(() => {
     if (!skeleton) {
       return;
@@ -2215,7 +2225,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       lastCompletedSection,
       activeSectionError:
         (selectedSectionId ? sectionErrorsById[selectedSectionId] : null) ?? error,
-      selectSection: (sectionId: string) => setSelectedSectionId(sectionId),
+      selectSection: selectSectionForBuild,
       // Re-insert a completed section: select it, clear cached run state so the
       // skeleton regenerates from scratch, and flip its status back to
       // in-progress in the list (the backend catches up when the skeleton is
@@ -2343,6 +2353,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       selectedSection,
       selectedSectionId,
       selectedSectionOpportunity,
+      selectSectionForBuild,
       createComponentOnApprove,
       componentForSection,
       insertComponentInstance,
