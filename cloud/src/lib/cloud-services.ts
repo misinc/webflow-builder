@@ -6,6 +6,7 @@ import { OpenAIPlanningProvider } from "@wfb/backend-core/planner/openai-plannin
 import { BuildJobService } from "@wfb/backend-core/services/build-job-service.js";
 import { BuildPlanService } from "@wfb/backend-core/services/build-plan-service.js";
 import { RepoSyncService } from "@wfb/backend-core/services/repo-sync-service.js";
+import { RepoTokenService } from "@wfb/backend-core/services/repo-token-service.js";
 import { SiteBindingService } from "@wfb/backend-core/services/site-binding-service.js";
 import { SiteStylePlanService } from "@wfb/backend-core/services/site-style-plan-service.js";
 import { V2ReadService } from "@wfb/backend-core/services/v2-read-service.js";
@@ -50,6 +51,7 @@ export function getCloudServices(locals: App.Locals) {
     planner,
     validator,
     repoSyncService: new RepoSyncService(repository, blobStore, githubClient, extractor),
+    repoTokenService: new RepoTokenService(blobStore),
     buildPlanService: new BuildPlanService(
       repository,
       blobStore,

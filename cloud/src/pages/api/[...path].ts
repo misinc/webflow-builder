@@ -192,6 +192,14 @@ async function handleGet(request: Request, locals: App.Locals, pathname: string)
     });
   }
 
+  if (pathname === "/api/workflow/repo-tokens") {
+    const repoId = url.searchParams.get("repoId");
+    if (!repoId) {
+      throw new Error("Missing repoId query parameter.");
+    }
+    return json(await services.repoTokenService.discoverRepoTokens(repoId));
+  }
+
   if (pathname === "/api/workflow/queue") {
     const repoId = url.searchParams.get("repoId");
     const webflowSiteId = url.searchParams.get("webflowSiteId");

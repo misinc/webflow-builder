@@ -2,6 +2,90 @@ import { describe, expect, it, vi } from "vitest";
 import { getWebflowBridge } from "../extension/src/webflow/bridge.js";
 
 describe("Webflow bridge image insertion", () => {
+  it("imports repo tokens as Webflow variables and reuses existing matches", async () => {
+    const variables: Array<{
+      id: string;
+      name: string;
+      type: string;
+      value: string;
+      getName: () => Promise<string>;
+      get: () => Promise<string>;
+    }> = [
+      {
+        id: "var-existing",
+        name: "Colors/green/primary",
+        type: "color",
+        value: "#8EC441",
+        getName: async () => "Colors/green/primary",
+        get: async () => "#8EC441"
+      }
+    ];
+    const collection = {
+      getAllVariables: vi.fn(async () => variables),
+      getVariableByName: vi.fn(async (name: string) =>
+        variables.find((variable) => variable.name === name) ?? null
+      ),
+      createColorVariable: vi.fn(async (name: string, value: string) => {
+        const variable = {
+          id: `var-${variables.length + 1}`,
+          name,
+          type: "color",
+          value,
+          getName: async () => name,
+          get: async () => value
+        };
+        variables.push(variable);
+        return variable;
+      })
+    };
+
+    Object.defineProperty(globalThis, "window", {
+      value: {
+        webflow: {
+          elementPresets: { DOM: {}, Image: {} },
+          getSiteInfo: async () => ({ siteId: "site-1", name: "Test Site" }),
+          getCurrentPage: async () => ({ id: "page-1", getName: async () => "Home" }),
+          getCurrentMode: async () => "design",
+          getSelectedElement: async () => null,
+          getAllStyles: async () => [],
+          getStyleByName: async () => null,
+          createStyle: async () => ({
+            id: "style-1",
+            getName: async () => "style-1",
+            setProperties: async () => undefined
+          }),
+          removeStyle: async () => undefined,
+          getDefaultVariableCollection: async () => collection,
+          getAllAssets: async () => []
+        }
+      },
+      configurable: true
+    });
+
+    const bridge = getWebflowBridge();
+    const result = await bridge.importVariables!([
+      {
+        group: "Colors",
+        name: "green/primary",
+        type: "color",
+        value: "#8EC441",
+        sourceFile: "tokens/colors.tokens.json"
+      },
+      {
+        group: "Colors",
+        name: "navy/dark",
+        type: "color",
+        value: "#001235",
+        sourceFile: "tokens/colors.tokens.json"
+      }
+    ]);
+
+    expect(result.reused.map((token) => token.name)).toEqual(["green/primary"]);
+    expect(result.created.map((token) => token.name)).toEqual(["navy/dark"]);
+    expect(result.missingAfterImport).toEqual([]);
+    expect(collection.createColorVariable).toHaveBeenCalledWith("Colors/navy/dark", "#001235");
+  });
+
   it("uses setAltText instead of reserved alt attributes for image nodes", async () => {
     const append = vi.fn(async () => created);
     const setAttribute = vi.fn(async () => undefined);

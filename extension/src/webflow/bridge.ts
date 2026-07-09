@@ -5,6 +5,8 @@ import {
 } from "@wfb/shared/client-first.js";
 import {
   BuildNode,
+  ImportVariablesResult,
+  RepoToken,
   SharedStyleContext,
   WebflowSitePage
 } from "@wfb/shared/contracts.js";
@@ -72,6 +74,7 @@ export interface WebflowDesignerBridge {
     boundProperties: number;
     bindings: string[];
   }>;
+  importVariables?(tokens: RepoToken[]): Promise<ImportVariablesResult>;
   createNode(input: CreateNodeInput): Promise<{ id: string }>;
   /** All site components as { id, name } (for reuse detection by name). */
   listComponents(): Promise<Array<{ id: string; name: string }>>;
@@ -143,11 +146,19 @@ interface WebflowVariable {
   getName(): Promise<string>;
   getBinding?(): Promise<string>;
   get?(): Promise<unknown>;
+  set?(value: unknown): Promise<unknown>;
+  setValue?(value: unknown): Promise<unknown>;
 }
 
 interface WebflowVariableCollection {
   getAllVariables(): Promise<WebflowVariable[]>;
   getVariableByName(name: string): Promise<WebflowVariable | null>;
+  createVariable?(name: string, value: unknown, type?: string): Promise<WebflowVariable>;
+  createColorVariable?(name: string, value: unknown): Promise<WebflowVariable>;
+  createSizeVariable?(name: string, value: unknown): Promise<WebflowVariable>;
+  createFontFamilyVariable?(name: string, value: unknown): Promise<WebflowVariable>;
+  createNumberVariable?(name: string, value: unknown): Promise<WebflowVariable>;
+  createStringVariable?(name: string, value: unknown): Promise<WebflowVariable>;
 }
 
 interface WebflowAsset {
@@ -383,6 +394,50 @@ function categorizeVariable(name: string, variableType?: string): string {
     default:
       return "custom";
   }
+}
+
+function tokenVariableName(token: RepoToken): string {
+  return `${token.group}/${token.name}`;
+}
+
+function tokenDesignerValue(token: RepoToken): unknown {
+  if (token.type === "size") {
+    const match = /^(-?[\d.]+)(px|rem|em|vw|vh|%|ch|svh|dvh)?$/i.exec(token.value.trim());
+    if (match?.[1]) {
+      return {
+        value: Number(match[1]),
+        unit: match[2] ?? "px"
+      };
+    }
+  }
+  if (token.type === "number") {
+    const parsed = Number(token.value);
+    return Number.isNaN(parsed) ? token.value : parsed;
+  }
+  return token.value;
+}
+
+async function findVariableByToken(
+  collection: WebflowVariableCollection,
+  token: RepoToken
+): Promise<WebflowVariable | null> {
+  const fullName = tokenVariableName(token);
+  const direct = await collection.getVariableByName(fullName).catch(() => null);
+  if (direct) {
+    return direct;
+  }
+  const fallback = await collection.getVariableByName(token.name).catch(() => null);
+  if (fallback) {
+    return fallback;
+  }
+  const variables = await collection.getAllVariables().catch(() => []);
+  for (const variable of variables) {
+    const name = await variable.getName().catch(() => null);
+    if (name === fullName || name === token.name) {
+      return variable;
+    }
+  }
+  return null;
 }
 
 function slugToRoute(slug: string | null | undefined, isHomepage = false): string | null {
@@ -1074,6 +1129,107 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
     return { stylesScanned: processedStyleIds.size, boundProperties, bindings };
   }
 
+  private async createVariableFromToken(
+    collection: WebflowVariableCollection,
+    token: RepoToken
+  ): Promise<WebflowVariable | null> {
+    const name = tokenVariableName(token);
+    const value = tokenDesignerValue(token);
+    const attempts: Array<() => Promise<WebflowVariable | null>> = [];
+
+    if (token.type === "color" && collection.createColorVariable) {
+      attempts.push(() => collection.createColorVariable!(name, value));
+    }
+    if (token.type === "size" && collection.createSizeVariable) {
+      attempts.push(() => collection.createSizeVariable!(name, value));
+      attempts.push(() => collection.createSizeVariable!(name, token.value));
+    }
+    if (token.type === "fontFamily" && collection.createFontFamilyVariable) {
+      attempts.push(() => collection.createFontFamilyVariable!(name, value));
+    }
+    if (token.type === "number" && collection.createNumberVariable) {
+      attempts.push(() => collection.createNumberVariable!(name, value));
+    }
+    if (token.type === "string" && collection.createStringVariable) {
+      attempts.push(() => collection.createStringVariable!(name, value));
+    }
+    if (collection.createVariable) {
+      attempts.push(() => collection.createVariable!(name, value, token.type));
+      attempts.push(() => (collection.createVariable as (name: string, type: string, value: unknown) => Promise<WebflowVariable>)(name, token.type, value));
+      attempts.push(() => collection.createVariable!(name, value));
+    }
+
+    let lastError: unknown = null;
+    for (const attempt of attempts) {
+      try {
+        const variable = await attempt();
+        if (variable) {
+          return variable;
+        }
+      } catch (err) {
+        lastError = err;
+      }
+    }
+    if (lastError) {
+      throw lastError;
+    }
+    return null;
+  }
+
+  async importVariables(tokens: RepoToken[]): Promise<ImportVariablesResult> {
+    const collection = await this.api.getDefaultVariableCollection();
+    const result: ImportVariablesResult = {
+      created: [],
+      reused: [],
+      skipped: [],
+      missingAfterImport: [],
+      failed: [],
+      warnings: []
+    };
+    if (!collection) {
+      return {
+        ...result,
+        skipped: tokens.map((token) => ({
+          token,
+          reason: "This site does not expose a default variable collection."
+        }))
+      };
+    }
+
+    for (const token of tokens) {
+      const existing = await findVariableByToken(collection, token);
+      if (existing) {
+        result.reused.push(token);
+        continue;
+      }
+      try {
+        const created = await this.createVariableFromToken(collection, token);
+        if (created) {
+          result.created.push(token);
+          continue;
+        }
+        result.skipped.push({
+          token,
+          reason: `Variable creation is not available for ${token.type} tokens in this Designer API.`
+        });
+      } catch (err) {
+        result.failed.push({
+          token,
+          error: err instanceof Error ? err.message : "Failed to create variable."
+        });
+      }
+    }
+
+    this.tokenValueMap = null;
+    for (const token of [...result.created, ...result.reused]) {
+      const exists = await findVariableByToken(collection, token);
+      if (!exists) {
+        result.missingAfterImport.push(token);
+      }
+    }
+    return result;
+  }
+
   async inspectSharedStyles(siteId: string): Promise<SharedStyleContext> {
     const [styles, collection] = await Promise.all([
       this.api.getAllStyles(),
@@ -1105,6 +1261,7 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
             return {
               name,
               category: categorizeVariable(name, variable.type),
+              group: name.includes("/") ? name.split("/")[0] : undefined,
               value:
                 typeof value === "string" || typeof value === "number"
                   ? String(value)
@@ -1485,6 +1642,7 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
 class MockWebflowDesignerBridge implements WebflowDesignerBridge {
   private readonly createdNodes = new Map<string, BuildNode>();
   private readonly createdStyles = new Set<string>();
+  private readonly importedVariables = new Map<string, RepoToken>();
   private readonly listeners = new Set<() => void>();
   private nodeCount = 0;
   private currentPageId = "mock-page-home";
@@ -1575,6 +1733,28 @@ class MockWebflowDesignerBridge implements WebflowDesignerBridge {
     return { stylesScanned: 0, boundProperties: 0, bindings: [] };
   }
 
+  async importVariables(tokens: RepoToken[]): Promise<ImportVariablesResult> {
+    const created: RepoToken[] = [];
+    const reused: RepoToken[] = [];
+    for (const token of tokens) {
+      const key = tokenVariableName(token);
+      if (this.importedVariables.has(key)) {
+        reused.push(token);
+      } else {
+        this.importedVariables.set(key, token);
+        created.push(token);
+      }
+    }
+    return {
+      created,
+      reused,
+      skipped: [],
+      missingAfterImport: [],
+      failed: [],
+      warnings: []
+    };
+  }
+
   async inspectSharedStyles(siteId: string): Promise<SharedStyleContext> {
     return {
       siteId,
@@ -1594,7 +1774,13 @@ class MockWebflowDesignerBridge implements WebflowDesignerBridge {
       ],
       variables: [
         { name: "space-large", category: "spacing", value: "64px" },
-        { name: "color-brand", category: "color", value: "#0f4c5c" }
+        { name: "color-brand", category: "color", value: "#0f4c5c" },
+        ...[...this.importedVariables.values()].map((token) => ({
+          name: tokenVariableName(token),
+          category: token.type === "size" ? "spacing" : token.type,
+          value: token.value,
+          group: token.group
+        }))
       ],
       styleIds: []
     };
@@ -1730,6 +1916,19 @@ export function getWebflowBridge(): WebflowDesignerBridge {
         (async () => {
           throw new Error("Injected bridge does not implement configureNode().");
         }),
+      importVariables:
+        injected.importVariables ??
+        (async (tokens: RepoToken[]) => ({
+          created: [],
+          reused: [],
+          skipped: tokens.map((token) => ({
+            token,
+            reason: "Injected bridge does not implement importVariables()."
+          })),
+          missingAfterImport: [],
+          failed: [],
+          warnings: []
+        })),
       registerBlankComponent:
         injected.registerBlankComponent ??
         (async () => {

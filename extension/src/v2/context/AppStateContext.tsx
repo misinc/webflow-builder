@@ -10,7 +10,10 @@ import {
 } from "react";
 import {
   ComponentOpportunity,
+  type ImportVariablesResult,
   type RepoConnectionInput,
+  type RepoToken,
+  type RepoTokensResponse,
   type PageMappingsUpsertInput,
   type SectionAnalysis,
   type SectionVerification,
@@ -287,6 +290,11 @@ interface AppStateContextValue {
   activeMapping: SitePageMappingRow | null;
   activeQueue: WorkflowQueueResponse | null;
   siteStylePlan: SiteStylePlan | null;
+  sharedStyleContext: SharedStyleContext | null;
+  repoTokens: RepoTokensResponse | null;
+  isLoadingRepoTokens: boolean;
+  loadRepoTokens: () => Promise<RepoTokensResponse | null>;
+  importRepoTokens: (tokens: RepoToken[]) => Promise<ImportVariablesResult | null>;
   refreshSiteStylePlan: () => Promise<void>;
   confirmSiteStylePlan: () => Promise<boolean>;
   currentSections: CurrentSectionRow[];
@@ -407,6 +415,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [seededComponentIds, setSeededComponentIds] = useState<Record<string, boolean>>({});
   const [sharedStyleContext, setSharedStyleContext] = useState<SharedStyleContext | null>(null);
   const [siteStylePlan, setSiteStylePlan] = useState<SiteStylePlan | null>(null);
+  const [repoTokens, setRepoTokens] = useState<RepoTokensResponse | null>(null);
+  const [isLoadingRepoTokens, setIsLoadingRepoTokens] = useState(false);
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<SectionAnalysis | null>(null);
   const [skeleton, setSkeleton] = useState<SkeletonPlan | null>(null);
@@ -529,6 +539,24 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     session?.userId,
     sharedStyleContext
   ]);
+
+  const loadRepoTokens = useCallback(async (): Promise<RepoTokensResponse | null> => {
+    if (!selectedRepoId) {
+      setRepoTokens(null);
+      return null;
+    }
+    setIsLoadingRepoTokens(true);
+    try {
+      const response = await backend.getRepoTokens(selectedRepoId);
+      setRepoTokens(response);
+      return response;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load repo tokens.");
+      return null;
+    } finally {
+      setIsLoadingRepoTokens(false);
+    }
+  }, [selectedRepoId]);
 
   const ensureHtmlSiteStylePlan = useCallback(async () => {
     if (!selectedRepoId || !session?.userId || !designerContext?.siteId) {
@@ -744,6 +772,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!selectedRepoId) {
       setRepoTree(null);
+      setRepoTokens(null);
       setComponentOpportunities([]);
       setComponentBannerDismissed(false);
       resetSectionRunState(null);
@@ -1018,6 +1047,63 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       return false;
     }
   }, [
+    designerContext?.siteId,
+    ensureSiteBound,
+    selectedRepoId,
+    session?.userId,
+    withMutation
+  ]);
+
+  const importRepoTokens = useCallback(async (
+    tokens: RepoToken[]
+  ): Promise<ImportVariablesResult | null> => {
+    if (!selectedRepoId || !session?.userId || !designerContext?.siteId) {
+      setError("Open a Webflow site and choose a repo first.");
+      return null;
+    }
+    if (tokens.length === 0) {
+      setError("Choose at least one token to import.");
+      return null;
+    }
+    try {
+      return await withMutation("Importing design tokens", async () => {
+        await ensureSiteBound();
+        const result = bridge.importVariables
+          ? await bridge.importVariables(tokens)
+          : {
+              created: [],
+              reused: [],
+              skipped: tokens.map((token) => ({
+                token,
+                reason: "The active Webflow bridge does not support variable import."
+              })),
+              missingAfterImport: [],
+              failed: [],
+              warnings: []
+            };
+        const styles = await captureSharedStyles(designerContext.siteId!);
+        const draft = await backend.rebuildSiteStylePlan({
+          repoId: selectedRepoId,
+          webflowSiteId: designerContext.siteId!,
+          requestedBy: session.userId,
+          sharedStyleContext: styles
+        });
+        setSiteStylePlan(draft);
+        const confirmed = await backend.confirmSiteStylePlan({
+          repoId: selectedRepoId,
+          webflowSiteId: designerContext.siteId!,
+          requestedBy: session.userId,
+          sharedStyleContext: styles
+        });
+        setSiteStylePlan(confirmed);
+        return result;
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to import design tokens.");
+      return null;
+    }
+  }, [
+    captureSharedStyles,
     designerContext?.siteId,
     ensureSiteBound,
     selectedRepoId,
@@ -2103,6 +2189,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       activeMapping,
       activeQueue,
       siteStylePlan,
+      sharedStyleContext,
+      repoTokens,
+      isLoadingRepoTokens,
+      loadRepoTokens,
+      importRepoTokens,
       refreshSiteStylePlan,
       confirmSiteStylePlan,
       currentSections,
@@ -2223,12 +2314,15 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       hasUnsavedMappings,
       isBootstrapping,
       isEditingSkeleton,
+      isLoadingRepoTokens,
       isLoadingWorkflowState,
       insertCurrentSkeleton,
+      importRepoTokens,
       isMutating,
       lastExecution,
       lastCompletedSection,
       livePages,
+      loadRepoTokens,
       loadingLabel,
       mappingRows,
       pageProgressRows,
@@ -2238,6 +2332,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       versionSkewWarning,
       regenerateSkeleton,
       repoTree,
+      repoTokens,
       repos,
       rollbackCurrentExecution,
       savePageMappings,
@@ -2258,6 +2353,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       selectedChrome,
       session,
       siteStylePlan,
+      sharedStyleContext,
       skeleton,
       skeletonDraft,
       skipCurrentSection,

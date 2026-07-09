@@ -49,6 +49,7 @@ export function isRelevantRepoFile(filePath: string): boolean {
 
   return (
     filePath === "webflow-builder.json" ||
+    /(?:^|\/)(?:tokens|variables)\/[^/]+\.tokens\.json$/i.test(filePath) ||
     /\.html?$/i.test(filePath) ||
     /\.(css|scss)$/i.test(filePath) ||
     /^src\/app\/pages\/.+\.(tsx|jsx|ts|js)$/.test(filePath) ||

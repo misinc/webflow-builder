@@ -10,6 +10,8 @@ import {
   DebugSkeletonJobResponse,
   PageMappingsUpsertInput,
   RepoConnectionInput,
+  RepoTokensResponse,
+  repoTokensResponseSchema,
   RepoRecord,
   RepoSyncRecord,
   repoTreeResponseSchema,
@@ -169,6 +171,7 @@ const cloudRouteMap: Record<string, string> = {
   "workflow-site-pages": "/workflow/site-pages",
   "workflow-page-mappings-get": "/workflow/page-mappings",
   "workflow-page-mappings-post": "/workflow/page-mappings",
+  "workflow-repo-tokens": "/workflow/repo-tokens",
   "workflow-site-style-plan": "/workflow/site-style-plan",
   "workflow-site-style-plan-rebuild": "/workflow/site-style-plan/rebuild",
   "workflow-site-style-plan-confirm": "/workflow/site-style-plan/confirm",
@@ -316,6 +319,14 @@ export class BackendClient {
       input.requestedBy
     );
     return response.mappings.map((row) => sitePageMappingRowSchema.parse(row));
+  }
+
+  async getRepoTokens(repoId: string): Promise<RepoTokensResponse> {
+    const response = await request<RepoTokensResponse>(
+      withQuery(this.functionUrl("workflow-repo-tokens"), { repoId }),
+      { method: "GET" }
+    );
+    return repoTokensResponseSchema.parse(response);
   }
 
   async getWorkflowQueue(

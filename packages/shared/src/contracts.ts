@@ -27,7 +27,56 @@ export const sharedClassSchema = z.object({
 export const sharedVariableSchema = z.object({
   name: z.string().min(1),
   category: z.string().min(1),
-  value: z.string().optional()
+  value: z.string().optional(),
+  group: z.string().optional()
+});
+
+export const repoTokenTypeSchema = z.enum([
+  "color",
+  "size",
+  "fontFamily",
+  "number",
+  "string",
+  "other"
+]);
+
+export const repoTokenSchema = z.object({
+  group: z.string().min(1),
+  name: z.string().min(1),
+  type: repoTokenTypeSchema,
+  value: z.string().min(1),
+  sourceFile: z.string().min(1),
+  figmaVariableId: z.string().optional()
+});
+
+export const repoTokensResponseSchema = z.object({
+  repoId: z.string().min(1),
+  generatedAt: z.string().datetime(),
+  tokens: z.array(repoTokenSchema),
+  warnings: z.array(z.string())
+});
+
+export const importVariablesInputSchema = z.object({
+  tokens: z.array(repoTokenSchema)
+});
+
+export const importVariablesResultSchema = z.object({
+  created: z.array(repoTokenSchema),
+  reused: z.array(repoTokenSchema),
+  skipped: z.array(
+    z.object({
+      token: repoTokenSchema,
+      reason: z.string().min(1)
+    })
+  ),
+  missingAfterImport: z.array(repoTokenSchema),
+  failed: z.array(
+    z.object({
+      token: repoTokenSchema,
+      error: z.string().min(1)
+    })
+  ),
+  warnings: z.array(z.string())
 });
 
 export const sharedStyleContextSchema = z.object({
@@ -707,6 +756,11 @@ export const componentOpportunitiesResponseSchema = z.object({
 export type SharedClass = z.infer<typeof sharedClassSchema>;
 export type SharedVariable = z.infer<typeof sharedVariableSchema>;
 export type SharedStyleContext = z.infer<typeof sharedStyleContextSchema>;
+export type RepoTokenType = z.infer<typeof repoTokenTypeSchema>;
+export type RepoToken = z.infer<typeof repoTokenSchema>;
+export type RepoTokensResponse = z.infer<typeof repoTokensResponseSchema>;
+export type ImportVariablesInput = z.infer<typeof importVariablesInputSchema>;
+export type ImportVariablesResult = z.infer<typeof importVariablesResultSchema>;
 export type SiteStylePlanClassDecision = z.infer<
   typeof siteStylePlanClassDecisionSchema
 >;
