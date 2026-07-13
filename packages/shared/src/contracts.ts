@@ -12,6 +12,13 @@ export interface BuildNode {
   /** Stable capture key (`data-pw-key`, e.g. "0.1.2") joining this node back to
    *  its browser-computed styles after the planner restructures the tree. */
   sourceKey?: string;
+  /** Emit a specific Webflow node `type` (e.g. "NavbarWrapper", "NavbarMenu")
+   *  instead of the inferred one — for native components whose behavior rides in
+   *  the node type/data (Webflow's built-in navbar/dropdown). */
+  webflowType?: string;
+  /** The `data` object for a `webflowType` node (navbar/dropdown config, attrs).
+   *  Merged verbatim; classes/children/text are still layered by the serializer. */
+  webflowData?: Record<string, unknown>;
   /** Safelisted inline `style` accents (color/background/border-color/…) — kept
    *  for per-instance combo classes (e.g. an icon's `currentColor` ring). */
   inlineStyles?: Record<string, string>;
@@ -316,6 +323,8 @@ export const buildNodeSchema: z.ZodType<BuildNode> = z.lazy(() =>
     sourceClassNames: z.array(z.string()).optional(),
     sourceId: z.string().optional(),
     sourceKey: z.string().optional(),
+    webflowType: z.string().optional(),
+    webflowData: z.record(z.string(), z.unknown()).optional(),
     inlineStyles: z.record(z.string(), z.string()).optional(),
     textContent: z.string().optional(),
     embedHtml: z.string().optional(),

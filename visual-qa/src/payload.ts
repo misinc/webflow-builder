@@ -204,6 +204,38 @@ function breakpointDelta(
   return delta;
 }
 
+function collectNodes(node: CapturedNode, pred: (n: CapturedNode) => boolean, out: CapturedNode[] = []): CapturedNode[] {
+  if (pred(node)) out.push(node);
+  for (const child of node.children) collectNodes(child, pred, out);
+  return out;
+}
+
+function collectBuildNodes(node: BuildNode): number {
+  return 1 + (node.children ?? []).reduce((sum, child) => sum + collectBuildNodes(child), 0);
+}
+
+// Native Webflow Navbar element `data` templates (learned from Relume's clipboard
+// — see docs/relume-navbar-structure.md). Emitting these node types makes the
+// built-in responsive menu button + dropdowns work without any custom interaction.
+const NAVBAR_WRAPPER_DATA = {
+  attr: { id: "", "data-collapse": "medium", "data-animation": "default", "data-duration": "400" },
+  navbar: {
+    type: "wrapper",
+    collapse: "medium",
+    easing: "ease",
+    easing2: "ease",
+    duration: 400,
+    docHeight: false,
+    noScroll: false,
+    animation: "default"
+  },
+  tag: "div"
+};
+const NAVBAR_BRAND_DATA = { attr: { id: "", href: "#" }, navbar: { type: "brand" }, link: { mode: "external" } };
+const NAVBAR_MENU_DATA = { attr: { role: "navigation", id: "" }, navbar: { type: "menu" }, tag: "nav" };
+const NAVBAR_LINK_DATA = { attr: { id: "", href: "#" }, navbar: { type: "link" }, link: { url: "#", mode: "external" } };
+const NAVBAR_BUTTON_DATA = { attr: { id: "" }, navbar: { type: "button" }, tag: "div" };
+
 // A "special" section — a full-bleed image backdrop or an absolutely-positioned
 // layout (heroes, overlays). These don't use the client-first container/padding
 // scaffold, so we skip container/padding-section naming and preserve them exactly.
@@ -430,7 +462,143 @@ function buildSection(input: SectionCaptureInput): SectionBuild {
     return base;
   };
 
-  const elementTree = toBuildNode(input.tree, "0", true);
+  // Register a class with fixed properties once (layout defaults for the native
+  // navbar scaffold — first definition wins, later refs just reuse the name).
+  const defineClass = (
+    name: string,
+    properties: Record<string, string>,
+    variants?: Record<string, Record<string, string>>
+  ): string => {
+    if (!styleDefinitions.some((d) => d.className === name)) {
+      styleDefinitions.push({ className: name, properties, variants });
+    }
+    return name;
+  };
+
+  // Rebuild the source navbar as Webflow's NATIVE Navbar element (generic
+  // navbar_* classes, source styling) so the built-in responsive menu + dropdowns
+  // work. Returns null if the source has no recognizable navbar parts.
+  const buildNavbarTree = (): BuildNode | null => {
+    let counter = 0;
+    const nid = (): string => `nav-${sectionKey}-${counter++}`;
+    const hasMedia = (n: CapturedNode): boolean =>
+      collectNodes(n, (x) => x.tag === "img" || Boolean(x.embedHtml)).length > 0;
+
+    const anchors = collectNodes(input.tree, (n) => n.tag === "a" || n.tag === "button");
+    const logoAnchor =
+      anchors.find(hasMedia) ?? anchors.find((a) => !collectText(a)) ?? anchors[0];
+    const buttons = anchors.filter((a) => a !== logoAnchor && looksLikeButton(a));
+    const navLinks = anchors.filter(
+      (a) => a !== logoAnchor && !buttons.includes(a) && Boolean(collectText(a))
+    );
+    if (navLinks.length === 0 && buttons.length === 0) {
+      return null; // not enough to recognize — fall back to fidelity
+    }
+
+    const native = (tag: string, webflowType: string, webflowData: Record<string, unknown>, classNames: string[], children: BuildNode[]): BuildNode => ({
+      id: nid(),
+      type: "element",
+      tag,
+      webflowType,
+      webflowData,
+      classNames,
+      children
+    });
+    const box = (className: string, styles: Record<string, string>, children: BuildNode[]): BuildNode => ({
+      id: nid(),
+      type: "element",
+      tag: "div",
+      classNames: [defineClass(className, styles)],
+      children
+    });
+
+    // Logo: keep an SVG/img as the brand graphic; render an <img> logo via CSS
+    // background-image so it shows; else preserve the brand's own content.
+    let logoChildren: BuildNode[] = [];
+    if (logoAnchor) {
+      const media = collectNodes(logoAnchor, (x) => x.tag === "img" || Boolean(x.embedHtml))[0];
+      if (media?.embedHtml) {
+        logoChildren = [
+          { id: nid(), type: "embed", tag: "div", classNames: [defineClass("navbar_logo", media.styles)], embedHtml: media.embedHtml, children: [] }
+        ];
+      } else if (media?.attrs.src) {
+        const logoStyles: Record<string, string> = {
+          ...media.styles,
+          "background-image": `url("${media.attrs.src}")`,
+          "background-size": "contain",
+          "background-repeat": "no-repeat",
+          "background-position": "50% 50%"
+        };
+        delete logoStyles["object-fit"];
+        logoChildren = [{ id: nid(), type: "element", tag: "div", classNames: [defineClass("navbar_logo", logoStyles)], children: [] }];
+      } else {
+        logoChildren = logoAnchor.children.map((child, index) => toBuildNode(child, `logo.${index}`, false));
+      }
+    }
+    const brand = native("a", "NavbarBrand", NAVBAR_BRAND_DATA, [defineClass("navbar_logo-link", logoAnchor?.styles ?? {})], logoChildren);
+
+    const linkClass = defineClass("navbar_link", navLinks[0]?.styles ?? {});
+    const linkNodes = navLinks.map((a) =>
+      native("a", "NavbarLink", NAVBAR_LINK_DATA, [linkClass], [
+        // NavbarLink text rides as a text child (added by the serializer).
+      ]) as BuildNode
+    ).map((node, i) => ({ ...node, textContent: collectText(navLinks[i]) }));
+
+    const buttonNodes = buttons.map((a) => ({
+      id: nid(),
+      type: "element",
+      tag: "a",
+      classNames: sharedWithCombo("button", a.styles, a.key),
+      textContent: collectText(a),
+      children: []
+    } as BuildNode));
+
+    const menuChildren: BuildNode[] = [
+      box("navbar_menu-links", { display: "flex", "align-items": "center", "grid-column-gap": "2rem" }, linkNodes)
+    ];
+    if (buttonNodes.length > 0) {
+      menuChildren.push(
+        box("navbar_menu-buttons", { display: "flex", "align-items": "center", "grid-column-gap": "1rem" }, buttonNodes)
+      );
+    }
+    const menu = native(
+      "nav",
+      "NavbarMenu",
+      NAVBAR_MENU_DATA,
+      [defineClass("navbar_menu", { display: "flex", "align-items": "center", "grid-column-gap": "2rem" })],
+      menuChildren
+    );
+
+    const line = (name: string): BuildNode => ({
+      id: nid(),
+      type: "element",
+      tag: "div",
+      classNames: [defineClass(name, { width: "24px", height: "2px", "background-color": "currentColor" })],
+      children: []
+    });
+    const menuIcon = box("menu-icon", { display: "flex", "flex-direction": "column", "grid-row-gap": "5px" }, [
+      line("menu-icon_line-top"),
+      box("menu-icon_line-middle", {}, [line("menu-icon_line-middle-inner")]),
+      line("menu-icon_line-bottom")
+    ]);
+    const menuButton = native("div", "NavbarButton", NAVBAR_BUTTON_DATA, [defineClass("navbar_menu-button", {})], [menuIcon]);
+
+    const container = box(
+      "navbar_container",
+      { display: "flex", "align-items": "center", "justify-content": "space-between", width: "100%" },
+      [brand, menu, menuButton]
+    );
+
+    const wrapper = native("div", "NavbarWrapper", NAVBAR_WRAPPER_DATA, [defineClass("navbar_component", input.tree.styles)], [container]);
+    if (input.label) wrapper.label = input.label;
+
+    stats.droppedLinkUrls += navLinks.length + buttons.length + (logoAnchor ? 1 : 0);
+    stats.nodeCount += collectBuildNodes(wrapper);
+    return wrapper;
+  };
+
+  const isNavbar = /navbar|header/i.test(input.kind ?? "");
+  const elementTree = (isNavbar && buildNavbarTree()) || toBuildNode(input.tree, "0", true);
   stats.classCount = styleDefinitions.length;
 
   if (stats.backgroundImages > 0) {

@@ -181,6 +181,83 @@ describe("responsive variants", () => {
   });
 });
 
+describe("navbar → native Webflow Navbar element", () => {
+  function navbar(): SectionCaptureInput {
+    return {
+      tree: el({
+        tag: "header",
+        key: "0",
+        styles: { "background-color": "rgb(0, 18, 53)" },
+        children: [
+          el({
+            tag: "nav",
+            key: "0.0",
+            styles: { display: "flex" },
+            children: [
+              el({
+                tag: "a",
+                key: "0.0.0",
+                attrs: { href: "/" },
+                children: [el({ tag: "div", key: "0.0.0.0", embedHtml: "<svg></svg>" })]
+              }),
+              el({ tag: "a", key: "0.0.1", attrs: { href: "/home" }, styles: { color: "rgb(255,255,255)" }, text: "Home" }),
+              el({ tag: "a", key: "0.0.2", attrs: { href: "/about" }, styles: { color: "rgb(255,255,255)" }, text: "About" }),
+              el({
+                tag: "a",
+                key: "0.0.3",
+                attrs: { href: "/contact" },
+                styles: { "background-color": "rgb(142,196,65)", "padding-top": "8px", "border-top-left-radius": "8px" },
+                text: "Get in touch"
+              })
+            ]
+          })
+        ]
+      }),
+      sectionName: "Navbar",
+      kind: "Header",
+      label: "Navbar"
+    };
+  }
+
+  it("emits native navbar node types (working responsive menu)", () => {
+    const { payload } = capturedSectionToClipboardPayload(navbar());
+    const types = new Set(payload.payload.nodes.map((n) => n.type));
+    expect(types).toContain("NavbarWrapper");
+    expect(types).toContain("NavbarBrand");
+    expect(types).toContain("NavbarMenu");
+    expect(types).toContain("NavbarLink");
+    expect(types).toContain("NavbarButton");
+    // NavbarWrapper carries the built-in collapse config.
+    const wrapper = payload.payload.nodes.find((n) => n.type === "NavbarWrapper")!;
+    expect((wrapper.data as any)?.navbar?.type).toBe("wrapper");
+  });
+
+  it("uses generic navbar_* classes with source styling and the hamburger", () => {
+    const { payload } = capturedSectionToClipboardPayload(navbar());
+    const names = classNames(payload);
+    expect(names).toEqual(
+      expect.arrayContaining([
+        "navbar_component",
+        "navbar_container",
+        "navbar_logo-link",
+        "navbar_logo",
+        "navbar_menu",
+        "navbar_menu-links",
+        "navbar_link",
+        "navbar_menu-buttons",
+        "button",
+        "navbar_menu-button",
+        "menu-icon"
+      ])
+    );
+    // Source navbar background rides on navbar_component.
+    expect(styleByName(payload, "navbar_component")!.styleLess).toContain("background-color: rgb(0, 18, 53);");
+    // Nav links carry their text; CTA becomes a button.
+    const linkTexts = payload.payload.nodes.filter((n) => n.text).map((n) => n.v);
+    expect(linkTexts).toEqual(expect.arrayContaining(["Home", "About", "Get in touch"]));
+  });
+});
+
 describe("combineSections wraps in main-wrapper", () => {
   it("wraps multiple sections in a main-wrapper root", () => {
     const { payload } = combineSections([hero(), hero({ sectionName: "Philosophy" })]);

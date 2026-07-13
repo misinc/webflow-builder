@@ -214,6 +214,16 @@ function isIconEmbed(node: BuildNode): boolean {
 /** Map a BuildNode to its XscpData element node (children wired by caller). */
 function nodeShapeFor(node: BuildNode, hasElementChildren: boolean): Omit<XscpNode, "_id" | "classes" | "children"> {
   const tag = node.tag || "div";
+  // Native Webflow element passthrough (navbar/dropdown, …): the caller supplies
+  // the exact Webflow node type + data, so the built-in behavior travels with the
+  // paste. Clone data so the walk's displayName mutation doesn't leak across nodes.
+  if (node.webflowType) {
+    return {
+      type: node.webflowType,
+      tag,
+      data: node.webflowData ? JSON.parse(JSON.stringify(node.webflowData)) : {}
+    };
+  }
   if (isIconEmbed(node)) {
     const html = node.embedHtml ?? `<div data-icon="${node.label ?? "icon"}"></div>`;
     return {
