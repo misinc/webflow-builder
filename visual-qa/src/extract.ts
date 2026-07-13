@@ -32,6 +32,8 @@ declare global {
 export interface SectionCandidate {
   selector: string;
   label: string;
+  /** Navbar | Header | Footer | Bar | Section — for a clearer grid label. */
+  kind: string;
   width: number;
   height: number;
 }
@@ -205,7 +207,21 @@ export async function findSectionCandidates(page: Page): Promise<SectionCandidat
     const isVisible = (el: Element): boolean => {
       const rect = el.getBoundingClientRect();
       const cs = getComputedStyle(el);
-      return rect.width >= 300 && rect.height >= 60 && cs.display !== "none" && cs.visibility !== "hidden";
+      // min-height 24 so thin announcement/message bars aren't dropped.
+      return rect.width >= 300 && rect.height >= 24 && cs.display !== "none" && cs.visibility !== "hidden";
+    };
+
+    // Classify a structural block for a clearer grid label.
+    const kindFor = (el: Element): string => {
+      const tag = el.tagName.toLowerCase();
+      const cls = el.className && typeof el.className === "string" ? el.className.toLowerCase() : "";
+      const role = el.getAttribute("role") ?? "";
+      if (tag === "nav" || role === "navigation" || /(^|[-_ ])nav(bar)?([-_ ]|$)/.test(cls)) return "Navbar";
+      if (tag === "header" || role === "banner") return "Header";
+      if (tag === "footer" || role === "contentinfo" || /footer/.test(cls)) return "Footer";
+      const rect = el.getBoundingClientRect();
+      if (rect.height <= 80 && /(announce|banner|topbar|message|notice|alert|promo)/.test(cls)) return "Bar";
+      return "Section";
     };
 
     const cssPath = (el: Element): string => {
@@ -239,14 +255,16 @@ export async function findSectionCandidates(page: Page): Promise<SectionCandidat
       return firstClass ? `${el.tagName.toLowerCase()}.${firstClass}` : el.tagName.toLowerCase();
     };
 
-    let elements: Element[] = [...document.querySelectorAll("header, footer, section")];
-    const main = document.querySelector("main");
-    if (main) {
-      elements.push(...main.children);
-    }
-    if (elements.length === 0 && document.body) {
-      elements.push(...document.body.children);
-    }
+    // Always start from the page's top-level structural children; then add any
+    // landmarks found anywhere (nav/header/footer/section, incl. role-based).
+    // The containment filter + wrapper-expand below recover the real blocks.
+    const root = document.querySelector("main") ?? document.body;
+    let elements: Element[] = root ? [...root.children] : [];
+    elements.push(
+      ...document.querySelectorAll(
+        "header, footer, section, nav, [role='navigation'], [role='banner'], [role='contentinfo']"
+      )
+    );
     elements = [...new Set(elements)].filter(isVisible);
     let topLevel = elements.filter(
       (el) => !elements.some((other) => other !== el && other.contains(el))
@@ -276,6 +294,7 @@ export async function findSectionCandidates(page: Page): Promise<SectionCandidat
       return {
         selector: cssPath(el),
         label: labelFor(el),
+        kind: kindFor(el),
         width: Math.round(rect.width),
         height: Math.round(rect.height)
       };
@@ -386,6 +405,14 @@ export async function captureElement(page: Page, selector: string): Promise<Resp
         }
 
         const styles = capture(el, isRoot);
+        // Direct colors: carry the EFFECTIVE (possibly inherited) text color on
+        // text elements. Dark sections set color once on the wrapper and let
+        // headings inherit it; the inheritance filter drops that, but a heading
+        // that reuses a Style-Guide class needs its own color to override the
+        // class's scheme-bound Text — so keep the computed color here.
+        if (/^(h[1-6]|p|blockquote)$/.test(tag)) {
+          styles.color = cs.getPropertyValue("color");
+        }
         const node: CapturedNode & { key: string } = { tag, key: path, attrs: {}, styles, children: [] };
         if (el.id) {
           node.attrs.id = el.id;

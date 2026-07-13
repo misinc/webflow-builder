@@ -3,7 +3,9 @@ services:
     name: webflow-builder-visual-qa
     runtime: node
     rootDir: visual-qa
-    buildCommand: npm install && npm run build
+    # Install Chromium explicitly every build — Render caches node_modules and
+    # skips postinstall, which otherwise leaves Playwright's browser missing.
+    buildCommand: npm install && npx playwright install chromium && npm run build
     startCommand: npm start
     plan: starter
     envVars:

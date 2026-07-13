@@ -9,7 +9,12 @@ import type { Browser, Page } from "playwright";
 import { PNG } from "pngjs";
 import { z } from "zod";
 import { BREAKPOINTS, captureElement, findSectionCandidates, preparePage } from "./extract.js";
-import { capturedTreeToClipboardPayload } from "./payload.js";
+import {
+  capturedTreeToClipboardPayload,
+  combineSections,
+  type CapturedNode,
+  type SectionBuildOptions
+} from "./payload.js";
 
 const visualQaViewportSchema = z.object({
   name: z.string().min(1),
@@ -61,6 +66,20 @@ const navigationTimeoutMs = Number.parseInt(
   process.env.VISUAL_QA_NAVIGATION_TIMEOUT_MS ?? "45000",
   10
 );
+
+// CORS — the extension (webflow.io iframe / localhost dev) calls this service
+// cross-origin. Reflect the origin and answer preflight.
+app.use((request, response, next) => {
+  response.header("Access-Control-Allow-Origin", request.headers.origin ?? "*");
+  response.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  response.header("Access-Control-Allow-Headers", "Content-Type");
+  response.header("Vary", "Origin");
+  if (request.method === "OPTIONS") {
+    response.sendStatus(204);
+    return;
+  }
+  next();
+});
 
 app.use(express.json({ limit: "8mb" }));
 app.use("/artifacts", express.static(artifactDir));
@@ -259,6 +278,86 @@ app.post("/playground/extract", async (request, response) => {
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Playground extract failed.";
+    response
+      .status(/invalid|missing|not allowed|blocked|not found|too large/i.test(message) ? 400 : 500)
+      .json({ error: message });
+  }
+});
+
+const playgroundExtractBatchSchema = z.object({
+  url: z.string().url(),
+  sections: z
+    .array(z.object({ selector: z.string().min(1), label: z.string().max(120).optional() }))
+    .min(1)
+    .max(30),
+  styleGuideMode: z.boolean().optional()
+});
+
+app.post("/playground/extract-batch", async (request, response) => {
+  try {
+    const input = playgroundExtractBatchSchema.parse(request.body);
+    assertUrlAllowed(input.url);
+
+    const runId = crypto.randomUUID();
+    const runDir = path.join(artifactDir, runId);
+    await fs.mkdir(runDir, { recursive: true });
+
+    const browser = await chromium.launch({ headless: true });
+    try {
+      const page = await browser.newPage({ viewport: playgroundViewport });
+      await preparePage(page, input.url, navigationTimeoutMs);
+      const artifactBaseUrl = getArtifactBaseUrl(request);
+      const breakpointKeys = BREAKPOINTS.map((breakpoint) => breakpoint.key);
+
+      const captured: Array<{ tree: CapturedNode; options: SectionBuildOptions }> = [];
+      const perSection: Array<{ selector: string; screenshot: string | null; warnings: string[] }> = [];
+
+      for (const [index, section] of input.sections.entries()) {
+        // Screenshot at the base viewport before captureElement resizes it.
+        await page.setViewportSize(playgroundViewport);
+        let screenshot: string | null = null;
+        try {
+          const filename = `section-${index}.png`;
+          await page
+            .locator(section.selector)
+            .first()
+            .screenshot({ path: path.join(runDir, filename), timeout: 12_000 });
+          screenshot = artifactUrl(artifactBaseUrl, runId, filename);
+        } catch {
+          // capture still proceeds without a thumbnail
+        }
+        const capture = await captureElement(page, section.selector);
+        captured.push({
+          tree: capture.tree,
+          options: {
+            sectionLabel: section.label ?? `Pasted from URL — ${section.selector}`,
+            breakpointStyles: capture.breakpointStyles,
+            breakpointKeys,
+            styleGuideMode: input.styleGuideMode ?? false
+          }
+        });
+        perSection.push({ selector: section.selector, screenshot, warnings: capture.warnings });
+      }
+
+      const result =
+        captured.length === 1
+          ? capturedTreeToClipboardPayload(captured[0].tree, captured[0].options)
+          : combineSections(
+              captured.map((c) => ({ tree: c.tree, options: c.options })),
+              {}
+            );
+
+      response.json({
+        payloadJson: JSON.stringify(result.payload),
+        stats: result.stats,
+        warnings: [...new Set([...perSection.flatMap((s) => s.warnings), ...result.warnings])],
+        perSection: perSection.map((s) => ({ selector: s.selector, screenshot: s.screenshot }))
+      });
+    } finally {
+      await browser.close();
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Playground batch extract failed.";
     response
       .status(/invalid|missing|not allowed|blocked|not found|too large/i.test(message) ? 400 : 500)
       .json({ error: message });

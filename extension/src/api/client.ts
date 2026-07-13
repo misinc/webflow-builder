@@ -35,6 +35,12 @@ import {
   VisualQaCompareResponse,
   visualQaCompareRequestSchema,
   visualQaCompareResponseSchema,
+  CaptureScanResponse,
+  captureScanResponseSchema,
+  CaptureExtractRequest,
+  CaptureExtractResponse,
+  captureExtractRequestSchema,
+  captureExtractResponseSchema,
   workflowClipboardResponseSchema,
   WorkflowClipboardRequest,
   WorkflowClipboardResponse,
@@ -706,6 +712,36 @@ export class VisualQaClient {
       }
     );
     return visualQaCompareResponseSchema.parse(response);
+  }
+
+  private ensureConfigured(): void {
+    if (!this.isConfigured()) {
+      throw new Error(
+        "Capture service is not configured. Set VITE_VISUAL_QA_BASE_URL to the visual-qa service URL."
+      );
+    }
+  }
+
+  /** Render a URL and detect its structural parts (navbar, sections, footer). */
+  async scanSections(url: string): Promise<CaptureScanResponse> {
+    this.ensureConfigured();
+    const response = await request<CaptureScanResponse>(
+      `${stripTrailingSlash(this.baseUrl)}/playground/scan`,
+      { method: "POST", body: JSON.stringify({ url }) }
+    );
+    return captureScanResponseSchema.parse(response);
+  }
+
+  /** Capture one or more selected sections and return a single combined
+   *  clipboard payload (style-guide mode maps to client-first classes). */
+  async extractSections(input: CaptureExtractRequest): Promise<CaptureExtractResponse> {
+    this.ensureConfigured();
+    const validated = captureExtractRequestSchema.parse(input);
+    const response = await request<CaptureExtractResponse>(
+      `${stripTrailingSlash(this.baseUrl)}/playground/extract-batch`,
+      { method: "POST", body: JSON.stringify(validated) }
+    );
+    return captureExtractResponseSchema.parse(response);
   }
 }
 

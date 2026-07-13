@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   capturedTreeToClipboardPayload,
+  combineSections,
   type CapturedNode
 } from "../../visual-qa/src/payload";
 
@@ -193,6 +194,30 @@ describe("style-guide mode (client-first references)", () => {
     expect(payload.payload.styles.some((s) => s.styleLess.includes("padding-top: 80px;"))).toBe(true);
   });
 
+  it("keeps the source text color as a combo on shared typography (direct colors)", () => {
+    const dark = el({
+      tag: "section",
+      styles: { "background-color": "rgb(0, 18, 53)" },
+      children: [el({ tag: "h2", styles: { "font-size": "40px", color: "rgb(255, 255, 255)" }, text: "On dark" })]
+    });
+    const { payload } = capturedTreeToClipboardPayload(dark, { styleGuideMode: true });
+    const heading = payload.payload.nodes.find((n) => n.type === "Heading")!;
+    const names = (heading.classes ?? []).map((id) => payload.payload.styles.find((s) => s._id === id)?.name);
+    expect(names).toContain("heading-style-h2");
+    const combo = payload.payload.styles.find(
+      (s) => s.comb === "&" && s.styleLess.includes("color: rgb(255, 255, 255);")
+    );
+    expect(combo).toBeDefined();
+  });
+
+  it("does not add a color combo to buttons (they get color from the Style Guide)", () => {
+    const { payload } = capturedTreeToClipboardPayload(tree(), { styleGuideMode: true });
+    // the button node wears only `button`, no color combo
+    const link = payload.payload.nodes.find((n) => n.type === "Link")!;
+    const names = (link.classes ?? []).map((id) => payload.payload.styles.find((s) => s._id === id)?.name);
+    expect(names).toEqual(["button"]);
+  });
+
   it("leaves typography self-contained (pw-* with captured styles) when off", () => {
     const { payload, stats } = capturedTreeToClipboardPayload(tree(), { styleGuideMode: false });
     expect(stats.styleGuideRefs).toBe(0);
@@ -208,5 +233,48 @@ describe("style-guide mode (client-first references)", () => {
     });
     const { payload } = capturedTreeToClipboardPayload(plainLink, { styleGuideMode: true });
     expect(payload.payload.styles.some((s) => s.name === "button")).toBe(false);
+  });
+});
+
+describe("combineSections (multi-select paste)", () => {
+  const navbar = () =>
+    el({ tag: "nav", styles: { display: "flex", "background-color": "rgb(255, 255, 255)" }, children: [] });
+  const hero = () =>
+    el({
+      tag: "section",
+      styles: { display: "flex", "padding-top": "80px", "background-color": "rgb(0, 18, 53)" },
+      children: [el({ tag: "h1", styles: { "font-size": "56px", color: "rgb(255, 255, 255)" }, text: "Hi" })]
+    });
+
+  it("wraps sections under one labeled 'unwrap me' root", () => {
+    const { payload } = combineSections([{ tree: navbar() }, { tree: hero() }], {});
+    const root = payload.payload.nodes.at(-1)!;
+    expect((root.data as { displayName?: string })?.displayName).toBe("Pasted sections — unwrap me");
+    expect(root.children?.length).toBe(2);
+  });
+
+  it("dedupes shared classes across sections and keeps every var/style", () => {
+    const { payload, stats } = combineSections(
+      [
+        { tree: hero(), options: { styleGuideMode: true } },
+        { tree: hero(), options: { styleGuideMode: true } }
+      ],
+      {}
+    );
+    // both heroes reference the same shared heading-style-h1 → one style entry
+    const headingRefs = payload.payload.styles.filter((s) => s.name === "heading-style-h1");
+    expect(headingRefs).toHaveLength(1);
+    // the white color combo is shared too
+    const whiteCombos = payload.payload.styles.filter(
+      (s) => s.comb === "&" && s.styleLess.includes("color: rgb(255, 255, 255);")
+    );
+    expect(whiteCombos).toHaveLength(1);
+    expect(stats.styleGuideRefs).toBeGreaterThan(0);
+  });
+
+  it("a single section still combines into a valid wrapped payload", () => {
+    const { payload } = combineSections([{ tree: hero() }], {});
+    expect(payload.type).toBe("@webflow/XscpData");
+    expect(payload.payload.nodes.length).toBeGreaterThan(0);
   });
 });

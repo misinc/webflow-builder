@@ -121,6 +121,53 @@ export const visualQaCompareResponseSchema = z.object({
   warnings: z.array(z.string())
 });
 
+// --- Capture service (URL → sections → clipboard payload) ----------------
+
+export const captureScanRequestSchema = z.object({
+  url: z.string().url()
+});
+
+export const captureCandidateSchema = z.object({
+  selector: z.string().min(1),
+  label: z.string(),
+  kind: z.string(),
+  width: z.number(),
+  height: z.number(),
+  screenshot: z.string().nullable()
+});
+
+export const captureScanResponseSchema = z.object({
+  url: z.string(),
+  candidates: z.array(captureCandidateSchema)
+});
+
+export const captureStatsSchema = z.object({
+  nodeCount: z.number(),
+  classCount: z.number(),
+  responsiveClassCount: z.number(),
+  styleGuideRefs: z.number(),
+  droppedLinkUrls: z.number(),
+  placeholderImages: z.number()
+});
+
+export const captureExtractRequestSchema = z.object({
+  url: z.string().url(),
+  sections: z
+    .array(z.object({ selector: z.string().min(1), label: z.string().max(120).optional() }))
+    .min(1)
+    .max(30),
+  styleGuideMode: z.boolean().optional()
+});
+
+export const captureExtractResponseSchema = z.object({
+  payloadJson: z.string().min(1),
+  stats: captureStatsSchema,
+  warnings: z.array(z.string()),
+  perSection: z.array(
+    z.object({ selector: z.string(), screenshot: z.string().nullable() })
+  )
+});
+
 export const sharedStyleContextSchema = z.object({
   siteId: z.string().min(1),
   capturedAt: z.string().datetime(),
@@ -807,6 +854,11 @@ export type VisualQaViewport = z.infer<typeof visualQaViewportSchema>;
 export type VisualQaCompareRequest = z.infer<typeof visualQaCompareRequestSchema>;
 export type VisualQaViewportResult = z.infer<typeof visualQaViewportResultSchema>;
 export type VisualQaCompareResponse = z.infer<typeof visualQaCompareResponseSchema>;
+export type CaptureScanRequest = z.infer<typeof captureScanRequestSchema>;
+export type CaptureCandidate = z.infer<typeof captureCandidateSchema>;
+export type CaptureScanResponse = z.infer<typeof captureScanResponseSchema>;
+export type CaptureExtractRequest = z.infer<typeof captureExtractRequestSchema>;
+export type CaptureExtractResponse = z.infer<typeof captureExtractResponseSchema>;
 export type SiteStylePlanClassDecision = z.infer<
   typeof siteStylePlanClassDecisionSchema
 >;

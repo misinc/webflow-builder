@@ -43,6 +43,32 @@ export interface PlaygroundPayloadResult {
   warnings: string[];
 }
 
+type StyleDefinitionInput = {
+  className: string;
+  properties: Record<string, string>;
+  variants?: Record<string, Record<string, string>>;
+  combo?: boolean;
+};
+
+export interface SectionBuildOptions {
+  sectionLabel?: string;
+  breakpointStyles?: BreakpointStyles;
+  breakpointKeys?: string[];
+  /** Style-guide-first: headings/body/buttons reference client-first Style
+   *  Guide classes by name (empty styleLess) so they adopt the project's Style
+   *  Guide, instead of carrying captured literal styles. */
+  styleGuideMode?: boolean;
+}
+
+/** One section's element tree + style definitions, before serialization —
+ *  the reusable unit combined into a single payload for multi-section paste. */
+interface SectionBuild {
+  elementTree: BuildNode;
+  styleDefinitions: StyleDefinitionInput[];
+  stats: PlaygroundPayloadResult["stats"];
+  warnings: string[];
+}
+
 /** Tags Webflow renders as text-only elements — children must be flattened. */
 const TEXT_ONLY_TAGS = new Set(["h1", "h2", "h3", "h4", "h5", "h6", "p", "blockquote"]);
 
@@ -100,28 +126,13 @@ function breakpointDelta(
   return delta;
 }
 
-export function capturedTreeToClipboardPayload(
-  tree: CapturedNode,
-  options: {
-    sectionLabel?: string;
-    breakpointStyles?: BreakpointStyles;
-    breakpointKeys?: string[];
-    /** Style-guide-first: headings/body/buttons reference client-first Style
-     *  Guide classes by name (empty styleLess) so they adopt the project's
-     *  Style Guide, instead of carrying captured literal styles. */
-    styleGuideMode?: boolean;
-  } = {}
-): PlaygroundPayloadResult {
+function buildSection(tree: CapturedNode, options: SectionBuildOptions = {}): SectionBuild {
   const warnings = new Set<string>();
   const breakpointStyles = options.breakpointStyles ?? {};
   const breakpointKeys = options.breakpointKeys ?? Object.keys(breakpointStyles);
   const styleGuideMode = options.styleGuideMode ?? false;
   const classNameByStyleKey = new Map<string, string>();
-  const styleDefinitions: Array<{
-    className: string;
-    properties: Record<string, string>;
-    variants?: Record<string, Record<string, string>>;
-  }> = [];
+  const styleDefinitions: StyleDefinitionInput[] = [];
   const stats = {
     nodeCount: 0,
     classCount: 0,
@@ -183,11 +194,32 @@ export function capturedTreeToClipboardPayload(
     }
     return [className];
   };
+  // Direct colors (no color schemes): reused Style Guide typography classes are
+  // color-bound to the scheme's Text variable, so keep the source's own text
+  // color as a combo on top — dark-section text stays readable. Clean up paste
+  // binds the literal color to the matching project variable.
+  const registerColorCombo = (tag: string, color: string): string => {
+    const key = `color-combo:${color}`;
+    let className = classNameByStyleKey.get(key);
+    if (!className) {
+      className = `pw-${tag}-c${fnvHash(color)}`;
+      classNameByStyleKey.set(key, className);
+      styleDefinitions.push({ className, properties: { color }, combo: true });
+    }
+    return className;
+  };
 
   const classFor = (node: CapturedNode): string[] => {
     const shared = styleGuideNameFor(node);
     if (shared) {
-      return registerShared(shared);
+      const classes = registerShared(shared);
+      const color = node.styles["color"];
+      // Buttons get their colors from the Style Guide's button class; text
+      // elements keep the source's own color so they read on any background.
+      if (color && shared !== "button") {
+        classes.push(registerColorCombo(node.tag, color));
+      }
+      return classes;
     }
     if (Object.keys(node.styles).length === 0) {
       return [];
@@ -261,11 +293,68 @@ export function capturedTreeToClipboardPayload(
     );
   }
 
+  return { elementTree, styleDefinitions, stats, warnings: [...warnings] };
+}
+
+/** Single section → a complete, standalone clipboard payload. */
+export function capturedTreeToClipboardPayload(
+  tree: CapturedNode,
+  options: SectionBuildOptions = {}
+): PlaygroundPayloadResult {
+  const built = buildSection(tree, options);
   const payload = buildWebflowClipboardPayload({
-    elementTree,
-    styleDefinitions,
+    elementTree: built.elementTree,
+    styleDefinitions: built.styleDefinitions,
+    existingStyles: []
+  });
+  return { payload, stats: built.stats, warnings: built.warnings };
+}
+
+/**
+ * Combine several captured sections into ONE payload: each section's tree becomes
+ * a child of a single labeled wrapper ("Pasted sections — unwrap me"), with style
+ * definitions deduped by class name — the page-mode pattern, so a multi-select
+ * paste drops every part in one gesture. A single section pastes bare via
+ * `capturedTreeToClipboardPayload` (no wrapper).
+ */
+export function combineSections(
+  sections: Array<{ tree: CapturedNode; options?: SectionBuildOptions }>,
+  opts: { wrapperLabel?: string } = {}
+): PlaygroundPayloadResult {
+  const builds = sections.map(({ tree, options }) => buildSection(tree, options ?? {}));
+
+  const stylesByName = new Map<string, StyleDefinitionInput>();
+  for (const build of builds) {
+    for (const definition of build.styleDefinitions) {
+      if (!stylesByName.has(definition.className)) {
+        stylesByName.set(definition.className, definition);
+      }
+    }
+  }
+
+  const wrapper: BuildNode = {
+    id: "pw-wrapper",
+    type: "element",
+    tag: "div",
+    label: opts.wrapperLabel ?? "Pasted sections — unwrap me",
+    classNames: [],
+    children: builds.map((build) => build.elementTree)
+  };
+
+  const payload = buildWebflowClipboardPayload({
+    elementTree: wrapper,
+    styleDefinitions: [...stylesByName.values()],
     existingStyles: []
   });
 
-  return { payload, stats, warnings: [...warnings] };
+  const stats = {
+    nodeCount: builds.reduce((sum, b) => sum + b.stats.nodeCount, 0),
+    classCount: stylesByName.size,
+    responsiveClassCount: builds.reduce((sum, b) => sum + b.stats.responsiveClassCount, 0),
+    styleGuideRefs: builds.reduce((sum, b) => sum + b.stats.styleGuideRefs, 0),
+    droppedLinkUrls: builds.reduce((sum, b) => sum + b.stats.droppedLinkUrls, 0),
+    placeholderImages: builds.reduce((sum, b) => sum + b.stats.placeholderImages, 0)
+  };
+  const warnings = [...new Set(builds.flatMap((b) => b.warnings))];
+  return { payload, stats, warnings };
 }
