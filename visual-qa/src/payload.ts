@@ -204,6 +204,18 @@ function breakpointDelta(
   return delta;
 }
 
+// A "special" section — a full-bleed image backdrop or an absolutely-positioned
+// layout (heroes, overlays). These don't use the client-first container/padding
+// scaffold, so we skip container/padding-section naming and preserve them exactly.
+function isSpecialLayout(node: CapturedNode, depth = 0): boolean {
+  if (isFullBleedImage(node)) return true;
+  if (depth > 0) {
+    const position = node.styles["position"];
+    if (position === "absolute" || position === "fixed") return true;
+  }
+  return node.children.some((child) => isSpecialLayout(child, depth + 1));
+}
+
 function buildSection(input: SectionCaptureInput): SectionBuild {
   const warnings = new Set<string>();
   const breakpointStyles = input.breakpointStyles ?? {};
@@ -211,6 +223,9 @@ function buildSection(input: SectionCaptureInput): SectionBuild {
   const chrome = CHROME_KINDS.test(input.kind ?? "");
   const rawKey = slugify(input.sectionName ?? "section") || "section";
   const sectionKey = rawKey.split("-").slice(0, 3).join("-") || "section";
+  // Special sections (hero backdrops, absolute layouts) skip the container /
+  // padding-section scaffold naming — kept as pure fidelity.
+  const scaffoldNaming = !chrome && !isSpecialLayout(input.tree);
 
   const styleDefinitions: StyleDefinitionInput[] = [];
   const classNameByKey = new Map<string, string>(); // dedup unique classes by style
@@ -322,7 +337,7 @@ function buildSection(input: SectionCaptureInput): SectionBuild {
 
     // Container: the first max-width wrapper in the section.
     const maxW = px(styles["max-width"]);
-    if (!containerAssigned && Number.isFinite(maxW) && maxW >= 560 && maxW <= 1700) {
+    if (scaffoldNaming && !containerAssigned && Number.isFinite(maxW) && maxW >= 560 && maxW <= 1700) {
       containerAssigned = true;
       const match = nearest(maxW, CONTAINERS, CONTAINER_TOLERANCE);
       if (match) {
@@ -340,7 +355,7 @@ function buildSection(input: SectionCaptureInput): SectionBuild {
     // Section padding: a wrapper carrying substantial symmetric vertical padding.
     const padTop = px(styles["padding-top"]);
     const padBottom = px(styles["padding-bottom"]);
-    if (Number.isFinite(padTop) && padTop >= 40 && Math.abs(padTop - (padBottom || padTop)) < 8) {
+    if (scaffoldNaming && Number.isFinite(padTop) && padTop >= 40 && Math.abs(padTop - (padBottom || padTop)) < 8) {
       const match = nearest(padTop, SECTION_PADDINGS, PADDING_TOLERANCE);
       if (match) {
         const rest = { ...styles };

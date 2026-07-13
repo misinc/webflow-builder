@@ -99,6 +99,31 @@ describe("container + section-padding size matching", () => {
     expect(styleByName(payload, "container-large")!.styleLess).toBe("");
   });
 
+  it("skips container/padding naming on special sections (absolute hero)", () => {
+    const input: SectionCaptureInput = {
+      tree: el({
+        tag: "section",
+        key: "0",
+        styles: { position: "relative", "padding-top": "80px", "padding-bottom": "80px" },
+        children: [
+          el({
+            tag: "div",
+            key: "0.0",
+            styles: { position: "absolute", "max-width": "1280px" }, // would-be container, but absolute
+            children: [el({ tag: "h1", key: "0.0.0", styles: { "font-size": "56px" }, text: "Hero" })]
+          })
+        ]
+      }),
+      sectionName: "Hero"
+    };
+    const { payload } = capturedSectionToClipboardPayload(input);
+    const names = classNames(payload);
+    expect(names.some((n) => n.startsWith("container"))).toBe(false);
+    expect(names.some((n) => n.startsWith("padding-section"))).toBe(false);
+    // Still gets client-first typography naming.
+    expect(names).toContain("heading-style-h1");
+  });
+
   it("mints a custom container when no standard size fits", () => {
     const wide = hero();
     (wide.tree.children[0].styles as Record<string, string>)["max-width"] = "1500px";
