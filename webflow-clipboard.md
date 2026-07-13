@@ -139,6 +139,37 @@ must fall back to `tag:"div"` on a `Block`**, keeping its classes. Guessing a
 node shape for an unsupported type is the #1 cause of a wholesale payload
 rejection. The tag is cosmetic-ish; the classes carry the real fidelity.
 
+**Semantic block types seen in real copies:** Webflow's own copies use richer
+types for structural `div`s — `Section` (`data.grid.type:"section"`, often with
+`data.attr.id`), `Container` (`data.grid.type:"container"`). A plain `Block`
+works in their place and pastes fine; these just give the Navigator nicer labels
+and the section/container grid affordances. Use them if you want the output to
+read like a hand-built Webflow section.
+
+**Extra `data` fields in real copies are optional.** Native nodes carry more
+bookkeeping — `devlink`, `xattr:[]`, `search:{exclude:false}`,
+`visibility:{conditions:[],keepInHtml:{…}}`, `attr:{id:""}`. Synthesized
+payloads that omit all of these still paste correctly; include them only if you
+need the specific behavior (e.g. `attr.id` to set an element id anchor). Style
+entries can likewise carry an optional `createdBy` field — safe to omit.
+
+**Webflow component types ride as first-class types too.** Real copies preserve
+built-in components under their own `type` rather than flattening to `Block`:
+
+- **Navbar:** `NavbarWrapper`, `NavbarBrand`, `NavbarMenu`, `NavbarLink`,
+  `NavbarButton`
+- **Dropdown:** `DropdownWrapper`, `DropdownToggle`, `DropdownList`
+- **Form:** `FormWrapper`, `FormForm`, `FormBlockLabel`, `FormInlineLabel`,
+  `FormTextInput`, `FormTextarea`, `FormSelect`, `FormButton`,
+  `FormCheckboxInput`/`FormCheckboxWrapper`, `FormRadioInput`/`FormRadioWrapper`,
+  `FormErrorMessage`, `FormSuccessMessage`
+- **Layout:** `Grid`
+
+Emitting these makes a pasted navbar/form behave like the real Webflow component
+(dropdown interactions, form submit). When synthesizing from arbitrary HTML you
+can fall back to `Block`/`div`, but a form built as plain divs won't *function*
+as a Webflow form — decide per case whether behavior or just appearance matters.
+
 ### HtmlEmbed (inline SVG icons, raw markup)
 
 The escape hatch — arbitrary HTML that survives paste intact. This is how you get
@@ -209,8 +240,88 @@ Key rules learned:
   (array of combo style ids). On a node, `classes` is ordered **base first, then
   combos**. Combo entries carry only the *delta* styling.
 - `styleLess` is a plain CSS declaration string (`"prop: value; prop: value;"`).
-- `variants` holds breakpoint/state overrides; empty means "base breakpoint
-  only". (Responsive variants are a known gap — not yet reverse-engineered here.)
+- `variants` holds breakpoint and state overrides — the responsive layer.
+  Fully decoded below (§3a).
+
+### 3a. Responsive & state variants (`variants`)
+
+Confirmed from ground-truth Designer copies. `variants` is an object keyed by a
+**breakpoint/state id**, each value carrying its own `styleLess` string of *only
+the declarations that differ from the cascade above it* — the delta, not the
+full style:
+
+```jsonc
+"variants": {
+  "medium": { "styleLess": "padding-top: 60px; padding-bottom: 100px;" },
+  "small":  { "styleLess": "flex-direction: column; text-align: center;" },
+  "tiny":   { "styleLess": "padding-right: 16px; padding-left: 16px;" }
+}
+```
+
+**The model is desktop-first, exactly like CSS `max-width` media queries.** Base
+`styleLess` is the desktop value and applies everywhere; each smaller breakpoint
+stores only what changes from the next size up. So a value that changes at every
+breakpoint is restated at each; a value set once at desktop and never changed
+appears in **no** variant.
+
+**There are no per-breakpoint *classes* in Webflow.** A class exists once and
+applies at every breakpoint — you never make a separate class per screen size.
+Only the *values* differ per breakpoint, which is exactly what `variants`
+encodes: one style entry, a base `styleLess`, plus per-breakpoint value
+overrides. (This is what makes the style-guide-first strategy in §6 work: set a
+class's values once — across all breakpoints — and every element using it
+inherits them.)
+
+Variant keys seen in ground-truth copies — **breakpoints**, **states**, and
+**breakpoint+state combos** (`{breakpoint}_{state}`):
+
+| Key                       | Kind             | Meaning |
+|---------------------------|------------------|---------|
+| *(base)*                  | breakpoint       | desktop — the top-level `styleLess` (992px+) |
+| `medium`                  | breakpoint       | tablet (≤ 991px) |
+| `small`                   | breakpoint       | mobile landscape (≤ 767px) |
+| `tiny`                    | breakpoint       | mobile portrait (≤ 479px) |
+| `main_hover`              | state            | hover (base breakpoint) |
+| `main_focus`              | state            | focus |
+| `main_placeholder`        | state            | `::placeholder` styling |
+| `main_current`            | state            | current-page (nav link on the active page) |
+| `main_open`               | state            | open (e.g. dropdown expanded) |
+| `main_redirected-checked` | state            | checked state of a custom checkbox/radio proxy |
+| `main_redirected-focus`   | state            | focus state of a custom checkbox/radio proxy |
+| `medium_open`             | breakpoint+state | confirmed real combo — proves the `{breakpoint}_{state}` pattern |
+
+Larger-than-desktop keys (`large`/`xl`/`xxl` for 1280/1440/1920) follow the same
+scheme but weren't in the samples. `main_` is the base-breakpoint namespace; a
+state at a smaller breakpoint combines as `{breakpoint}_{state}` (`medium_open`).
+
+Worked cascade from a real copy — a two-column contact split that shrinks then
+stacks:
+
+```jsonc
+{ "name": "Contact Split Image",
+  "styleLess": "width: 50%; min-height: 600px;",
+  "variants": {
+    "medium": { "styleLess": "width: 33.33%;" },
+    "small":  { "styleLess": "display: none; width: 100%; height: 240px;" } } }
+
+{ "name": "Contact Section",
+  "styleLess": "display: flex; flex-direction: row;",
+  "variants": { "small": { "styleLess": "flex-direction: column;" } } }
+```
+
+Notes for synthesizing variants:
+- Each variant's `styleLess` obeys **all the same §4 normalization rules** (no
+  `gap`/logical/shorthand/`calc()`; drop the same unsafe props). Run breakpoint
+  deltas through the identical serializer path as the base.
+- Compute deltas **desktop-first and cumulatively**: diff `medium` against base,
+  `small` against the base+`medium` result, `tiny` against base+`medium`+`small`.
+  Emit a key only when its delta is non-empty.
+- Omit the `variants` object's keys entirely rather than emitting empty ones; an
+  all-empty `variants: {}` is correct for a desktop-only class.
+- Deriving variants by **capturing computed styles at each breakpoint width**
+  (headless Chrome resized to 991/767/479) reproduces this encoding almost
+  exactly — the one difference is literal units (Webflow may author `7%`, a
+  computed capture yields the equivalent `px`).
 
 ### Avoiding `name 2` duplicates
 
@@ -240,26 +351,50 @@ never contain these forms, so neither should yours. Normalize before serializing
 | `flex: 1 0 0`                   | longhands: `flex-grow: 1; flex-shrink: 0; flex-basis: 0` |
 | `calc(...)`                     | **evaluate it** to a concrete value before emitting      |
 
-**Drop entirely** (native copies of even hover-styled elements contain none of
-these in `styleLess`; including them can reject the whole payload):
+**Transitions are SAFE — correction from ground truth.** Real Designer copies
+*do* carry `transition-*` in `styleLess` (e.g. an `Input` with
+`transition-property: border-color; transition-duration: 300ms;
+transition-timing-function: ease;`, and a `Button` whose `main_hover` variant
+holds `box-shadow` + `transform: translate(0px, -1px)`). Since Webflow's own
+copy emits them and paste is the inverse, they are accepted. Earlier notes here
+claimed the opposite — that was wrong. This repo's serializer still drops them
+conservatively (pending a synthesized-payload paste test); once verified, they
+can be kept, and hover/focus effects belong in `main_hover`/`main_focus`
+variants (§3a).
 
-`transition`, `transition-property`, `transition-duration`,
-`transition-timing-function`, `transition-delay`, `isolation`,
-`content-visibility`, `will-change`, `contain`.
+**Drop entirely** (not seen in any ground-truth copy; unverified, so still
+risky to emit): `isolation`, `content-visibility`, `will-change`, `contain`.
 
 Rule of thumb: **when styling silently vanishes after a paste, suspect a dropped
 declaration first** — a modern/logical/shorthand property Webflow didn't parse.
 
 ### Things that never ride the clipboard at all
 
-- **Variables / design tokens** — the clipboard references variables by
-  site-internal ids that mean nothing in another project. Styles paste as
-  **literal values** (hex, px). Re-link to variables *after* paste via the
-  Designer API (§5).
+- **Variables / design tokens** — in the `application/json` flavor (the one paste
+  consumes) variables **flatten to literal values** (hex, px), even when the
+  element clearly has a variable bound in the Designer. Confirmed airtight: a
+  button bound to *Primary warm accent* / *Neutral Darkest* pasted as
+  `background-color: #FF9902; color: #0D0800` with **zero** variable references
+  anywhere in the JSON. Restore the binding after paste (§5b) — or, better, put
+  it on the *class* before paste (§6). The one exception is the Relume `text/html`
+  companion flavor, which preserves variable **names** (§6).
 - **Components / symbols** — flattened to literal elements on copy.
-- **Media assets** — images come in as placeholders; real `src` upload is
-  separate.
+- **Media assets** — an `<img>` `Image` node carries the live CDN `src`
+  (+`width`/`height`/`alt`/`img.id`/`sizes`), so it renders immediately.
+  **Background images ride differently** — as an asset-id reference,
+  `background-image: @raw<|@img_<assetId>|>` in `styleLess`. That id resolves only
+  if the asset already exists in the destination project, so a background image
+  generally won't render when pasted into a *different* site. Either way,
+  registering the asset in the destination Assets panel is a separate step.
 - `<br>`, `<source>`, nested `<p>` inside `<p>` — can **crash the canvas**. Avoid.
+
+**The `@raw<|…|>` wrapper.** Webflow wraps certain `styleLess` values in a
+`@raw<|…|>` sentinel — seen around an asset reference (`@raw<|@img_66b1979…|>`)
+and a bare size literal (`@raw<|999px|>`). Its exact trigger isn't pinned down
+(definitely asset refs; sometimes size values), but two things are clear: it is
+**not** a variable marker (bound color variables flatten to plain hex, never
+`@raw`), and a synthesized payload doesn't need to produce it — plain values
+work. Strip/ignore it when reading real copies.
 
 ---
 
@@ -297,12 +432,67 @@ string literal:
 
 Net effect the user sees: *"N classes fixed · M tokens bound."*
 
+**Prefer name-based matching when you have names.** Value-matching is ambiguous
+when two variables share a value. Two sources hand you the variable *name*
+directly: **(a)** the source site's own authored CSS, where a property reads
+`color: var(--_primitives---colors--primary-warm-accent)` — the CSSOM preserves
+that raw `var()` on the matched rule (`getComputedStyle` resolves it away, so
+read `rule.style.getPropertyValue(prop)` instead); **(b)** the Relume `text/html`
+flavor's `data-relumestylelesswithvariables`, keyed by style id, giving each
+bound property `{cssProperty, name, value}`. Match those names to the destination
+project's variables (unambiguous); fall back to value-matching only when no name
+is available.
+
 > The extension only **uses** existing variables/styles — it never creates
-> tokens. Tokens are authored beforehand (via MCP). Binding is pure value-match.
+> tokens. Tokens are authored beforehand (via MCP). Binding is name-match first,
+> value-match as fallback.
 
 ---
 
-## 6. Minimal working example
+## 6. Variables & the style-guide-first strategy
+
+The clipboard can't carry a variable binding, but the **Designer API can** — the
+extension already binds variables to styles in post-paste cleanup (§5b). That
+opens a cleaner ordering than "paste literals, then rebind."
+
+**Style-guide-first.** Build/adjust the variable-bound *classes* first, then paste
+sections that merely *reference* those classes by name with empty `styleLess`
+(§3). Each pasted element adopts the fully-styled, variable-bound class — no lossy
+post-paste rebinding. This fits a Relume-cloneable workflow, where the project
+already ships a **Style Guide** of client-first classes (`heading-style-*`,
+`text-size-*`, `button`, …):
+
+1. **Update the Style Guide to the source site.** For each style-guide class, set
+   its properties — including per-breakpoint values via the Designer API's
+   breakpoint option (Webflow has no per-breakpoint classes; you set per-breakpoint
+   *values* on the one class, §3a) — to the source's **canonical** value for that
+   role, and bind variables by name where the source uses them. Create the class
+   only if it doesn't already exist.
+2. **Paste sections** whose elements reference those class names with empty
+   `styleLess` (and the real style ids, see "Avoiding name 2"). They inherit the
+   updated Style Guide → the section looks like the source site, responsive
+   values and variable bindings included.
+
+**Guardrail — canonical, not per-node.** A shared client-first class must be set
+from the site's *design-system* value (its style guide, or the dominant value
+across instances), **never** from one arbitrary node's CSS — otherwise one card's
+font size pollutes every heading. Per-instance deviations still ride **combo
+classes** (§3). And note: restyling a shared class updates *every* element using
+it project-wide — intended when migrating into a fresh clone, but a conscious,
+destructive-ish act otherwise.
+
+**Getting the variable names** (for step 1's binding): the source site's authored
+CSS exposes them directly — `color: var(--_primitives---colors--primary-warm-accent)`.
+Read the raw `var()` off the matched rule (`rule.style.getPropertyValue`, since
+`getComputedStyle` resolves it to a hex) and match the name to the destination
+project's variable. When source and target share a design system the names line
+up 1:1; otherwise fall back to value-matching. This generalizes beyond Webflow
+sources — any site whose tokens are CSS custom properties (Tailwind v4's
+`var(--color-…)`, etc.) exposes matchable names.
+
+---
+
+## 7. Minimal working example
 
 Section → heading + `<a>` CTA (text + inline-SVG icon) → varied card (base+combo):
 
@@ -340,15 +530,17 @@ styling; `services_card_v2` is its combo (`comb:"&"`, listed in the base's
 
 ---
 
-## 7. Checklist for a new payload
+## 8. Checklist for a new payload
 
 - [ ] Root element is first in `nodes`.
 - [ ] Every `children`/`classes` id resolves to an existing node/style.
 - [ ] Text is a separate `text:true` node, not a parent attribute.
 - [ ] Unsupported tags fell back to `Block`/`div` (didn't guess a `type`).
 - [ ] Icons are `HtmlEmbed` with SVG in both `v` and `data.embed.meta.html`.
-- [ ] `styleLess` has no `gap`/logical/shorthand/`calc()`/`transition` — all
-      normalized or dropped (§4).
+- [ ] `styleLess` has no `gap`/logical/shorthand/`calc()` — all normalized (§4).
+- [ ] Responsive overrides go in `variants` as desktop-first deltas
+      (`medium`/`small`/`tiny`), each obeying the same §4 normalization; omit
+      empty keys (§3a).
 - [ ] Combos have `comb:"&"`, are listed in the base's `children`, and come after
       the base in the node's `classes`.
 - [ ] Classes meant to reuse project styles have **empty `styleLess`** (and, if

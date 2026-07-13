@@ -24,6 +24,15 @@ export interface WebflowClipboardStyleInput {
   className: string;
   properties: Record<string, string>;
   combo?: boolean;
+  /**
+   * Per-breakpoint / state overrides, keyed by Webflow's variant id
+   * (`medium` = tablet, `small` = mobile landscape, `tiny` = mobile portrait,
+   * `main_hover`/`main_focus` = states). Each value holds ONLY the declarations
+   * that differ from the cascaded value above it — the delta, exactly as real
+   * Designer copies encode it. Emitted into the style's `variants` as
+   * `{ [key]: { styleLess } }`.
+   */
+  variants?: Record<string, Record<string, string>>;
 }
 
 export interface WebflowClipboardInput {
@@ -353,6 +362,18 @@ export function buildWebflowClipboardPayload(input: WebflowClipboardInput): Xscp
   const styles: XscpStyle[] = [...usedClassNames].map((name) => {
     const definition = definitionByName.get(name);
     const existsInProject = projectStyleIdByName.has(name);
+    // Existing project classes paste empty (reference-only, never restyled);
+    // only new classes carry base styleLess and breakpoint variants.
+    const carriesStyle = !existsInProject && Boolean(definition);
+    const variants: Record<string, { styleLess: string }> = {};
+    if (carriesStyle && definition?.variants) {
+      for (const [key, properties] of Object.entries(definition.variants)) {
+        const styleLess = stylePropertiesToStyleLess(properties);
+        if (styleLess) {
+          variants[key] = { styleLess };
+        }
+      }
+    }
     return {
       _id: styleIdFor(name),
       fake: false,
@@ -360,9 +381,8 @@ export function buildWebflowClipboardPayload(input: WebflowClipboardInput): Xscp
       name,
       namespace: "",
       comb: definition?.combo ? "&" : "",
-      styleLess:
-        !existsInProject && definition ? stylePropertiesToStyleLess(definition.properties) : "",
-      variants: {},
+      styleLess: carriesStyle ? stylePropertiesToStyleLess(definition!.properties) : "",
+      variants,
       children: [...(comboIdsByBaseName.get(name) ?? [])].sort(),
       origin: null,
       selector: null

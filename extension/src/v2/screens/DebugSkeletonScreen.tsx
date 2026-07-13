@@ -16,6 +16,7 @@ import {
 import { getWebflowBridge } from "../../webflow/bridge.js";
 import type { BuildNode, DebugSkeletonRequest, SharedStyleContext, SkeletonPlan } from "@wfb/shared/contracts.js";
 import { buildWebflowClipboardPayload } from "@wfb/shared/webflow-clipboard.js";
+import { styleGuideSpecSchema } from "@wfb/shared/style-guide.js";
 import { copyWebflowPayloadToClipboard } from "../../webflow/clipboard.js";
 
 const backend = new BackendClient();
@@ -65,6 +66,8 @@ export function DebugSkeletonScreen() {
   const [dedupeLabel, setDedupeLabel] = useState("Clean up paste");
   const [copyHint, setCopyHint] = useState<string | null>(null);
   const [inspectedClipboard, setInspectedClipboard] = useState("");
+  const [styleGuideText, setStyleGuideText] = useState("");
+  const [applyLabel, setApplyLabel] = useState("Apply Style Guide");
   const [lastGeneratedInput, setLastGeneratedInput] = useState<{
     code: string;
     inputType: DebugSkeletonRequest["inputType"];
@@ -321,6 +324,43 @@ export function DebugSkeletonScreen() {
     }
   };
 
+  const applyStyleGuide = async () => {
+    if (!bridge.applyStyleGuide) {
+      setError("This bridge does not support applying a Style Guide.");
+      return;
+    }
+    let spec;
+    try {
+      spec = styleGuideSpecSchema.parse(JSON.parse(styleGuideText));
+    } catch (err) {
+      setError(
+        `Invalid Style Guide JSON: ${err instanceof Error ? err.message.split("\n")[0] : "could not parse"}`
+      );
+      return;
+    }
+    setIsMutating(true);
+    setLoadingLabel("Applying Style Guide");
+    setError(null);
+    try {
+      const r = await bridge.applyStyleGuide(spec);
+      setApplyLabel(
+        `${r.variablesCreated + r.variablesUpdated} vars · ${r.classesUpdated} classes · ${r.breakpointsApplied} bp`
+      );
+      setCopyHint(
+        r.warnings.length > 0
+          ? `${r.warnings.length} warning(s): ${r.warnings[0]}`
+          : `${r.bindings} variable binding${r.bindings === 1 ? "" : "s"} applied`
+      );
+      window.setTimeout(() => setApplyLabel("Apply Style Guide"), 4000);
+      window.setTimeout(() => setCopyHint(null), 10000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to apply the Style Guide.");
+    } finally {
+      setIsMutating(false);
+      setLoadingLabel(null);
+    }
+  };
+
   return (
     <Panel
       onClose={() => navigate("welcome")}
@@ -378,6 +418,16 @@ export function DebugSkeletonScreen() {
             title="Fallback path: build node-by-node via the Designer API instead of pasting."
           >
             {hasInsertedSkeleton ? "Insert again" : "Insert via API"}
+          </Button>
+          <Button
+            variant="ghost"
+            disabled={isMutating || styleGuideText.trim().length === 0}
+            onClick={() => {
+              void applyStyleGuide();
+            }}
+            title="Paste a Style Guide JSON spec in the box below, then click. Creates the spec's variables and updates this project's Style Guide classes (typography, buttons, section padding) to match — base plus tablet/mobile values."
+          >
+            {applyLabel}
           </Button>
           <Button
             variant="ghost"
@@ -564,6 +614,19 @@ export function DebugSkeletonScreen() {
               spellCheck={false}
               className="w-full h-full resize-none bg-transparent p-4 font-mono text-[11.5px] text-wb-text-secondary leading-relaxed outline-none"
               placeholder="Copy any element in the Designer (Cmd+C), click here, then Cmd+V — Webflow's own paste payload appears for inspection. Select-all + copy to share it."
+            />
+          </div>
+          <SplitHeader title="Style Guide spec (paste JSON · updates classes + variables)" />
+          <div className="h-24 flex-shrink-0 overflow-hidden bg-black/[0.18] border-t border-white/[0.06]">
+            <textarea
+              value={styleGuideText}
+              onChange={(event) => {
+                setStyleGuideText(event.target.value);
+                setError(null);
+              }}
+              spellCheck={false}
+              className="w-full h-full resize-none bg-transparent p-4 font-mono text-[11.5px] text-wb-text-secondary leading-relaxed outline-none"
+              placeholder="Paste a Style Guide JSON spec, then click Apply Style Guide to create the variables and update heading-style-*, text-size-*, text-weight-*, text-style-*, button and padding-section-* classes (base + tablet/mobile) in this project."
             />
           </div>
         </div>

@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Paste-from-URL playground</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 32px 24px 64px;
+    font: 14px/1.5 -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    background: #101216; color: #e8eaee;
+    max-width: 1080px; margin-inline: auto;
+  }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { color: #9aa1ad; margin: 0 0 24px; }
+  .row { display: flex; gap: 8px; margin-bottom: 12px; }
+  input[type="url"], input[type="text"] {
+    flex: 1; padding: 10px 12px; border-radius: 8px;
+    border: 1px solid #2c313c; background: #181b22; color: #e8eaee; font: inherit;
+  }
+  button {
+    padding: 10px 18px; border-radius: 8px; border: 1px solid #2c313c;
+    background: #22262f; color: #e8eaee; font: inherit; cursor: pointer;
+  }
+  button:hover { background: #2a2f3a; }
+  button.primary { background: #2563eb; border-color: #2563eb; font-weight: 600; }
+  button.primary:hover { background: #1d4ed8; }
+  button:disabled { opacity: 0.5; cursor: default; }
+  details.advanced { margin-bottom: 20px; color: #9aa1ad; }
+  details.advanced .row { margin-top: 8px; }
+  .status { color: #9aa1ad; margin: 12px 0; min-height: 20px; }
+  .status.error { color: #f87171; }
+  .grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 12px; margin-bottom: 24px;
+  }
+  .card {
+    border: 1px solid #2c313c; border-radius: 10px; overflow: hidden;
+    background: #181b22; cursor: pointer; text-align: left; padding: 0;
+  }
+  .card:hover { border-color: #2563eb; background: #181b22; }
+  .card .shot {
+    height: 140px; background: #0c0e12 center top / cover no-repeat;
+    border-bottom: 1px solid #2c313c;
+  }
+  .card .meta { padding: 10px 12px; }
+  .card .label { font-weight: 600; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .card .dims { color: #9aa1ad; font-size: 12px; }
+  #result { border: 1px solid #2c313c; border-radius: 10px; background: #181b22; padding: 20px; display: none; }
+  #result img { max-width: 100%; border: 1px solid #2c313c; border-radius: 8px; margin: 12px 0; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0 4px; }
+  .chip { background: #22262f; border-radius: 999px; padding: 3px 12px; font-size: 12px; color: #9aa1ad; }
+  ul.warnings { color: #fbbf24; font-size: 13px; padding-left: 18px; }
+  textarea { width: 100%; height: 140px; margin-top: 8px; background: #0c0e12; color: #9aa1ad; border: 1px solid #2c313c; border-radius: 8px; font: 12px/1.4 ui-monospace, monospace; padding: 8px; }
+  .copied { color: #34d399; font-weight: 600; margin-left: 12px; }
+  code { background: #22262f; border-radius: 4px; padding: 1px 5px; font-size: 12px; }
+  #pasteZone {
+    min-height: 80px; border: 1px dashed #3a4150; border-radius: 8px;
+    background: #0c0e12; color: #9aa1ad; padding: 14px; overflow: auto;
+    max-height: 140px; white-space: pre-wrap; word-break: break-all; font: 12px/1.4 ui-monospace, monospace;
+  }
+  #pasteZone:focus { outline: none; border-color: #2563eb; }
+  #pasteZone:empty::before { content: "Click here, then Cmd+V to paste a Webflow Designer copy"; color: #5c6373; }
+</style>
+</head>
+<body>
+  <h1>Paste-from-URL playground</h1>
+  <p class="sub">Enter a live site URL, pick a section, then paste it onto the Webflow canvas (Cmd+V). Styles come from a real Chrome render — computed, not guessed.</p>
+
+  <form class="row" id="scanForm">
+    <input type="url" id="url" placeholder="https://the-site-to-migrate.com/" required />
+    <button type="submit" class="primary" id="scanBtn">Scan sections</button>
+  </form>
+
+  <label style="display:flex;align-items:center;gap:8px;margin:-4px 0 4px;color:#c8ccd4;cursor:pointer">
+    <input type="checkbox" id="styleGuideMode" checked />
+    Style-guide mode — headings, body text &amp; buttons reference client-first classes (<code>heading-style-*</code>, <code>text-size-medium</code>, <code>button</code>) by name, so they adopt your Relume Style Guide
+  </label>
+
+  <details class="advanced">
+    <summary>Advanced: extract by CSS selector</summary>
+    <div class="row">
+      <input type="text" id="selector" placeholder='e.g. #hero, body > main > section:nth-of-type(2), or "body" for the whole page' />
+      <button type="button" id="extractBtn">Extract</button>
+    </div>
+  </details>
+
+  <div class="status" id="status"></div>
+  <div class="grid" id="candidates"></div>
+
+  <div id="result">
+    <h2 style="font-size:16px;margin:0">Ready to paste</h2>
+    <div class="chips" id="chips"></div>
+    <div>
+      <button class="primary" id="copyBtn">Copy for Webflow</button>
+      <span class="copied" id="copiedNote" hidden>Copied — paste on the canvas with Cmd+V</span>
+    </div>
+    <img id="shot" alt="Original section render" />
+    <ul class="warnings" id="warnings"></ul>
+    <details><summary style="color:#9aa1ad">Payload JSON (debug)</summary><textarea id="payload" readonly></textarea></details>
+  </div>
+
+  <div id="inspector">
+    <h2 style="font-size:16px;margin:32px 0 4px">Clipboard inspector</h2>
+    <p class="sub" style="margin:0 0 12px">Copy a responsive section inside the Webflow Designer, then click the box below and paste (Cmd+V). Captures every clipboard flavor and pulls out the <code>styles</code>/<code>variants</code> so we can decode Webflow's per-breakpoint format.</p>
+    <div id="pasteZone" tabindex="0" contenteditable="true" spellcheck="false"></div>
+    <div style="margin-top:8px">
+      <span class="chip" id="inspectHint">Click here, then Cmd+V</span>
+    </div>
+    <ul class="warnings" id="inspectSummary" style="color:#34d399"></ul>
+    <details id="inspectDetails" hidden><summary style="color:#9aa1ad">Sample styles with variants</summary><textarea id="inspectSample" readonly style="height:220px"></textarea></details>
+  </div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  let payloadJson = "";
+
+  function setStatus(text, isError) {
+    $("status").textContent = text || "";
+    $("status").className = "status" + (isError ? " error" : "");
+  }
+
+  async function post(pathname, body) {
+    const response = await fetch(pathname, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data.error || ("Request failed (" + response.status + ")"));
+    }
+    return data;
+  }
+
+  $("scanForm").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    $("scanBtn").disabled = true;
+    $("candidates").innerHTML = "";
+    $("result").style.display = "none";
+    setStatus("Rendering the page in Chrome and detecting sections…");
+    try {
+      const data = await post("/playground/scan", { url: $("url").value.trim() });
+      if (!data.candidates.length) {
+        setStatus("No section-shaped elements found — use the advanced selector field.", true);
+        return;
+      }
+      setStatus("Click a section to extract it (" + data.candidates.length + " found).");
+      for (const candidate of data.candidates) {
+        const card = document.createElement("button");
+        card.type = "button";
+        card.className = "card";
+        card.innerHTML =
+          '<div class="shot"></div>' +
+          '<div class="meta"><span class="label"></span><span class="dims"></span></div>';
+        if (candidate.screenshot) {
+          card.querySelector(".shot").style.backgroundImage = "url(" + JSON.stringify(candidate.screenshot) + ")";
+        }
+        card.querySelector(".label").textContent = candidate.label;
+        card.querySelector(".dims").textContent = Math.round(candidate.width) + " × " + Math.round(candidate.height) + " — " + candidate.selector;
+        card.addEventListener("click", () => extract(candidate.selector, candidate.label));
+        $("candidates").appendChild(card);
+      }
+    } catch (error) {
+      setStatus(error.message, true);
+    } finally {
+      $("scanBtn").disabled = false;
+    }
+  });
+
+  $("extractBtn").addEventListener("click", () => {
+    const selector = $("selector").value.trim();
+    if (selector) extract(selector, selector);
+  });
+
+  async function extract(selector, label) {
+    $("result").style.display = "none";
+    setStatus("Capturing computed styles for “" + label + "”…");
+    try {
+      const data = await post("/playground/extract", {
+        url: $("url").value.trim(),
+        selector,
+        label: "Pasted from URL — " + label,
+        styleGuideMode: $("styleGuideMode").checked
+      });
+      payloadJson = data.payloadJson;
+      $("chips").innerHTML = "";
+      const chips = [
+        data.stats.nodeCount + " elements",
+        data.stats.classCount + " classes",
+        (data.stats.responsiveClassCount || 0) + " responsive",
+        (data.stats.styleGuideRefs || 0) + " style-guide refs",
+        Math.round(payloadJson.length / 1024) + " KB payload"
+      ];
+      for (const text of chips) {
+        const chip = document.createElement("span");
+        chip.className = "chip";
+        chip.textContent = text;
+        $("chips").appendChild(chip);
+      }
+      $("shot").src = data.screenshot;
+      $("warnings").innerHTML = "";
+      for (const warning of data.warnings) {
+        const item = document.createElement("li");
+        item.textContent = warning;
+        $("warnings").appendChild(item);
+      }
+      $("payload").value = payloadJson;
+      $("copiedNote").hidden = true;
+      $("result").style.display = "block";
+      setStatus("");
+    } catch (error) {
+      setStatus(error.message, true);
+    }
+  }
+
+  // The Designer reads the application/json clipboard flavor, which can only
+  // be written from a real copy event inside a user gesture (same mechanism
+  // as the extension's copyWebflowPayloadToClipboard).
+  $("copyBtn").addEventListener("click", () => {
+    const onCopy = (event) => {
+      event.preventDefault();
+      event.clipboardData.setData("application/json", payloadJson);
+      event.clipboardData.setData("text/plain", payloadJson);
+    };
+    document.addEventListener("copy", onCopy);
+    try {
+      if (!document.execCommand("copy")) {
+        throw new Error("Clipboard write blocked — click again.");
+      }
+      $("copiedNote").hidden = false;
+    } catch (error) {
+      setStatus(error.message, true);
+    } finally {
+      document.removeEventListener("copy", onCopy);
+    }
+  });
+
+  // Clipboard inspector: grab every flavor from a real Webflow Designer copy
+  // and send them to the server, which saves them and decodes the variants.
+  $("pasteZone").addEventListener("paste", async (event) => {
+    event.preventDefault();
+    const clipboard = event.clipboardData;
+    if (!clipboard) {
+      return;
+    }
+    const flavors = {};
+    for (const type of clipboard.types) {
+      try {
+        const value = clipboard.getData(type);
+        if (value) flavors[type] = value;
+      } catch (_) { /* some flavors aren't readable as text */ }
+    }
+    const jsonLen = (flavors["application/json"] || "").length;
+    $("pasteZone").textContent =
+      "Captured " + Object.keys(flavors).length + " flavor(s): " + Object.keys(flavors).join(", ") +
+      (jsonLen ? "  (application/json: " + jsonLen + " chars)" : "");
+    $("inspectHint").textContent = "Sending to server…";
+    $("inspectSummary").innerHTML = "";
+    $("inspectDetails").hidden = true;
+    try {
+      const data = await post("/playground/inspect", { flavors });
+      const lines = [
+        "Saved " + data.totalChars + " chars → " + data.savedPath,
+        (data.styleCount ?? "?") + " style entries, " + data.stylesWithVariants + " carry variants",
+        "Variant/breakpoint keys: " + (data.variantKeys.length ? data.variantKeys.join(", ") : "(none — section may be desktop-only)")
+      ];
+      if (data.parseError) lines.push("Note: " + data.parseError);
+      $("inspectSummary").innerHTML = "";
+      for (const line of lines) {
+        const item = document.createElement("li");
+        item.textContent = line;
+        $("inspectSummary").appendChild(item);
+      }
+      if (data.sampleStylesWithVariants && data.sampleStylesWithVariants.length) {
+        $("inspectSample").value = JSON.stringify(data.sampleStylesWithVariants, null, 2);
+        $("inspectDetails").hidden = false;
+      }
+      $("inspectHint").textContent = "Done — Claude can read the saved file. Paste again to capture another.";
+    } catch (error) {
+      $("inspectHint").textContent = "";
+      const item = document.createElement("li");
+      item.style.color = "#f87171";
+      item.textContent = error.message;
+      $("inspectSummary").appendChild(item);
+    }
+  });
+</script>
+</body>
+</html>

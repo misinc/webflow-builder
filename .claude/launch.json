@@ -15,6 +15,12 @@
       "port": 8123
     },
     {
+      "name": "visual-qa",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "visual-qa"],
+      "port": 8788
+    },
+    {
       "name": "extension-dev",
       "runtimeExecutable": "npx",
       "runtimeArgs": ["vite", "--config", "vite.extension.config.ts", "--port", "5199", "--strictPort"],

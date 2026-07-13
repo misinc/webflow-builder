@@ -38,7 +38,7 @@ post-paste dedupe):
 heading-style-*    text-size-*     text-weight-*    text-style-*    text-color-*
 container-*        padding-global   padding-section-*   page-wrapper    page-padding
 main-wrapper       spacer-*        margin-*         max-width-*      background-color-*
-button   button-*
+color-scheme-*     button   button-*
 ```
 
 - Headings map to **their own level only** — `<h3>` → `heading-style-h3`, never
@@ -46,6 +46,12 @@ button   button-*
   size).
 - Body text (`p`/`blockquote`/`span`/`label`) → `text-size-medium` (or the
   project's `body`/`text-medium` if present).
+- **Color schemes** — Relume applies section color via a `color-scheme-1..N` class
+  (each a background/text/border set bound to variables), not per-element color.
+  A migrated section's background should reference the matching `color-scheme-*`
+  rather than carry a literal `background-color`. Buttons themselves vary by combo
+  (`button is-secondary`/`is-small`/`is-link`/`is-alternate`/`is-icon`), where
+  `is-alternate` is the variant used on dark scheme backgrounds.
 
 ### b) Section-scoped functional classes — CREATE and style
 

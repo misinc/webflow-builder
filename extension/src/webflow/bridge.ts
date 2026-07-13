@@ -10,6 +10,21 @@ import {
   SharedStyleContext,
   WebflowSitePage
 } from "@wfb/shared/contracts.js";
+import {
+  planStyleGuideApply,
+  type StyleGuideSpec,
+  type StyleGuideVariableOp
+} from "@wfb/shared/style-guide.js";
+
+export interface ApplyStyleGuideResult {
+  variablesCreated: number;
+  variablesUpdated: number;
+  variablesFailed: number;
+  classesUpdated: number;
+  breakpointsApplied: number;
+  bindings: number;
+  warnings: string[];
+}
 
 export interface DesignerContext {
   siteId: string | null;
@@ -75,6 +90,9 @@ export interface WebflowDesignerBridge {
     bindings: string[];
   }>;
   importVariables?(tokens: RepoToken[]): Promise<ImportVariablesResult>;
+  /** Apply a validated Style Guide spec: create/update variables and update the
+   *  project's Style Guide classes (base + per-breakpoint + variants). */
+  applyStyleGuide?(spec: StyleGuideSpec): Promise<ApplyStyleGuideResult>;
   createNode(input: CreateNodeInput): Promise<{ id: string }>;
   /** All site components as { id, name } (for reuse detection by name). */
   listComponents(): Promise<Array<{ id: string; name: string }>>;
@@ -132,12 +150,19 @@ type ElementIdValue = string | { component?: string; element?: string };
 
 type WebflowStyleValue = string | WebflowVariable;
 
+/** Options accepted by setProperties/setProperty for per-breakpoint / pseudo
+ *  values. Optional and unused by legacy calls; exercised by applyStyleGuide. */
+interface WebflowStyleOptions {
+  breakpoint?: string;
+  pseudo?: string;
+}
+
 interface WebflowStyle {
   id: string;
   getName(): Promise<string>;
   getProperties?(): Promise<Record<string, unknown>>;
-  setProperties(props: Record<string, unknown>): Promise<void>;
-  setProperty?(property: string, value: WebflowStyleValue): Promise<void>;
+  setProperties(props: Record<string, unknown>, options?: WebflowStyleOptions): Promise<void>;
+  setProperty?(property: string, value: WebflowStyleValue, options?: WebflowStyleOptions): Promise<void>;
 }
 
 interface WebflowVariable {
@@ -1257,6 +1282,157 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
     return result;
   }
 
+  private styleGuideOpToToken(op: StyleGuideVariableOp): RepoToken {
+    const typeMap = {
+      color: "color",
+      size: "size",
+      font: "fontFamily",
+      number: "number",
+      other: "other"
+    } as const;
+    return {
+      group: "Style Guide",
+      name: op.name,
+      type: typeMap[op.type],
+      value: op.value,
+      sourceFile: "style-guide-spec"
+    };
+  }
+
+  private async updateVariableValue(
+    variable: WebflowVariable,
+    op: StyleGuideVariableOp
+  ): Promise<boolean> {
+    const value = tokenDesignerValue(this.styleGuideOpToToken(op));
+    if (variable.set) {
+      try {
+        await variable.set(value);
+        return true;
+      } catch {
+        /* fall through */
+      }
+    }
+    if (variable.setValue) {
+      try {
+        await variable.setValue(value);
+        return true;
+      } catch {
+        /* fall through */
+      }
+    }
+    return false;
+  }
+
+  async applyStyleGuide(spec: StyleGuideSpec): Promise<ApplyStyleGuideResult> {
+    const plan = planStyleGuideApply(spec);
+    const result: ApplyStyleGuideResult = {
+      variablesCreated: 0,
+      variablesUpdated: 0,
+      variablesFailed: 0,
+      classesUpdated: 0,
+      breakpointsApplied: 0,
+      bindings: 0,
+      warnings: []
+    };
+
+    // 1. Variables — create first so class bindings can resolve.
+    const collections = await this.api.getAllVariableCollections?.().catch(() => null);
+    const collection =
+      collections?.[0] ?? (await this.api.getDefaultVariableCollection().catch(() => null));
+    const variableByToken = new Map<string, WebflowVariable>();
+    if (!collection) {
+      result.warnings.push(
+        "No variable collection available — variables were not created; classes fall back to literal values."
+      );
+    } else {
+      for (const op of plan.variables) {
+        try {
+          let variable = await collection.getVariableByName(op.name).catch(() => null);
+          if (variable) {
+            if (await this.updateVariableValue(variable, op)) {
+              result.variablesUpdated += 1;
+            }
+          } else {
+            variable = await this.createVariableFromToken(collection, this.styleGuideOpToToken(op));
+            if (variable) {
+              result.variablesCreated += 1;
+            }
+          }
+          if (variable) {
+            variableByToken.set(op.token, variable);
+          } else {
+            result.variablesFailed += 1;
+          }
+        } catch {
+          result.variablesFailed += 1;
+        }
+      }
+    }
+
+    // 2. Styles — base, then breakpoints, then variants (plan order).
+    const touched = new Set<string>();
+    for (const op of plan.styles) {
+      if (isReservedStyleGuideClassName(op.className)) {
+        result.warnings.push(`Skipped reserved class: ${op.className}`);
+        continue;
+      }
+      const options: WebflowStyleOptions | undefined = op.breakpoint
+        ? { breakpoint: op.breakpoint }
+        : undefined;
+      try {
+        const style = await this.getOrCreateStyle(op.className);
+        if (Object.keys(op.literals).length > 0) {
+          await this.applyStyleProperties(style, op.literals, options);
+        }
+        for (const [property, token] of Object.entries(op.bindings)) {
+          const variable = variableByToken.get(token);
+          if (variable && style.setProperty) {
+            await style.setProperty(property, variable, options);
+            result.bindings += 1;
+          } else {
+            // No variable — fall back to the token's literal value.
+            const literal = spec.variables[token]?.value;
+            if (literal) {
+              await this.applyStyleProperties(style, { [property]: literal }, options);
+            }
+          }
+        }
+        touched.add(op.className);
+        if (op.breakpoint) {
+          result.breakpointsApplied += 1;
+        }
+      } catch (err) {
+        const at = op.breakpoint ? ` (${op.breakpoint})` : "";
+        result.warnings.push(
+          `Failed to update ${op.className}${at}: ${err instanceof Error ? err.message : "unknown error"}`
+        );
+      }
+    }
+    result.classesUpdated = touched.size;
+
+    const schemeCount = Object.keys(spec.colorSchemes ?? {}).length;
+    if (schemeCount > 0) {
+      result.warnings.push(
+        `${schemeCount} color scheme(s) were not applied — color schemes aren't supported yet.`
+      );
+    }
+    return result;
+  }
+
+  private async applyStyleProperties(
+    style: WebflowStyle,
+    properties: Record<string, string>,
+    options?: WebflowStyleOptions
+  ): Promise<void> {
+    if (style.setProperties) {
+      await style.setProperties(properties, options);
+    } else if (style.setProperty) {
+      for (const [property, value] of Object.entries(properties)) {
+        await style.setProperty(property, value, options);
+      }
+    }
+  }
+
   private async getInspectableVariableCollections(): Promise<WebflowVariableCollection[]> {
     const all = await this.api.getAllVariableCollections?.().catch(() => null);
     if (all?.length) {
@@ -1796,6 +1972,20 @@ class MockWebflowDesignerBridge implements WebflowDesignerBridge {
     };
   }
 
+  async applyStyleGuide(spec: StyleGuideSpec): Promise<ApplyStyleGuideResult> {
+    const plan = planStyleGuideApply(spec);
+    const classes = new Set(plan.styles.map((op) => op.className));
+    return {
+      variablesCreated: plan.variables.length,
+      variablesUpdated: 0,
+      variablesFailed: 0,
+      classesUpdated: classes.size,
+      breakpointsApplied: plan.styles.filter((op) => op.breakpoint).length,
+      bindings: plan.styles.reduce((sum, op) => sum + Object.keys(op.bindings).length, 0),
+      warnings: ["Mock bridge — nothing was applied to a real project."]
+    };
+  }
+
   async inspectSharedStyles(siteId: string): Promise<SharedStyleContext> {
     return {
       siteId,
@@ -1969,6 +2159,17 @@ export function getWebflowBridge(): WebflowDesignerBridge {
           missingAfterImport: [],
           failed: [],
           warnings: []
+        })),
+      applyStyleGuide:
+        injected.applyStyleGuide ??
+        (async () => ({
+          variablesCreated: 0,
+          variablesUpdated: 0,
+          variablesFailed: 0,
+          classesUpdated: 0,
+          breakpointsApplied: 0,
+          bindings: 0,
+          warnings: ["Injected bridge does not implement applyStyleGuide()."]
         })),
       registerBlankComponent:
         injected.registerBlankComponent ??
