@@ -195,6 +195,51 @@ const playgroundInspectSchema = z.object({
   flavors: z.record(z.string(), z.string())
 });
 
+// A nested tag + class-name outline of a pasted @webflow/XscpData payload — so
+// we can LEARN a real component's structure (e.g. Relume navbars) rather than
+// inventing our own. `&class` marks a combo class.
+function outlineFromClipboard(flavors: Record<string, string>): string | null {
+  const json =
+    flavors["application/json"] ??
+    Object.values(flavors).find((value) => value.trim().startsWith("{"));
+  if (!json) return null;
+  let parsed: any;
+  try {
+    parsed = JSON.parse(json);
+  } catch {
+    return null;
+  }
+  const nodes: any[] = parsed?.payload?.nodes ?? [];
+  const styles: any[] = parsed?.payload?.styles ?? [];
+  if (nodes.length === 0) return null;
+
+  const styleById = new Map(styles.map((s) => [s._id, s]));
+  const nodeById = new Map(nodes.map((n) => [n._id, n]));
+  const childIds = new Set<string>();
+  for (const node of nodes) {
+    for (const child of node.children ?? []) childIds.add(child);
+  }
+  const roots = nodes.filter((n) => !childIds.has(n._id));
+  const lines: string[] = [];
+  const render = (id: string, depth: number): void => {
+    const node = nodeById.get(id);
+    if (!node) return;
+    const classNames = (node.classes ?? []).map((cid: string) => {
+      const style = styleById.get(cid);
+      if (!style) return cid;
+      return style.comb === "&" ? `&${style.name}` : style.name;
+    });
+    const tag = node.tag || node.type || "?";
+    const displayName = node.data?.displayName ? ` "${node.data.displayName}"` : "";
+    const text = node.text && node.v ? ` — “${String(node.v).slice(0, 48)}”` : "";
+    const classes = classNames.length ? ` .${classNames.join(" .")}` : "";
+    lines.push(`${"  ".repeat(depth)}${tag}${classes}${displayName}${text}`);
+    for (const child of node.children ?? []) render(child, depth + 1);
+  };
+  for (const root of roots) render(root._id, 0);
+  return lines.join("\n");
+}
+
 app.post("/playground/inspect", async (request, response) => {
   try {
     const input = playgroundInspectSchema.parse(request.body);
@@ -212,6 +257,11 @@ app.post("/playground/inspect", async (request, response) => {
       input.flavors["application/json"] ??
       Object.values(input.flavors).find((value) => value.trim().startsWith("{"));
 
+    const outline = outlineFromClipboard(input.flavors);
+    if (outline) {
+      await fs.writeFile(path.join(runDir, "outline.txt"), outline);
+    }
+
     const summary: {
       savedPath: string;
       totalChars: number;
@@ -219,6 +269,7 @@ app.post("/playground/inspect", async (request, response) => {
       stylesWithVariants: number;
       variantKeys: string[];
       sampleStylesWithVariants: unknown[];
+      outline: string | null;
       parseError?: string;
     } = {
       savedPath: path.join(runDir, "clipboard.json"),
@@ -226,7 +277,8 @@ app.post("/playground/inspect", async (request, response) => {
       styleCount: null,
       stylesWithVariants: 0,
       variantKeys: [],
-      sampleStylesWithVariants: []
+      sampleStylesWithVariants: [],
+      outline
     };
 
     if (jsonFlavor) {

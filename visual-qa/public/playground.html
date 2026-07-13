@@ -110,6 +110,10 @@
       <span class="chip" id="inspectHint">Click here, then Cmd+V</span>
     </div>
     <ul class="warnings" id="inspectSummary" style="color:#34d399"></ul>
+    <div id="outlineWrap" hidden>
+      <p class="sub" style="margin:12px 0 4px;color:#e5e7eb">Element structure — copy this and paste it back to Claude:</p>
+      <textarea id="inspectOutline" readonly style="height:280px;font-family:ui-monospace,Menlo,monospace"></textarea>
+    </div>
     <details id="inspectDetails" hidden><summary style="color:#9aa1ad">Sample styles with variants</summary><textarea id="inspectSample" readonly style="height:220px"></textarea></details>
   </div>
 
@@ -274,11 +278,17 @@
         item.textContent = line;
         $("inspectSummary").appendChild(item);
       }
+      if (data.outline) {
+        $("inspectOutline").value = data.outline;
+        $("outlineWrap").hidden = false;
+      } else {
+        $("outlineWrap").hidden = true;
+      }
       if (data.sampleStylesWithVariants && data.sampleStylesWithVariants.length) {
         $("inspectSample").value = JSON.stringify(data.sampleStylesWithVariants, null, 2);
         $("inspectDetails").hidden = false;
       }
-      $("inspectHint").textContent = "Done — Claude can read the saved file. Paste again to capture another.";
+      $("inspectHint").textContent = "Done — copy the element structure below and paste it back to Claude. Paste again to capture another.";
     } catch (error) {
       $("inspectHint").textContent = "";
       const item = document.createElement("li");
