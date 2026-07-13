@@ -1,7 +1,10 @@
+import { execFile } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 import express from "express";
 import pixelmatch from "pixelmatch";
 import { chromium } from "playwright";
@@ -15,6 +18,47 @@ import {
   type CapturedNode,
   type SectionBuildOptions
 } from "./payload.js";
+
+const execFileAsync = promisify(execFile);
+
+// Render caches node_modules and skips postinstall, so the Playwright browser
+// binary can be missing at runtime. Self-heal: install Chromium on demand and
+// cache the in-flight promise so concurrent requests share one install. This
+// keeps the service working regardless of how the deploy's build command is set.
+let chromiumReady: Promise<void> | null = null;
+function ensureChromium(): Promise<void> {
+  if (!chromiumReady) {
+    const require = createRequire(import.meta.url);
+    const pkgJsonPath = require.resolve("playwright/package.json");
+    const cliPath = path.join(path.dirname(pkgJsonPath), "cli.js");
+    console.warn("[visual-qa] Ensuring Chromium is installed…");
+    chromiumReady = execFileAsync(process.execPath, [cliPath, "install", "chromium"], {
+      maxBuffer: 64 * 1024 * 1024
+    })
+      .then(() => {
+        console.warn("[visual-qa] Chromium ready.");
+      })
+      .catch((error) => {
+        console.error("[visual-qa] Chromium install failed", error);
+        chromiumReady = null; // allow a later request to retry
+      });
+  }
+  return chromiumReady;
+}
+
+async function launchBrowser(): Promise<Browser> {
+  try {
+    return await chromium.launch({ headless: true });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (/Executable doesn't exist|playwright install/i.test(message)) {
+      console.warn("[visual-qa] Chromium missing — installing on demand…");
+      await ensureChromium();
+      return await chromium.launch({ headless: true });
+    }
+    throw error;
+  }
+}
 
 const visualQaViewportSchema = z.object({
   name: z.string().min(1),
@@ -111,7 +155,7 @@ app.post("/playground/scan", async (request, response) => {
     const runDir = path.join(artifactDir, runId);
     await fs.mkdir(runDir, { recursive: true });
 
-    const browser = await chromium.launch({ headless: true });
+    const browser = await launchBrowser();
     try {
       const page = await browser.newPage({ viewport: playgroundViewport });
       await preparePage(page, input.url, navigationTimeoutMs);
@@ -248,7 +292,7 @@ app.post("/playground/extract", async (request, response) => {
     const runDir = path.join(artifactDir, runId);
     await fs.mkdir(runDir, { recursive: true });
 
-    const browser = await chromium.launch({ headless: true });
+    const browser = await launchBrowser();
     try {
       const page = await browser.newPage({ viewport: playgroundViewport });
       await preparePage(page, input.url, navigationTimeoutMs);
@@ -302,7 +346,7 @@ app.post("/playground/extract-batch", async (request, response) => {
     const runDir = path.join(artifactDir, runId);
     await fs.mkdir(runDir, { recursive: true });
 
-    const browser = await chromium.launch({ headless: true });
+    const browser = await launchBrowser();
     try {
       const page = await browser.newPage({ viewport: playgroundViewport });
       await preparePage(page, input.url, navigationTimeoutMs);
@@ -374,7 +418,7 @@ app.post("/visual-qa/compare", async (request, response) => {
     const runDir = path.join(artifactDir, runId);
     await fs.mkdir(runDir, { recursive: true });
 
-    const browser = await chromium.launch({ headless: true });
+    const browser = await launchBrowser();
     try {
       const viewports = input.viewports.slice(0, maxViewports);
       const results: VisualQaViewportResult[] = [];
@@ -618,4 +662,7 @@ function isPrivateHost(host: string): boolean {
 const port = Number.parseInt(process.env.PORT ?? "8788", 10);
 app.listen(port, () => {
   console.log(`Visual QA service listening on ${port}`);
+  // Warm the browser install during boot (non-blocking) so the first scan
+  // isn't delayed by an on-demand install.
+  void ensureChromium();
 });
