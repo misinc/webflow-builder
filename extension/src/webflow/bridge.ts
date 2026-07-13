@@ -1289,6 +1289,14 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
     return result;
   }
 
+  /** Webflow variable groups are name-path based: "Colors/Primary" places
+   *  "Primary" under a "Colors" group. Using the full path also matches Relume's
+   *  existing grouped defaults (e.g. "Font Styles/Heading") so they update in
+   *  place instead of duplicating. */
+  private styleGuideVariableName(op: StyleGuideVariableOp): string {
+    return op.group ? `${op.group}/${op.name}` : op.name;
+  }
+
   private styleGuideOpToToken(op: StyleGuideVariableOp): RepoToken {
     const typeMap = {
       color: "color",
@@ -1301,7 +1309,7 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
     const value = op.type === "font" ? primaryFontFamily(op.value) : op.value;
     return {
       group: op.collection,
-      name: op.name,
+      name: this.styleGuideVariableName(op),
       type: typeMap[op.type],
       value,
       sourceFile: "style-guide-spec"
@@ -1381,7 +1389,8 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
         continue;
       }
       try {
-        let variable = await collection.getVariableByName(op.name).catch(() => null);
+        const variableName = this.styleGuideVariableName(op);
+        let variable = await collection.getVariableByName(variableName).catch(() => null);
         if (variable) {
           if (await this.updateVariableValue(variable, op)) {
             result.variablesUpdated += 1;
