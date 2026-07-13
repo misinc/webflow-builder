@@ -327,6 +327,32 @@ app.post("/playground/inspect", async (request, response) => {
   }
 });
 
+// The most recently inspected clipboard structures — so pasted components
+// (Relume navbars) can be fetched directly instead of copied back by hand.
+app.get("/playground/inspect/recent", async (request, response) => {
+  try {
+    const limit = Math.min(Number.parseInt(String(request.query.limit ?? "10"), 10) || 10, 25);
+    const entries = await fs.readdir(artifactDir, { withFileTypes: true }).catch(() => []);
+    const found: Array<{ runId: string; at: number; outline: string }> = [];
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      const outlinePath = path.join(artifactDir, entry.name, "outline.txt");
+      try {
+        const stat = await fs.stat(outlinePath);
+        const outline = await fs.readFile(outlinePath, "utf8");
+        found.push({ runId: entry.name, at: stat.mtimeMs, outline });
+      } catch {
+        // No outline for this run — skip.
+      }
+    }
+    found.sort((a, b) => b.at - a.at);
+    response.json({ count: found.length, items: found.slice(0, limit) });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not list inspections.";
+    response.status(500).json({ error: message });
+  }
+});
+
 const playgroundExtractSchema = z.object({
   url: z.string().url(),
   selector: z.string().min(1),
