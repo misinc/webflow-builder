@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@wfb/shared": "file:../shared"
+    "@wfb/shared": "file:../shared",
+    "node-html-parser": "^8.0.3"
   },
   "exports": {
     "./*.js": "./src/*.ts",

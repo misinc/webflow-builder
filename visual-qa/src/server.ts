@@ -13,11 +13,15 @@ import { PNG } from "pngjs";
 import { z } from "zod";
 import { BREAKPOINTS, captureElement, findSectionCandidates, preparePage } from "./extract.js";
 import {
-  capturedTreeToClipboardPayload,
+  capturedSectionToClipboardPayload,
   combineSections,
-  type CapturedNode,
-  type SectionBuildOptions
+  type SectionCaptureInput
 } from "./payload.js";
+
+// Navbar / header / footer / announcement bars keep their own tag and get no
+// client-first section scaffold.
+const CHROME_KINDS = /^(navbar|header|footer|bar)$/i;
+const isChromeKind = (kind?: string): boolean => CHROME_KINDS.test(kind ?? "");
 
 const execFileAsync = promisify(execFile);
 
@@ -280,6 +284,7 @@ const playgroundExtractSchema = z.object({
   url: z.string().url(),
   selector: z.string().min(1),
   label: z.string().max(120).optional(),
+  kind: z.string().optional(),
   styleGuideMode: z.boolean().optional()
 });
 
@@ -304,11 +309,16 @@ app.post("/playground/extract", async (request, response) => {
         .screenshot({ path: path.join(runDir, screenshotName), timeout: 15_000 });
 
       const capture = await captureElement(page, input.selector);
-      const result = capturedTreeToClipboardPayload(capture.tree, {
-        sectionLabel: input.label ?? `Pasted from URL — ${input.selector}`,
+      const label = input.label ?? `Pasted from URL — ${input.selector}`;
+      const result = capturedSectionToClipboardPayload({
+        html: capture.html,
+        baseStylesByKey: capture.baseStylesByKey,
         breakpointStyles: capture.breakpointStyles,
         breakpointKeys: BREAKPOINTS.map((breakpoint) => breakpoint.key),
-        styleGuideMode: input.styleGuideMode ?? false
+        sectionId: "section-0",
+        sectionName: input.label,
+        chrome: isChromeKind(input.kind),
+        label
       });
 
       response.json({
@@ -331,7 +341,13 @@ app.post("/playground/extract", async (request, response) => {
 const playgroundExtractBatchSchema = z.object({
   url: z.string().url(),
   sections: z
-    .array(z.object({ selector: z.string().min(1), label: z.string().max(120).optional() }))
+    .array(
+      z.object({
+        selector: z.string().min(1),
+        label: z.string().max(120).optional(),
+        kind: z.string().optional()
+      })
+    )
     .min(1)
     .max(30),
   styleGuideMode: z.boolean().optional()
@@ -353,7 +369,7 @@ app.post("/playground/extract-batch", async (request, response) => {
       const artifactBaseUrl = getArtifactBaseUrl(request);
       const breakpointKeys = BREAKPOINTS.map((breakpoint) => breakpoint.key);
 
-      const captured: Array<{ tree: CapturedNode; options: SectionBuildOptions }> = [];
+      const captured: SectionCaptureInput[] = [];
       const perSection: Array<{ selector: string; screenshot: string | null; warnings: string[] }> = [];
 
       for (const [index, section] of input.sections.entries()) {
@@ -372,24 +388,22 @@ app.post("/playground/extract-batch", async (request, response) => {
         }
         const capture = await captureElement(page, section.selector);
         captured.push({
-          tree: capture.tree,
-          options: {
-            sectionLabel: section.label ?? `Pasted from URL — ${section.selector}`,
-            breakpointStyles: capture.breakpointStyles,
-            breakpointKeys,
-            styleGuideMode: input.styleGuideMode ?? false
-          }
+          html: capture.html,
+          baseStylesByKey: capture.baseStylesByKey,
+          breakpointStyles: capture.breakpointStyles,
+          breakpointKeys,
+          sectionId: `section-${index}`,
+          sectionName: section.label,
+          chrome: isChromeKind(section.kind),
+          label: section.label ?? `Pasted from URL — ${section.selector}`
         });
         perSection.push({ selector: section.selector, screenshot, warnings: capture.warnings });
       }
 
       const result =
         captured.length === 1
-          ? capturedTreeToClipboardPayload(captured[0].tree, captured[0].options)
-          : combineSections(
-              captured.map((c) => ({ tree: c.tree, options: c.options })),
-              {}
-            );
+          ? capturedSectionToClipboardPayload(captured[0])
+          : combineSections(captured, {});
 
       response.json({
         payloadJson: JSON.stringify(result.payload),

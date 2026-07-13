@@ -134,7 +134,7 @@ export function MigrationProvider({ children }: { children: ReactNode }) {
     try {
       const result = await capture.extractSections({
         url: sourceUrl.trim(),
-        sections: chosen.map((c) => ({ selector: c.selector, label: c.label })),
+        sections: chosen.map((c) => ({ selector: c.selector, label: c.label, kind: c.kind })),
         styleGuideMode: true
       });
       setPreparedPayload(result.payloadJson);

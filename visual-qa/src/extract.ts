@@ -49,6 +49,12 @@ const BASE_HEIGHT = 900;
 
 export interface ResponsiveCaptureResult {
   tree: CapturedNode;
+  /** The captured subtree's real HTML, annotated with `data-pw-key` on every
+   *  kept node — fed to the client-first planner for structure/naming. */
+  html: string;
+  /** node key (`data-pw-key`) → authored base (desktop) styles. Joins the
+   *  planner's restructured nodes back to their browser-computed styles. */
+  baseStylesByKey: Record<string, Record<string, string>>;
   /** breakpoint key → (node key → authored styles at that width). */
   breakpointStyles: Record<string, Record<string, Record<string, string>>>;
   warnings: string[];
@@ -445,10 +451,19 @@ export async function captureElement(page: Page, selector: string): Promise<Resp
       if (!tree) {
         throw new Error("The selected element is hidden or not capturable.");
       }
-      return { tree, warnings: [...warnings] };
+      // Drop everything the walk didn't keep (hidden / dropped tags carry no
+      // data-pw-key) so the returned HTML matches the captured tree 1:1, then
+      // hand the planner real, annotated markup with original classes intact.
+      for (const el of Array.from(root.querySelectorAll("*"))) {
+        if (!el.hasAttribute("data-pw-key")) {
+          el.remove();
+        }
+      }
+      const html = (root as HTMLElement).outerHTML;
+      return { tree, warnings: [...warnings], html };
     },
     { selector, maxNodes: MAX_CAPTURE_NODES }
-  )) as { tree: CapturedNode; warnings: string[] };
+  )) as { tree: CapturedNode; warnings: string[]; html: string };
 
   const breakpointStyles: Record<string, Record<string, Record<string, string>>> = {};
   const rootKey = "0";
@@ -465,5 +480,25 @@ export async function captureElement(page: Page, selector: string): Promise<Resp
     }, rootKey);
   }
 
-  return { tree: base.tree, breakpointStyles, warnings: base.warnings };
+  // Flatten the captured tree into a key→styles map for the base width. Built
+  // from the tree (not a fresh DOM query) so it keeps the effective text-color
+  // injected on headings/paragraphs during capture.
+  const baseStylesByKey: Record<string, Record<string, string>> = {};
+  const collectBase = (node: CapturedNode): void => {
+    if (node.key) {
+      baseStylesByKey[node.key] = node.styles;
+    }
+    for (const child of node.children) {
+      collectBase(child);
+    }
+  };
+  collectBase(base.tree);
+
+  return {
+    tree: base.tree,
+    html: base.html,
+    baseStylesByKey,
+    breakpointStyles,
+    warnings: base.warnings
+  };
 }

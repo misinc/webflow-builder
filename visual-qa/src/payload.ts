@@ -1,26 +1,30 @@
+import { htmlToBuildNode } from "@wfb/backend-core/planner/html-planner.js";
 import { buildWebflowClipboardPayload } from "@wfb/shared/webflow-clipboard.js";
 import type { XscpData } from "@wfb/shared/webflow-clipboard.js";
 import type { BuildNode } from "@wfb/shared/contracts.js";
 
 /**
- * Trial pipeline ("paste from URL" playground): a DOM subtree captured from a
- * real Chrome render — with per-node browser-computed styles already filtered
- * to authored-only values — is mapped straight to a Webflow clipboard payload.
+ * URL-first capture → client-first payload.
+ *
+ * A section's real (annotated) HTML is run through the client-first planner
+ * (`htmlToBuildNode`) for structure + naming — `section_{key}` → `padding-global`
+ * → `container-large` → `padding-section-*`, `heading-style-h*`, `text-size-*`,
+ * `{key}_card`, … — then the browser-computed styles captured per node are
+ * attached as content-hashed combo classes, joined back by `data-pw-key`
+ * (`BuildNode.sourceKey`). The planner's scaffold nodes carry no `sourceKey`, so
+ * they stay styled by the project's Style Guide.
  *
  * Responsive: per-node styles captured at each breakpoint width are diffed,
- * desktop-first, into `variants` deltas (medium/small/tiny) — the exact shape
- * real Designer copies use. No client-first naming, no token binding yet.
+ * desktop-first, into `variants` deltas (medium/small/tiny) — the shape real
+ * Designer copies use.
  */
 
+/** A DOM subtree captured from a real render (kept for extract.ts's flatten). */
 export interface CapturedNode {
   tag: string;
-  /** Stable path key ("0", "0.1", …) aligning this node with breakpoint captures. */
   key?: string;
-  /** Direct text content (element's own text nodes, whitespace-collapsed). */
   text?: string;
-  /** Inline SVG markup captured verbatim (rendered as a Webflow Embed). */
   embedHtml?: string;
-  /** Authored-only computed styles at the base (desktop) width. */
   styles: Record<string, string>;
   attrs: { href?: string; src?: string; alt?: string; id?: string };
   children: CapturedNode[];
@@ -35,7 +39,7 @@ export interface PlaygroundPayloadResult {
     nodeCount: number;
     classCount: number;
     responsiveClassCount: number;
-    /** Client-first Style Guide classes referenced by name (empty styleLess). */
+    /** Nodes styled purely by client-first Style Guide classes (no combo). */
     styleGuideRefs: number;
     droppedLinkUrls: number;
     placeholderImages: number;
@@ -50,18 +54,25 @@ type StyleDefinitionInput = {
   combo?: boolean;
 };
 
-export interface SectionBuildOptions {
-  sectionLabel?: string;
+/** One captured section, ready to run through the planner + styling attach. */
+export interface SectionCaptureInput {
+  /** The section's real HTML, annotated with `data-pw-key` on every kept node. */
+  html: string;
+  /** node key → authored base (desktop) styles. */
+  baseStylesByKey: Record<string, Record<string, string>>;
   breakpointStyles?: BreakpointStyles;
   breakpointKeys?: string[];
-  /** Style-guide-first: headings/body/buttons reference client-first Style
-   *  Guide classes by name (empty styleLess) so they adopt the project's Style
-   *  Guide, instead of carrying captured literal styles. */
-  styleGuideMode?: boolean;
+  /** Stable id for the section (drives node ids / fallback class prefix). */
+  sectionId: string;
+  /** Human name → the client-first class prefix (`section_{slug}`). */
+  sectionName?: string;
+  /** Navbar/header/footer: keep the root tag, no section scaffold. */
+  chrome?: boolean;
+  /** Human label for the section root node in the Webflow navigator. */
+  label?: string;
 }
 
-/** One section's element tree + style definitions, before serialization —
- *  the reusable unit combined into a single payload for multi-section paste. */
+/** One section's element tree + style definitions, before serialization. */
 interface SectionBuild {
   elementTree: BuildNode;
   styleDefinitions: StyleDefinitionInput[];
@@ -69,8 +80,16 @@ interface SectionBuild {
   warnings: string[];
 }
 
-/** Tags Webflow renders as text-only elements — children must be flattened. */
-const TEXT_ONLY_TAGS = new Set(["h1", "h2", "h3", "h4", "h5", "h6", "p", "blockquote"]);
+function emptyStats(): PlaygroundPayloadResult["stats"] {
+  return {
+    nodeCount: 0,
+    classCount: 0,
+    responsiveClassCount: 0,
+    styleGuideRefs: 0,
+    droppedLinkUrls: 0,
+    placeholderImages: 0
+  };
+}
 
 function fnvHash(seed: string): string {
   let hash = 0x811c9dc5;
@@ -85,26 +104,6 @@ function styleKey(styles: Record<string, string>): string {
     .sort()
     .map((prop) => `${prop}:${styles[prop]}`)
     .join(";");
-}
-
-function collectText(node: CapturedNode): string {
-  const parts: string[] = [];
-  if (node.text) {
-    parts.push(node.text);
-  }
-  for (const child of node.children) {
-    const text = collectText(child);
-    if (text) {
-      parts.push(text);
-    }
-  }
-  return parts.join(" ").replace(/\s+/g, " ").trim();
-}
-
-function hasStyledDescendant(node: CapturedNode): boolean {
-  return node.children.some(
-    (child) => Object.keys(child.styles).length > 0 || hasStyledDescendant(child)
-  );
 }
 
 /**
@@ -126,24 +125,35 @@ function breakpointDelta(
   return delta;
 }
 
-function buildSection(tree: CapturedNode, options: SectionBuildOptions = {}): SectionBuild {
-  const warnings = new Set<string>();
-  const breakpointStyles = options.breakpointStyles ?? {};
-  const breakpointKeys = options.breakpointKeys ?? Object.keys(breakpointStyles);
-  const styleGuideMode = options.styleGuideMode ?? false;
-  const classNameByStyleKey = new Map<string, string>();
-  const styleDefinitions: StyleDefinitionInput[] = [];
-  const stats = {
-    nodeCount: 0,
-    classCount: 0,
-    responsiveClassCount: 0,
-    styleGuideRefs: 0,
-    droppedLinkUrls: 0,
-    placeholderImages: 0
-  };
+// The client-first scaffold (padding-global / container-large / padding-section)
+// owns section spacing and width. Strip these from the section root's own combo
+// so it doesn't double up — the root combo carries only its background/visuals.
+const SCAFFOLD_OWNED = new Set([
+  "margin-top",
+  "margin-right",
+  "margin-bottom",
+  "margin-left",
+  "padding-top",
+  "padding-right",
+  "padding-bottom",
+  "padding-left",
+  "width",
+  "min-width",
+  "max-width"
+]);
 
-  const variantsFor = (nodeKey: string | undefined, baseStyles: Record<string, string>) => {
-    if (!nodeKey || breakpointKeys.length === 0) {
+function attachCapturedStyling(
+  root: BuildNode,
+  input: SectionCaptureInput,
+  stats: PlaygroundPayloadResult["stats"]
+): StyleDefinitionInput[] {
+  const definitions: StyleDefinitionInput[] = [];
+  const comboByKey = new Map<string, string>();
+  const breakpointStyles = input.breakpointStyles ?? {};
+  const breakpointKeys = input.breakpointKeys ?? Object.keys(breakpointStyles);
+
+  const variantsFor = (nodeKey: string, baseStyles: Record<string, string>) => {
+    if (breakpointKeys.length === 0) {
       return undefined;
     }
     const effective = { ...baseStyles };
@@ -161,147 +171,97 @@ function buildSection(tree: CapturedNode, options: SectionBuildOptions = {}): Se
     return Object.keys(variants).length > 0 ? variants : undefined;
   };
 
-  // Style-guide-first: map a typography/button node to the client-first Style
-  // Guide class it should adopt (referenced by name, empty styleLess).
-  const looksLikeButton = (node: CapturedNode): boolean => {
-    if (!("background-color" in node.styles)) {
-      return false;
-    }
-    const keys = Object.keys(node.styles);
-    return keys.some((k) => k.startsWith("padding")) || keys.some((k) => k.includes("radius"));
-  };
-  const styleGuideNameFor = (node: CapturedNode): string | null => {
-    if (!styleGuideMode) {
-      return null;
-    }
-    if (/^h[1-6]$/.test(node.tag)) {
-      return `heading-style-${node.tag}`;
-    }
-    if (node.tag === "p" || node.tag === "blockquote") {
-      return "text-size-medium";
-    }
-    if ((node.tag === "a" || node.tag === "button") && looksLikeButton(node)) {
-      return "button";
-    }
-    return null;
-  };
-  const registerShared = (className: string): string[] => {
-    const key = `shared:${className}`;
-    if (!classNameByStyleKey.has(key)) {
-      classNameByStyleKey.set(key, className);
-      styleDefinitions.push({ className, properties: {} }); // empty → reuse by name
-      stats.styleGuideRefs += 1;
-    }
-    return [className];
-  };
-  // Direct colors (no color schemes): reused Style Guide typography classes are
-  // color-bound to the scheme's Text variable, so keep the source's own text
-  // color as a combo on top — dark-section text stays readable. Clean up paste
-  // binds the literal color to the matching project variable.
-  const registerColorCombo = (tag: string, color: string): string => {
-    const key = `color-combo:${color}`;
-    let className = classNameByStyleKey.get(key);
-    if (!className) {
-      className = `pw-${tag}-c${fnvHash(color)}`;
-      classNameByStyleKey.set(key, className);
-      styleDefinitions.push({ className, properties: { color }, combo: true });
-    }
-    return className;
-  };
-
-  const classFor = (node: CapturedNode): string[] => {
-    const shared = styleGuideNameFor(node);
-    if (shared) {
-      const classes = registerShared(shared);
-      const color = node.styles["color"];
-      // Buttons get their colors from the Style Guide's button class; text
-      // elements keep the source's own color so they read on any background.
-      if (color && shared !== "button") {
-        classes.push(registerColorCombo(node.tag, color));
-      }
-      return classes;
-    }
-    if (Object.keys(node.styles).length === 0) {
-      return [];
-    }
-    const variants = variantsFor(node.key, node.styles);
-    // Dedup on base + variants: two nodes identical on desktop but different on
-    // mobile must not share a class.
-    const key = `${styleKey(node.styles)}||${variants ? JSON.stringify(variants) : ""}`;
-    let className = classNameByStyleKey.get(key);
-    if (!className) {
-      className = `pw-${node.tag}-${fnvHash(key)}`;
-      classNameByStyleKey.set(key, className);
-      styleDefinitions.push({ className, properties: node.styles, variants });
+  // A per-node combo carrying its captured fidelity, named after the node's most
+  // specific client-first class so the Navigator reads sensibly. Deduped by
+  // (base class + declarations) so identical nodes share one combo.
+  const registerCombo = (
+    node: BuildNode,
+    props: Record<string, string>,
+    variants: Record<string, Record<string, string>> | undefined
+  ): string => {
+    const primary = node.classNames[node.classNames.length - 1] ?? node.tag;
+    const dedupeKey = `${primary}|${styleKey(props)}|${variants ? JSON.stringify(variants) : ""}`;
+    let name = comboByKey.get(dedupeKey);
+    if (!name) {
+      name = `${primary}_v${fnvHash(dedupeKey)}`;
+      comboByKey.set(dedupeKey, name);
+      definitions.push({ className: name, properties: props, variants, combo: true });
       if (variants) {
         stats.responsiveClassCount += 1;
       }
     }
-    return [className];
+    return name;
   };
 
-  const toBuildNode = (node: CapturedNode, path: string): BuildNode => {
+  const walk = (node: BuildNode, isRoot: boolean): void => {
     stats.nodeCount += 1;
-    const base: BuildNode = {
-      id: `pw${path}`,
-      type: node.embedHtml ? "embed" : "element",
-      tag: node.tag,
-      classNames: classFor(node),
-      children: []
-    };
-    if (node.embedHtml) {
-      base.embedHtml = node.embedHtml;
-      return base;
-    }
     if (node.tag === "img") {
       stats.placeholderImages += 1;
-      base.label = node.attrs.alt ?? "";
-      return base;
     }
-    if (node.tag === "a" && node.attrs.href) {
-      stats.droppedLinkUrls += 1;
-    }
-    if (TEXT_ONLY_TAGS.has(node.tag)) {
-      if (hasStyledDescendant(node)) {
-        warnings.add(
-          `Styled inline content inside <${node.tag}> was flattened to plain text (Webflow text elements are text-only).`
-        );
+    const key = node.sourceKey;
+    if (key) {
+      const base = input.baseStylesByKey[key];
+      if (base) {
+        let props = { ...base };
+        if (isRoot && !input.chrome) {
+          for (const prop of SCAFFOLD_OWNED) {
+            delete props[prop];
+          }
+        }
+        if (Object.keys(props).length > 0) {
+          const variants = variantsFor(key, props);
+          node.classNames.push(registerCombo(node, props, variants));
+        } else {
+          stats.styleGuideRefs += 1;
+        }
+      } else {
+        stats.styleGuideRefs += 1;
       }
-      base.textContent = collectText(node);
-      return base;
+    } else {
+      // Scaffold node (padding-global, container-large, …) — Style Guide styles it.
+      stats.styleGuideRefs += 1;
     }
-    if (node.text) {
-      base.textContent = node.text;
+    for (const child of node.children) {
+      walk(child, false);
     }
-    base.children = node.children.map((child, index) => toBuildNode(child, `${path}.${index}`));
-    return base;
   };
 
-  const elementTree = toBuildNode(tree, "0");
-  if (options.sectionLabel) {
-    elementTree.label = options.sectionLabel;
-  }
-  stats.classCount = styleDefinitions.length;
-  if (stats.placeholderImages > 0) {
-    warnings.add(
-      `${stats.placeholderImages} image(s) paste as empty placeholders sized by their captured width/height — upload assets and relink after paste.`
-    );
-  }
-  if (stats.droppedLinkUrls > 0) {
-    warnings.add(
-      `${stats.droppedLinkUrls} link URL(s) reset to "#" (the paste format does not carry them) — relink after paste.`
-    );
-  }
-
-  return { elementTree, styleDefinitions, stats, warnings: [...warnings] };
+  walk(root, true);
+  return definitions;
 }
 
-/** Single section → a complete, standalone clipboard payload. */
-export function capturedTreeToClipboardPayload(
-  tree: CapturedNode,
-  options: SectionBuildOptions = {}
+function buildSection(input: SectionCaptureInput): SectionBuild {
+  const stats = emptyStats();
+  const warnings = new Set<string>();
+
+  const built = htmlToBuildNode({
+    sourceCode: input.html,
+    sectionId: input.sectionId,
+    sectionName: input.sectionName,
+    chrome: input.chrome
+  });
+  if (!built) {
+    throw new Error("The planner could not build a client-first tree for this section.");
+  }
+  for (const warning of built.warnings) {
+    warnings.add(warning.message);
+  }
+
+  const root = built.root;
+  if (input.label) {
+    root.label = input.label;
+  }
+  const styleDefinitions = attachCapturedStyling(root, input, stats);
+  stats.classCount = styleDefinitions.length;
+
+  return { elementTree: root, styleDefinitions, stats, warnings: [...warnings] };
+}
+
+/** Single captured section → a complete, standalone clipboard payload. */
+export function capturedSectionToClipboardPayload(
+  input: SectionCaptureInput
 ): PlaygroundPayloadResult {
-  const built = buildSection(tree, options);
+  const built = buildSection(input);
   const payload = buildWebflowClipboardPayload({
     elementTree: built.elementTree,
     styleDefinitions: built.styleDefinitions,
@@ -311,17 +271,17 @@ export function capturedTreeToClipboardPayload(
 }
 
 /**
- * Combine several captured sections into ONE payload: each section's tree becomes
- * a child of a single labeled wrapper ("Pasted sections — unwrap me"), with style
- * definitions deduped by class name — the page-mode pattern, so a multi-select
- * paste drops every part in one gesture. A single section pastes bare via
- * `capturedTreeToClipboardPayload` (no wrapper).
+ * Combine several captured sections into ONE payload: each section's client-first
+ * tree becomes a child of a single labeled wrapper ("Pasted sections — unwrap
+ * me"), with style definitions deduped by class name — so a multi-select paste
+ * drops every part in one gesture. A single section pastes bare via
+ * `capturedSectionToClipboardPayload` (no wrapper).
  */
 export function combineSections(
-  sections: Array<{ tree: CapturedNode; options?: SectionBuildOptions }>,
+  sections: SectionCaptureInput[],
   opts: { wrapperLabel?: string } = {}
 ): PlaygroundPayloadResult {
-  const builds = sections.map(({ tree, options }) => buildSection(tree, options ?? {}));
+  const builds = sections.map((section) => buildSection(section));
 
   const stylesByName = new Map<string, StyleDefinitionInput>();
   for (const build of builds) {

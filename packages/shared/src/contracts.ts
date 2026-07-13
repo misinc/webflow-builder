@@ -9,6 +9,9 @@ export interface BuildNode {
   sourceClassNames?: string[];
   /** The source element's `id` attribute, for resolving `#id` CSS rules. */
   sourceId?: string;
+  /** Stable capture key (`data-pw-key`, e.g. "0.1.2") joining this node back to
+   *  its browser-computed styles after the planner restructures the tree. */
+  sourceKey?: string;
   /** Safelisted inline `style` accents (color/background/border-color/…) — kept
    *  for per-instance combo classes (e.g. an icon's `currentColor` ring). */
   inlineStyles?: Record<string, string>;
@@ -153,7 +156,14 @@ export const captureStatsSchema = z.object({
 export const captureExtractRequestSchema = z.object({
   url: z.string().url(),
   sections: z
-    .array(z.object({ selector: z.string().min(1), label: z.string().max(120).optional() }))
+    .array(
+      z.object({
+        selector: z.string().min(1),
+        label: z.string().max(120).optional(),
+        /** Scan `kind` (Navbar/Header/Footer/Bar/Section) — drives chrome mode. */
+        kind: z.string().optional()
+      })
+    )
     .min(1)
     .max(30),
   styleGuideMode: z.boolean().optional()
@@ -304,6 +314,7 @@ export const buildNodeSchema: z.ZodType<BuildNode> = z.lazy(() =>
     classNames: z.array(z.string()),
     sourceClassNames: z.array(z.string()).optional(),
     sourceId: z.string().optional(),
+    sourceKey: z.string().optional(),
     inlineStyles: z.record(z.string(), z.string()).optional(),
     textContent: z.string().optional(),
     embedHtml: z.string().optional(),

@@ -794,6 +794,7 @@ function buildNodeFromElement(input: {
     classNames,
     sourceClassNames: sourceClasses,
     sourceId: input.element.getAttribute("id")?.trim() || undefined,
+    sourceKey: input.element.getAttribute("data-pw-key")?.trim() || undefined,
     inlineStyles: inlineStylesFor(input.element),
     textContent,
     children
