@@ -232,6 +232,55 @@ describe("navbar → native Webflow Navbar element", () => {
     expect((wrapper.data as any)?.navbar?.type).toBe("wrapper");
   });
 
+  it("maps a source dropdown to the native Dropdown structure", () => {
+    const withDropdown: SectionCaptureInput = {
+      tree: el({
+        tag: "header",
+        key: "0",
+        styles: { "background-color": "rgb(0, 18, 53)" },
+        children: [
+          el({
+            tag: "nav",
+            key: "0.0",
+            children: [
+              el({ tag: "div", key: "0.0.0", children: [el({ tag: "a", key: "0.0.0.0", attrs: { href: "/home" }, text: "Home" })] }),
+              el({
+                tag: "div",
+                key: "0.0.1",
+                children: [
+                  el({ tag: "a", key: "0.0.1.0", attrs: { href: "/products" }, text: "Products" }),
+                  el({
+                    tag: "div",
+                    key: "0.0.1.1",
+                    children: [
+                      el({ tag: "a", key: "0.0.1.1.0", attrs: { href: "/p1" }, text: "Product One" }),
+                      el({ tag: "a", key: "0.0.1.1.1", attrs: { href: "/p2" }, text: "Product Two" })
+                    ]
+                  })
+                ]
+              })
+            ]
+          })
+        ]
+      }),
+      sectionName: "Navbar",
+      kind: "Header",
+      label: "Navbar"
+    };
+    const { payload } = capturedSectionToClipboardPayload(withDropdown);
+    const types = new Set(payload.payload.nodes.map((n) => n.type));
+    expect(types).toContain("DropdownWrapper");
+    expect(types).toContain("DropdownToggle");
+    expect(types).toContain("DropdownList");
+    expect(types).toContain("DropdownLink");
+    const names = classNames(payload);
+    expect(names).toEqual(
+      expect.arrayContaining(["navbar_menu-dropdown", "navbar_dropdown-toggle", "navbar_dropdown-list", "navbar_dropdown-link"])
+    );
+    const texts = payload.payload.nodes.filter((n) => n.text).map((n) => n.v);
+    expect(texts).toEqual(expect.arrayContaining(["Home", "Products", "Product One", "Product Two"]));
+  });
+
   it("uses generic navbar_* classes with source styling and the hamburger", () => {
     const { payload } = capturedSectionToClipboardPayload(navbar());
     const names = classNames(payload);

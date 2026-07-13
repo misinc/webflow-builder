@@ -235,6 +235,25 @@ const NAVBAR_BRAND_DATA = { attr: { id: "", href: "#" }, navbar: { type: "brand"
 const NAVBAR_MENU_DATA = { attr: { role: "navigation", id: "" }, navbar: { type: "menu" }, tag: "nav" };
 const NAVBAR_LINK_DATA = { attr: { id: "", href: "#" }, navbar: { type: "link" }, link: { url: "#", mode: "external" } };
 const NAVBAR_BUTTON_DATA = { attr: { id: "" }, navbar: { type: "button" }, tag: "div" };
+const DROPDOWN_WRAPPER_DATA = { attr: { id: "", "data-delay": "200", "data-hover": true }, dropdown: { type: "wrapper" }, tag: "div" };
+const DROPDOWN_TOGGLE_DATA = { attr: { id: "" }, dropdown: { type: "toggle" }, tag: "div" };
+const DROPDOWN_LIST_DATA = { attr: { id: "" }, dropdown: { type: "list" }, tag: "nav" };
+const DROPDOWN_LINK_DATA = { attr: { id: "", href: "#" }, dropdown: { type: "link" }, link: { url: "#", mode: "external" } };
+const CHEVRON_SVG =
+  '<svg width="12" height="12" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>';
+
+/** Build a parent lookup for a captured tree (dropdown grouping needs ancestry). */
+function buildParentMap(root: CapturedNode): Map<CapturedNode, CapturedNode> {
+  const parent = new Map<CapturedNode, CapturedNode>();
+  const walk = (n: CapturedNode): void => {
+    for (const child of n.children) {
+      parent.set(child, n);
+      walk(child);
+    }
+  };
+  walk(root);
+  return parent;
+}
 
 // A "special" section — a full-bleed image backdrop or an absolutely-positioned
 // layout (heroes, overlays). These don't use the client-first container/padding
@@ -485,8 +504,10 @@ function buildSection(input: SectionCaptureInput): SectionBuild {
       collectNodes(n, (x) => x.tag === "img" || Boolean(x.embedHtml)).length > 0;
 
     const anchors = collectNodes(input.tree, (n) => n.tag === "a" || n.tag === "button");
+    // The brand is a link carrying a graphic (img/svg) or a text-less link — never
+    // steal a labeled nav link when there's no real logo.
     const logoAnchor =
-      anchors.find(hasMedia) ?? anchors.find((a) => !collectText(a)) ?? anchors[0];
+      anchors.find(hasMedia) ?? anchors.find((a) => a.tag === "a" && !collectText(a) && a.children.length > 0);
     const buttons = anchors.filter((a) => a !== logoAnchor && looksLikeButton(a));
     const navLinks = anchors.filter(
       (a) => a !== logoAnchor && !buttons.includes(a) && Boolean(collectText(a))
@@ -538,11 +559,84 @@ function buildSection(input: SectionCaptureInput): SectionBuild {
     const brand = native("a", "NavbarBrand", NAVBAR_BRAND_DATA, [defineClass("navbar_logo-link", logoAnchor?.styles ?? {})], logoChildren);
 
     const linkClass = defineClass("navbar_link", navLinks[0]?.styles ?? {});
-    const linkNodes = navLinks.map((a) =>
-      native("a", "NavbarLink", NAVBAR_LINK_DATA, [linkClass], [
-        // NavbarLink text rides as a text child (added by the serializer).
-      ]) as BuildNode
-    ).map((node, i) => ({ ...node, textContent: collectText(navLinks[i]) }));
+    const navLink = (a: CapturedNode): BuildNode => ({
+      ...native("a", "NavbarLink", NAVBAR_LINK_DATA, [linkClass], []),
+      textContent: collectText(a)
+    });
+
+    // Group nav links into their top-level menu item (child of the links' common
+    // ancestor). An item holding a toggle + a nested list of ≥2 links becomes a
+    // native Dropdown; otherwise a plain NavbarLink.
+    const buildMenuItems = (): BuildNode[] => {
+      if (navLinks.length === 0) return [];
+      const parent = buildParentMap(input.tree);
+      const ancestorsOf = (n: CapturedNode): CapturedNode[] => {
+        const arr: CapturedNode[] = [];
+        let c: CapturedNode | undefined = n;
+        while (c) {
+          arr.push(c);
+          c = parent.get(c);
+        }
+        return arr;
+      };
+      const lists = navLinks.map(ancestorsOf);
+      let lca = input.tree;
+      for (const cand of lists[0]) {
+        if (lists.every((l) => l.includes(cand))) {
+          lca = cand;
+          break;
+        }
+      }
+      const itemOf = (a: CapturedNode): CapturedNode => {
+        let c = a;
+        while (parent.get(c) && parent.get(c) !== lca) c = parent.get(c)!;
+        return c;
+      };
+      // Ordered, de-duplicated items.
+      const items: CapturedNode[] = [];
+      const byItem = new Map<CapturedNode, CapturedNode[]>();
+      for (const a of navLinks) {
+        const item = itemOf(a);
+        if (!byItem.has(item)) {
+          byItem.set(item, []);
+          items.push(item);
+        }
+        byItem.get(item)!.push(a);
+      }
+
+      const dropdownLinkClass = defineClass("navbar_dropdown-link", {});
+      return items.map((item) => {
+        const group = byItem.get(item)!;
+        const directAnchor = group.find((a) => parent.get(a) === item);
+        const submenu = directAnchor ? group.filter((a) => a !== directAnchor) : group.slice(1);
+        const toggle = directAnchor ?? group[0];
+        if (submenu.length >= 1 && directAnchor) {
+          const toggleNode = native(
+            "div",
+            "DropdownToggle",
+            DROPDOWN_TOGGLE_DATA,
+            [defineClass("navbar_dropdown-toggle", { display: "flex", "align-items": "center", "grid-column-gap": "6px" })],
+            [
+              { id: nid(), type: "element", tag: "div", classNames: [defineClass("navbar_dropdown-label", {})], textContent: collectText(toggle), children: [] },
+              { id: nid(), type: "embed", tag: "div", classNames: [defineClass("dropdown-chevron", {})], embedHtml: CHEVRON_SVG, children: [] }
+            ]
+          );
+          const listNode = native(
+            "nav",
+            "DropdownList",
+            DROPDOWN_LIST_DATA,
+            [defineClass("navbar_dropdown-list", {})],
+            submenu.map((a) => ({
+              ...native("a", "DropdownLink", DROPDOWN_LINK_DATA, [dropdownLinkClass], []),
+              textContent: collectText(a)
+            }))
+          );
+          return native("div", "DropdownWrapper", DROPDOWN_WRAPPER_DATA, [defineClass("navbar_menu-dropdown", {})], [toggleNode, listNode]);
+        }
+        return navLink(toggle);
+      });
+    };
+    const linkNodes = buildMenuItems();
 
     const buttonNodes = buttons.map((a) => ({
       id: nid(),
@@ -586,7 +680,7 @@ function buildSection(input: SectionCaptureInput): SectionBuild {
     const container = box(
       "navbar_container",
       { display: "flex", "align-items": "center", "justify-content": "space-between", width: "100%" },
-      [brand, menu, menuButton]
+      [...(logoAnchor ? [brand] : []), menu, menuButton]
     );
 
     const wrapper = native("div", "NavbarWrapper", NAVBAR_WRAPPER_DATA, [defineClass("navbar_component", input.tree.styles)], [container]);

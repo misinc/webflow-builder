@@ -6,7 +6,7 @@ import "./v2/index.css";
 
 // Bump on every bundle rebuild so you can confirm which bundle Webflow loaded
 // (open the Designer dev console). Backend fixes deploy separately via git.
-const BUNDLE_VERSION = "2026-07-14b · client-first output: capture now runs the planner (section scaffold + heading-style/text-size names) with computed styles as combos";
+const BUNDLE_VERSION = "2026-07-14c · 2-step Welcome (Style Guide ✓ + build page-by-page); native navbar element + dropdown mapping (backend)";
 // eslint-disable-next-line no-console
 console.log(`%c[Webflow Builder] bundle ${BUNDLE_VERSION}`, "color:#00d09c;font-weight:bold");
 

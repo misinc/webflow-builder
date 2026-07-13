@@ -84,5 +84,8 @@ a link with a submenu → `navbar_menu-dropdown` (toggle + `navbar_dropdown-list
 (+ `&is-secondary` for outline/ghost styles); always emit the `navbar_menu-button`
 + `menu-icon` hamburger. Because the output uses the **native Navbar element
 types**, the responsive menu button and dropdown open/close work on paste with no
-manual interaction wiring. Dropdowns from arbitrary source markup are not yet
-detected (v1 flattens submenu links to top-level `navbar_link`).
+manual interaction wiring. Source dropdowns are detected (a nav item with a toggle
+link + a nested list of ≥2 links → native `DropdownWrapper/Toggle/List/Link` with
+`navbar_menu-dropdown` / `navbar_dropdown-*` classes). Caveat: hover menus hidden
+with `display:none` aren't captured (skipped by the extractor), so only visible/
+captured dropdown structure is mapped.

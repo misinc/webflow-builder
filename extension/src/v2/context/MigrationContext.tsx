@@ -52,6 +52,8 @@ interface MigrationContextValue {
 
   // Style Guide
   applyStyleGuide: (json: string) => Promise<void>;
+  styleGuideComplete: boolean;
+  setStyleGuideComplete: (done: boolean) => void;
 
   // Top notification bar
   notification: Notification | null;
@@ -73,6 +75,26 @@ export function MigrationProvider({ children }: { children: ReactNode }) {
   const [preparedPayload, setPreparedPayload] = useState<string | null>(null);
   const [preparedCount, setPreparedCount] = useState(0);
   const [notification, setNotification] = useState<Notification | null>(null);
+  const [styleGuideComplete, setStyleGuideCompleteState] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("wfb:styleGuideComplete") === "1";
+    } catch {
+      return false;
+    }
+  });
+
+  const setStyleGuideComplete = useCallback((done: boolean) => {
+    setStyleGuideCompleteState(done);
+    try {
+      if (done) {
+        localStorage.setItem("wfb:styleGuideComplete", "1");
+      } else {
+        localStorage.removeItem("wfb:styleGuideComplete");
+      }
+    } catch {
+      /* localStorage unavailable — session-only */
+    }
+  }, []);
 
   const notify = useCallback((message: string, tone: NotificationTone = "info") => {
     setNotification({ message, tone, dismissed: false });
@@ -212,11 +234,12 @@ export function MigrationProvider({ children }: { children: ReactNode }) {
           `Style Guide applied — ${r.variablesCreated + r.variablesUpdated} variables · ${r.classesUpdated} classes${warn}.`,
           "success"
         );
+        setStyleGuideComplete(true);
       } catch (error) {
         notify(error instanceof Error ? error.message : "Apply failed.", "error");
       }
     },
-    [notify]
+    [notify, setStyleGuideComplete]
   );
 
   const resetForNewPage = useCallback(() => {
@@ -247,6 +270,8 @@ export function MigrationProvider({ children }: { children: ReactNode }) {
       cleanupPaste,
       markBuilt,
       applyStyleGuide,
+      styleGuideComplete,
+      setStyleGuideComplete,
       notification,
       notify,
       dismissNotification,
@@ -269,6 +294,8 @@ export function MigrationProvider({ children }: { children: ReactNode }) {
       cleanupPaste,
       markBuilt,
       applyStyleGuide,
+      styleGuideComplete,
+      setStyleGuideComplete,
       notification,
       notify,
       dismissNotification,
