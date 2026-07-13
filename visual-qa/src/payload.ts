@@ -1,30 +1,36 @@
-import { htmlToBuildNode } from "@wfb/backend-core/planner/html-planner.js";
 import { buildWebflowClipboardPayload } from "@wfb/shared/webflow-clipboard.js";
 import type { XscpData } from "@wfb/shared/webflow-clipboard.js";
 import type { BuildNode } from "@wfb/shared/contracts.js";
+import { slugify } from "@wfb/shared/text.js";
 
 /**
- * URL-first capture → client-first payload.
+ * URL-first capture → client-first payload, FIDELITY-FIRST.
  *
- * A section's real (annotated) HTML is run through the client-first planner
- * (`htmlToBuildNode`) for structure + naming — `section_{key}` → `padding-global`
- * → `container-large` → `padding-section-*`, `heading-style-h*`, `text-size-*`,
- * `{key}_card`, … — then the browser-computed styles captured per node are
- * attached as content-hashed combo classes, joined back by `data-pw-key`
- * (`BuildNode.sourceKey`). The planner's scaffold nodes carry no `sourceKey`, so
- * they stay styled by the project's Style Guide.
+ * The captured DOM subtree is preserved 1:1 with its browser-computed styles, so
+ * the paste looks like the source. Client-first NAMES are layered on the parts
+ * that map cleanly — `section_{key}`, `heading-style-h*`, `text-size-*`, `button`,
+ * `container-*`, `padding-section-*` — without reshaping the structure (no
+ * scaffold injection, which would break custom / absolute layouts).
+ *
+ * Shared Style-Guide classes are referenced by name so they adopt the project;
+ * per-node fidelity rides in content-hashed combo classes on top. Containers and
+ * section padding are matched to the nearest client-first size by their measured
+ * value, or minted as a custom class when nothing fits. Full-bleed images become
+ * CSS `background-image` so heroes render instead of pasting blank.
  *
  * Responsive: per-node styles captured at each breakpoint width are diffed,
- * desktop-first, into `variants` deltas (medium/small/tiny) — the shape real
- * Designer copies use.
+ * desktop-first, into `variants` deltas (medium/small/tiny).
  */
 
-/** A DOM subtree captured from a real render (kept for extract.ts's flatten). */
 export interface CapturedNode {
   tag: string;
+  /** Stable path key ("0", "0.1", …) aligning this node with breakpoint captures. */
   key?: string;
+  /** Direct text content (element's own text nodes, whitespace-collapsed). */
   text?: string;
+  /** Inline SVG markup captured verbatim (rendered as a Webflow Embed). */
   embedHtml?: string;
+  /** Authored-only computed styles at the base (desktop) width. */
   styles: Record<string, string>;
   attrs: { href?: string; src?: string; alt?: string; id?: string };
   children: CapturedNode[];
@@ -39,10 +45,11 @@ export interface PlaygroundPayloadResult {
     nodeCount: number;
     classCount: number;
     responsiveClassCount: number;
-    /** Nodes styled purely by client-first Style Guide classes (no combo). */
+    /** Shared client-first classes referenced by name (adopt the Style Guide). */
     styleGuideRefs: number;
     droppedLinkUrls: number;
     placeholderImages: number;
+    backgroundImages: number;
   };
   warnings: string[];
 }
@@ -54,25 +61,19 @@ type StyleDefinitionInput = {
   combo?: boolean;
 };
 
-/** One captured section, ready to run through the planner + styling attach. */
 export interface SectionCaptureInput {
-  /** The section's real HTML, annotated with `data-pw-key` on every kept node. */
-  html: string;
-  /** node key → authored base (desktop) styles. */
-  baseStylesByKey: Record<string, Record<string, string>>;
+  /** The captured section subtree (source structure preserved). */
+  tree: CapturedNode;
   breakpointStyles?: BreakpointStyles;
   breakpointKeys?: string[];
-  /** Stable id for the section (drives node ids / fallback class prefix). */
-  sectionId: string;
   /** Human name → the client-first class prefix (`section_{slug}`). */
   sectionName?: string;
-  /** Navbar/header/footer: keep the root tag, no section scaffold. */
-  chrome?: boolean;
-  /** Human label for the section root node in the Webflow navigator. */
+  /** Scan kind (Navbar/Header/Footer/Bar/Section) — chrome keeps its own root. */
+  kind?: string;
+  /** Human label for the section root node in the Webflow Navigator. */
   label?: string;
 }
 
-/** One section's element tree + style definitions, before serialization. */
 interface SectionBuild {
   elementTree: BuildNode;
   styleDefinitions: StyleDefinitionInput[];
@@ -80,15 +81,38 @@ interface SectionBuild {
   warnings: string[];
 }
 
-function emptyStats(): PlaygroundPayloadResult["stats"] {
-  return {
-    nodeCount: 0,
-    classCount: 0,
-    responsiveClassCount: 0,
-    styleGuideRefs: 0,
-    droppedLinkUrls: 0,
-    placeholderImages: 0
-  };
+/** Tags Webflow renders as text-only elements — children must be flattened. */
+const TEXT_ONLY_TAGS = new Set(["h1", "h2", "h3", "h4", "h5", "h6", "p", "blockquote"]);
+const CHROME_KINDS = /^(navbar|header|footer|bar)$/i;
+
+// Canonical client-first sizes (px) used to pick the nearest named class. The
+// project's own values may differ slightly — a bare reference adopts them; only
+// when nothing is within tolerance do we mint a custom class carrying the exact
+// measured value.
+const CONTAINERS: Array<{ name: string; px: number }> = [
+  { name: "container-small", px: 768 },
+  { name: "container-medium", px: 1024 },
+  { name: "container-large", px: 1280 }
+];
+const SECTION_PADDINGS: Array<{ name: string; px: number }> = [
+  { name: "padding-section-small", px: 48 },
+  { name: "padding-section-medium", px: 80 },
+  { name: "padding-section-large", px: 128 },
+  { name: "padding-section-xlarge", px: 192 }
+];
+const CONTAINER_TOLERANCE = 0.12;
+const PADDING_TOLERANCE = 0.2;
+
+// text-size-* by font size (px). Bare reference adopts the project's scale; the
+// exact size still rides in the combo.
+function textSizeFor(styles: Record<string, string>): string {
+  const px = parseFloat(styles["font-size"] ?? "");
+  if (!Number.isFinite(px)) return "text-size-medium";
+  if (px < 13) return "text-size-tiny";
+  if (px < 15) return "text-size-small";
+  if (px < 17.5) return "text-size-regular";
+  if (px <= 20.5) return "text-size-medium";
+  return "text-size-large";
 }
 
 function fnvHash(seed: string): string {
@@ -106,11 +130,66 @@ function styleKey(styles: Record<string, string>): string {
     .join(";");
 }
 
-/**
- * Desktop-first delta for one breakpoint: the properties whose value at this
- * width differs from the cascaded value above it. Mutates `effective` to carry
- * the cascade down to the next-smaller breakpoint.
- */
+function px(value: string | undefined): number {
+  const n = parseFloat(value ?? "");
+  return Number.isFinite(n) ? n : NaN;
+}
+
+/** Nearest named size within tolerance, else null (→ mint a custom class). */
+function nearest(
+  value: number,
+  scale: Array<{ name: string; px: number }>,
+  tolerance: number
+): string | null {
+  let best: { name: string; diff: number } | null = null;
+  for (const step of scale) {
+    const diff = Math.abs(value - step.px) / step.px;
+    if (diff <= tolerance && (!best || diff < best.diff)) {
+      best = { name: step.name, diff };
+    }
+  }
+  return best?.name ?? null;
+}
+
+function collectText(node: CapturedNode): string {
+  const parts: string[] = [];
+  if (node.text) parts.push(node.text);
+  for (const child of node.children) {
+    const text = collectText(child);
+    if (text) parts.push(text);
+  }
+  return parts.join(" ").replace(/\s+/g, " ").trim();
+}
+
+function hasStyledDescendant(node: CapturedNode): boolean {
+  return node.children.some(
+    (child) => Object.keys(child.styles).length > 0 || hasStyledDescendant(child)
+  );
+}
+
+function looksLikeButton(node: CapturedNode): boolean {
+  if (node.tag !== "a" && node.tag !== "button") return false;
+  const keys = Object.keys(node.styles);
+  const hasBg = "background-color" in node.styles;
+  const hasPad = keys.some((k) => k.startsWith("padding"));
+  const hasRadius = keys.some((k) => k.includes("radius"));
+  return (hasBg && (hasPad || hasRadius)) || (hasPad && hasRadius);
+}
+
+// A full-bleed image (a hero backdrop) pastes as a blank placeholder because
+// assets don't ride the clipboard. Rendered as a CSS background-image (hotlinked
+// from the source) it shows immediately — the user swaps it for an uploaded
+// asset later.
+function isFullBleedImage(node: CapturedNode): boolean {
+  if (node.tag !== "img" || !node.attrs.src) return false;
+  const position = node.styles["position"];
+  return (
+    position === "absolute" ||
+    position === "fixed" ||
+    node.styles["object-fit"] === "cover"
+  );
+}
+
 function breakpointDelta(
   effective: Record<string, string>,
   atWidth: Record<string, string>
@@ -125,136 +204,237 @@ function breakpointDelta(
   return delta;
 }
 
-// The client-first scaffold (padding-global / container-large / padding-section)
-// owns section spacing and width. Strip these from the section root's own combo
-// so it doesn't double up — the root combo carries only its background/visuals.
-const SCAFFOLD_OWNED = new Set([
-  "margin-top",
-  "margin-right",
-  "margin-bottom",
-  "margin-left",
-  "padding-top",
-  "padding-right",
-  "padding-bottom",
-  "padding-left",
-  "width",
-  "min-width",
-  "max-width"
-]);
-
-function attachCapturedStyling(
-  root: BuildNode,
-  input: SectionCaptureInput,
-  stats: PlaygroundPayloadResult["stats"]
-): StyleDefinitionInput[] {
-  const definitions: StyleDefinitionInput[] = [];
-  const comboByKey = new Map<string, string>();
+function buildSection(input: SectionCaptureInput): SectionBuild {
+  const warnings = new Set<string>();
   const breakpointStyles = input.breakpointStyles ?? {};
   const breakpointKeys = input.breakpointKeys ?? Object.keys(breakpointStyles);
+  const chrome = CHROME_KINDS.test(input.kind ?? "");
+  const rawKey = slugify(input.sectionName ?? "section") || "section";
+  const sectionKey = rawKey.split("-").slice(0, 3).join("-") || "section";
 
-  const variantsFor = (nodeKey: string, baseStyles: Record<string, string>) => {
-    if (breakpointKeys.length === 0) {
-      return undefined;
-    }
+  const styleDefinitions: StyleDefinitionInput[] = [];
+  const classNameByKey = new Map<string, string>(); // dedup unique classes by style
+  const comboByKey = new Map<string, string>(); // dedup combos by base+style
+  const roleCounts = new Map<string, number>();
+  let containerAssigned = false;
+
+  const stats = {
+    nodeCount: 0,
+    classCount: 0,
+    responsiveClassCount: 0,
+    styleGuideRefs: 0,
+    droppedLinkUrls: 0,
+    placeholderImages: 0,
+    backgroundImages: 0
+  };
+
+  const variantsFor = (nodeKey: string | undefined, baseStyles: Record<string, string>) => {
+    if (!nodeKey || breakpointKeys.length === 0) return undefined;
     const effective = { ...baseStyles };
     const variants: Record<string, Record<string, string>> = {};
     for (const key of breakpointKeys) {
       const atWidth = breakpointStyles[key]?.[nodeKey];
-      if (!atWidth) {
-        continue;
-      }
+      if (!atWidth) continue;
       const delta = breakpointDelta(effective, atWidth);
-      if (Object.keys(delta).length > 0) {
-        variants[key] = delta;
-      }
+      if (Object.keys(delta).length > 0) variants[key] = delta;
     }
     return Object.keys(variants).length > 0 ? variants : undefined;
   };
 
-  // A per-node combo carrying its captured fidelity, named after the node's most
-  // specific client-first class so the Navigator reads sensibly. Deduped by
-  // (base class + declarations) so identical nodes share one combo.
-  const registerCombo = (
-    node: BuildNode,
-    props: Record<string, string>,
-    variants: Record<string, Record<string, string>> | undefined
+  // A unique (section-scoped or custom) class carrying its exact styles directly.
+  const uniqueClass = (
+    baseName: string,
+    styles: Record<string, string>,
+    nodeKey: string | undefined
   ): string => {
-    const primary = node.classNames[node.classNames.length - 1] ?? node.tag;
-    const dedupeKey = `${primary}|${styleKey(props)}|${variants ? JSON.stringify(variants) : ""}`;
-    let name = comboByKey.get(dedupeKey);
+    const variants = variantsFor(nodeKey, styles);
+    const dedupe = `${baseName}|${styleKey(styles)}|${variants ? JSON.stringify(variants) : ""}`;
+    let name = classNameByKey.get(dedupe);
     if (!name) {
-      name = `${primary}_v${fnvHash(dedupeKey)}`;
-      comboByKey.set(dedupeKey, name);
-      definitions.push({ className: name, properties: props, variants, combo: true });
-      if (variants) {
-        stats.responsiveClassCount += 1;
+      name = baseName;
+      // Disambiguate if the same base name already carries different styles.
+      if (styleDefinitions.some((d) => d.className === name)) {
+        name = `${baseName}-${fnvHash(dedupe)}`;
       }
+      classNameByKey.set(dedupe, name);
+      styleDefinitions.push({ className: name, properties: styles, variants });
+      if (variants) stats.responsiveClassCount += 1;
     }
     return name;
   };
 
-  const walk = (node: BuildNode, isRoot: boolean): void => {
-    stats.nodeCount += 1;
-    if (node.tag === "img") {
-      stats.placeholderImages += 1;
-    }
-    const key = node.sourceKey;
-    if (key) {
-      const base = input.baseStylesByKey[key];
-      if (base) {
-        let props = { ...base };
-        if (isRoot && !input.chrome) {
-          for (const prop of SCAFFOLD_OWNED) {
-            delete props[prop];
-          }
-        }
-        if (Object.keys(props).length > 0) {
-          const variants = variantsFor(key, props);
-          node.classNames.push(registerCombo(node, props, variants));
-        } else {
-          stats.styleGuideRefs += 1;
-        }
-      } else {
-        stats.styleGuideRefs += 1;
-      }
-    } else {
-      // Scaffold node (padding-global, container-large, …) — Style Guide styles it.
-      stats.styleGuideRefs += 1;
-    }
-    for (const child of node.children) {
-      walk(child, false);
-    }
+  // A shared client-first class referenced by name only (adopts the Style Guide).
+  const sharedBare = (shared: string): string[] => {
+    stats.styleGuideRefs += 1;
+    return [shared];
   };
 
-  walk(root, true);
-  return definitions;
-}
+  // A shared client-first class (referenced by name, adopts the Style Guide) with
+  // a content-hashed combo carrying this node's captured fidelity on top.
+  const sharedWithCombo = (
+    shared: string,
+    styles: Record<string, string>,
+    nodeKey: string | undefined
+  ): string[] => {
+    stats.styleGuideRefs += 1;
+    if (Object.keys(styles).length === 0) return [shared];
+    const variants = variantsFor(nodeKey, styles);
+    const dedupe = `${shared}|${styleKey(styles)}|${variants ? JSON.stringify(variants) : ""}`;
+    let combo = comboByKey.get(dedupe);
+    if (!combo) {
+      combo = `${shared}_v${fnvHash(dedupe)}`;
+      comboByKey.set(dedupe, combo);
+      styleDefinitions.push({ className: combo, properties: styles, variants, combo: true });
+      if (variants) stats.responsiveClassCount += 1;
+    }
+    return [shared, combo];
+  };
 
-function buildSection(input: SectionCaptureInput): SectionBuild {
-  const stats = emptyStats();
-  const warnings = new Set<string>();
+  const roleName = (role: string): string => {
+    const n = (roleCounts.get(role) ?? 0) + 1;
+    roleCounts.set(role, n);
+    return n === 1 ? `${sectionKey}_${role}` : `${sectionKey}_${role}-${n}`;
+  };
 
-  const built = htmlToBuildNode({
-    sourceCode: input.html,
-    sectionId: input.sectionId,
-    sectionName: input.sectionName,
-    chrome: input.chrome
-  });
-  if (!built) {
-    throw new Error("The planner could not build a client-first tree for this section.");
-  }
-  for (const warning of built.warnings) {
-    warnings.add(warning.message);
-  }
+  const classFor = (node: CapturedNode, isRoot: boolean): string[] => {
+    const styles = node.styles;
 
-  const root = built.root;
-  if (input.label) {
-    root.label = input.label;
-  }
-  const styleDefinitions = attachCapturedStyling(root, input, stats);
+    // Section / chrome root.
+    if (isRoot) {
+      const base = chrome
+        ? /footer/i.test(input.kind ?? "")
+          ? "footer_component"
+          : "navbar_component"
+        : `section_${sectionKey}`;
+      return [uniqueClass(base, styles, node.key)];
+    }
+
+    // Typography.
+    if (/^h[1-6]$/.test(node.tag)) {
+      return sharedWithCombo(`heading-style-${node.tag}`, styles, node.key);
+    }
+    if (node.tag === "p" || node.tag === "blockquote") {
+      return sharedWithCombo(textSizeFor(styles), styles, node.key);
+    }
+    if (looksLikeButton(node)) {
+      return sharedWithCombo("button", styles, node.key);
+    }
+
+    // Container: the first max-width wrapper in the section.
+    const maxW = px(styles["max-width"]);
+    if (!containerAssigned && Number.isFinite(maxW) && maxW >= 560 && maxW <= 1700) {
+      containerAssigned = true;
+      const match = nearest(maxW, CONTAINERS, CONTAINER_TOLERANCE);
+      if (match) {
+        // Adopt the project container width; keep any other styles as a combo.
+        const rest = { ...styles };
+        delete rest["max-width"];
+        delete rest["margin-left"];
+        delete rest["margin-right"];
+        return Object.keys(rest).length > 0 ? sharedWithCombo(match, rest, node.key) : sharedBare(match);
+      }
+      // Nothing fits → a custom container carrying the exact width.
+      return [uniqueClass(`container-${sectionKey}`, styles, node.key)];
+    }
+
+    // Section padding: a wrapper carrying substantial symmetric vertical padding.
+    const padTop = px(styles["padding-top"]);
+    const padBottom = px(styles["padding-bottom"]);
+    if (Number.isFinite(padTop) && padTop >= 40 && Math.abs(padTop - (padBottom || padTop)) < 8) {
+      const match = nearest(padTop, SECTION_PADDINGS, PADDING_TOLERANCE);
+      if (match) {
+        const rest = { ...styles };
+        delete rest["padding-top"];
+        delete rest["padding-bottom"];
+        return Object.keys(rest).length > 0 ? sharedWithCombo(match, rest, node.key) : sharedBare(match);
+      }
+    }
+
+    if (Object.keys(styles).length === 0) return [];
+
+    // Any other wrapper: a section-scoped class carrying its exact styles.
+    const role = styles["display"] === "grid" || styles["display"] === "flex" ? "group" : "wrapper";
+    return [uniqueClass(roleName(role), styles, node.key)];
+  };
+
+  const toBuildNode = (node: CapturedNode, path: string, isRoot: boolean): BuildNode => {
+    stats.nodeCount += 1;
+
+    // Full-bleed image → a div with a CSS background-image (renders on paste).
+    if (isFullBleedImage(node)) {
+      stats.backgroundImages += 1;
+      const bg: Record<string, string> = { ...node.styles };
+      delete bg["object-fit"];
+      bg["background-image"] = `url("${node.attrs.src}")`;
+      bg["background-size"] = "cover";
+      bg["background-position"] = "50% 50%";
+      bg["background-repeat"] = "no-repeat";
+      return {
+        id: `pw${path}`,
+        type: "element",
+        tag: "div",
+        classNames: [uniqueClass(roleName("image"), bg, node.key)],
+        children: []
+      };
+    }
+
+    const base: BuildNode = {
+      id: `pw${path}`,
+      type: node.embedHtml ? "embed" : "element",
+      tag: node.tag,
+      classNames: classFor(node, isRoot),
+      children: []
+    };
+    if (isRoot && input.label) base.label = input.label;
+
+    if (node.embedHtml) {
+      base.embedHtml = node.embedHtml;
+      return base;
+    }
+    if (node.tag === "img") {
+      stats.placeholderImages += 1;
+      base.label = node.attrs.alt ?? "";
+      return base;
+    }
+    if (node.tag === "a" && node.attrs.href) {
+      stats.droppedLinkUrls += 1;
+    }
+    if (TEXT_ONLY_TAGS.has(node.tag)) {
+      if (hasStyledDescendant(node)) {
+        warnings.add(
+          `Styled inline content inside <${node.tag}> was flattened to plain text (Webflow text elements are text-only).`
+        );
+      }
+      base.textContent = collectText(node);
+      return base;
+    }
+    if (node.text) {
+      base.textContent = node.text;
+    }
+    base.children = node.children.map((child, index) => toBuildNode(child, `${path}.${index}`, false));
+    return base;
+  };
+
+  const elementTree = toBuildNode(input.tree, "0", true);
   stats.classCount = styleDefinitions.length;
 
-  return { elementTree: root, styleDefinitions, stats, warnings: [...warnings] };
+  if (stats.backgroundImages > 0) {
+    warnings.add(
+      `${stats.backgroundImages} full-bleed image(s) render as hotlinked CSS background-images — replace with uploaded assets after paste.`
+    );
+  }
+  if (stats.placeholderImages > 0) {
+    warnings.add(
+      `${stats.placeholderImages} inline image(s) paste as empty placeholders — upload assets and relink after paste.`
+    );
+  }
+  if (stats.droppedLinkUrls > 0) {
+    warnings.add(
+      `${stats.droppedLinkUrls} link URL(s) reset to "#" (the paste format does not carry them) — relink after paste.`
+    );
+  }
+
+  return { elementTree, styleDefinitions, stats, warnings: [...warnings] };
 }
 
 /** Single captured section → a complete, standalone clipboard payload. */
@@ -271,15 +451,14 @@ export function capturedSectionToClipboardPayload(
 }
 
 /**
- * Combine several captured sections into ONE payload: each section's client-first
- * tree becomes a child of a single labeled wrapper ("Pasted sections — unwrap
- * me"), with style definitions deduped by class name — so a multi-select paste
- * drops every part in one gesture. A single section pastes bare via
- * `capturedSectionToClipboardPayload` (no wrapper).
+ * Combine several captured sections into ONE payload wrapped in a single
+ * `main-wrapper` (client-first): paste it straight into `page-wrapper` and every
+ * part lands in place. Styles are deduped by class name. A single section pastes
+ * bare via `capturedSectionToClipboardPayload` (drop it into `main-wrapper`).
  */
 export function combineSections(
   sections: SectionCaptureInput[],
-  opts: { wrapperLabel?: string } = {}
+  _opts: { wrapperLabel?: string } = {}
 ): PlaygroundPayloadResult {
   const builds = sections.map((section) => buildSection(section));
 
@@ -293,11 +472,11 @@ export function combineSections(
   }
 
   const wrapper: BuildNode = {
-    id: "pw-wrapper",
+    id: "pw-main-wrapper",
     type: "element",
-    tag: "div",
-    label: opts.wrapperLabel ?? "Pasted sections — unwrap me",
-    classNames: [],
+    tag: "main",
+    label: "main-wrapper",
+    classNames: ["main-wrapper"],
     children: builds.map((build) => build.elementTree)
   };
 
@@ -313,7 +492,8 @@ export function combineSections(
     responsiveClassCount: builds.reduce((sum, b) => sum + b.stats.responsiveClassCount, 0),
     styleGuideRefs: builds.reduce((sum, b) => sum + b.stats.styleGuideRefs, 0),
     droppedLinkUrls: builds.reduce((sum, b) => sum + b.stats.droppedLinkUrls, 0),
-    placeholderImages: builds.reduce((sum, b) => sum + b.stats.placeholderImages, 0)
+    placeholderImages: builds.reduce((sum, b) => sum + b.stats.placeholderImages, 0),
+    backgroundImages: builds.reduce((sum, b) => sum + b.stats.backgroundImages, 0)
   };
   const warnings = [...new Set(builds.flatMap((b) => b.warnings))];
   return { payload, stats, warnings };

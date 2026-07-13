@@ -150,7 +150,8 @@ export const captureStatsSchema = z.object({
   responsiveClassCount: z.number(),
   styleGuideRefs: z.number(),
   droppedLinkUrls: z.number(),
-  placeholderImages: z.number()
+  placeholderImages: z.number(),
+  backgroundImages: z.number().default(0)
 });
 
 export const captureExtractRequestSchema = z.object({

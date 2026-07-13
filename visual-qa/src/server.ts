@@ -18,11 +18,6 @@ import {
   type SectionCaptureInput
 } from "./payload.js";
 
-// Navbar / header / footer / announcement bars keep their own tag and get no
-// client-first section scaffold.
-const CHROME_KINDS = /^(navbar|header|footer|bar)$/i;
-const isChromeKind = (kind?: string): boolean => CHROME_KINDS.test(kind ?? "");
-
 const execFileAsync = promisify(execFile);
 
 // Render caches node_modules and skips postinstall, so the Playwright browser
@@ -311,13 +306,11 @@ app.post("/playground/extract", async (request, response) => {
       const capture = await captureElement(page, input.selector);
       const label = input.label ?? `Pasted from URL — ${input.selector}`;
       const result = capturedSectionToClipboardPayload({
-        html: capture.html,
-        baseStylesByKey: capture.baseStylesByKey,
+        tree: capture.tree,
         breakpointStyles: capture.breakpointStyles,
         breakpointKeys: BREAKPOINTS.map((breakpoint) => breakpoint.key),
-        sectionId: "section-0",
         sectionName: input.label,
-        chrome: isChromeKind(input.kind),
+        kind: input.kind,
         label
       });
 
@@ -388,13 +381,11 @@ app.post("/playground/extract-batch", async (request, response) => {
         }
         const capture = await captureElement(page, section.selector);
         captured.push({
-          html: capture.html,
-          baseStylesByKey: capture.baseStylesByKey,
+          tree: capture.tree,
           breakpointStyles: capture.breakpointStyles,
           breakpointKeys,
-          sectionId: `section-${index}`,
           sectionName: section.label,
-          chrome: isChromeKind(section.kind),
+          kind: section.kind,
           label: section.label ?? `Pasted from URL — ${section.selector}`
         });
         perSection.push({ selector: section.selector, screenshot, warnings: capture.warnings });

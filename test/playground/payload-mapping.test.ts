@@ -2,200 +2,178 @@ import { describe, expect, it } from "vitest";
 import {
   capturedSectionToClipboardPayload,
   combineSections,
+  type CapturedNode,
   type SectionCaptureInput
 } from "../../visual-qa/src/payload";
 
-const BP_KEYS = ["medium", "small", "tiny"];
+const el = (partial: Partial<CapturedNode> & { tag: string }): CapturedNode => ({
+  attrs: {},
+  styles: {},
+  children: [],
+  ...partial
+});
 
 type Payload = ReturnType<typeof capturedSectionToClipboardPayload>["payload"];
 type Node = Payload["payload"]["nodes"][number];
 
-/** Every class name present in the payload's style table. */
-const classNames = (payload: Payload): string[] => payload.payload.styles.map((s) => s.name);
-
-/** The class names applied to a node (resolving class ids → style names). */
-const nodeClassNames = (payload: Payload, node: Node): string[] =>
+const classNames = (p: Payload): string[] => p.payload.styles.map((s) => s.name);
+const nodeClassNames = (p: Payload, node: Node): string[] =>
   (node.classes ?? [])
-    .map((id) => payload.payload.styles.find((s) => s._id === id)?.name)
-    .filter((name): name is string => Boolean(name));
+    .map((id) => p.payload.styles.find((s) => s._id === id)?.name)
+    .filter((n): n is string => Boolean(n));
+const styleByName = (p: Payload, name: string) => p.payload.styles.find((s) => s.name === name);
 
-const styleByName = (payload: Payload, name: string) =>
-  payload.payload.styles.find((s) => s.name === name);
-
-/** A hero section: dark background, a heading and a paragraph. */
+/** A dark hero: section bg + centered container + heading, body, CTA. */
 function hero(overrides: Partial<SectionCaptureInput> = {}): SectionCaptureInput {
   return {
-    html:
-      '<section data-pw-key="0" class="hero">' +
-      '<div data-pw-key="0.0" class="hero-inner">' +
-      '<h1 data-pw-key="0.0.0">Build faster</h1>' +
-      '<p data-pw-key="0.0.1">Ship your site</p>' +
-      "</div>" +
-      "</section>",
-    baseStylesByKey: {
-      "0": { "background-color": "rgb(0, 18, 53)", "padding-top": "80px" },
-      "0.0": { display: "flex", "flex-direction": "column", "row-gap": "16px" },
-      "0.0.0": { "font-size": "56px", color: "rgb(255, 255, 255)" },
-      "0.0.1": { "font-size": "18px", color: "rgb(200, 210, 230)" }
-    },
-    sectionId: "section-0",
+    tree: el({
+      tag: "section",
+      key: "0",
+      styles: { "background-color": "rgb(0, 18, 53)", "padding-top": "80px", "padding-bottom": "80px" },
+      children: [
+        el({
+          tag: "div",
+          key: "0.0",
+          styles: { "max-width": "1280px", "margin-left": "auto", "margin-right": "auto" },
+          children: [
+            el({ tag: "h1", key: "0.0.0", styles: { "font-size": "56px", color: "rgb(255, 255, 255)" }, text: "Human + AI" }),
+            el({ tag: "p", key: "0.0.1", styles: { "font-size": "18px", color: "rgb(255, 255, 255)" }, text: "We combine expertise" }),
+            el({
+              tag: "a",
+              key: "0.0.2",
+              attrs: { href: "https://x.com" },
+              styles: { "background-color": "rgb(142, 196, 65)", "padding-top": "8px", "border-top-left-radius": "8px" },
+              text: "Meet with bAI Lab"
+            })
+          ]
+        })
+      ]
+    }),
     sectionName: "Hero",
     label: "Hero",
     ...overrides
   };
 }
 
-describe("client-first structure and naming (captured HTML → planner → XscpData)", () => {
-  it("emits the client-first scaffold and semantic class names, never pw-* hashes", () => {
+describe("fidelity-first client-first naming (captured tree → XscpData)", () => {
+  it("names the section root section_{key} and never emits pw-* classes", () => {
     const { payload } = capturedSectionToClipboardPayload(hero());
     const names = classNames(payload);
-    expect(names).toEqual(
-      expect.arrayContaining([
-        "section_hero",
-        "padding-global",
-        "container-large",
-        "padding-section-medium",
-        "heading-style-h1",
-        "text-size-medium"
-      ])
-    );
-    // The old 1:1-DOM capture minted `pw-<tag>-<hash>` classes — never again.
-    expect(names.some((name) => /^pw-/.test(name))).toBe(false);
+    expect(names).toContain("section_hero");
+    expect(names.some((n) => /^pw-/.test(n))).toBe(false);
   });
 
-  it("names the section root for the Designer Navigator", () => {
+  it("keeps the section's own background (fidelity) on section_hero", () => {
     const { payload } = capturedSectionToClipboardPayload(hero());
-    const root = payload.payload.nodes.at(-1);
-    expect((root?.data as { displayName?: string })?.displayName).toBe("Hero");
+    const section = styleByName(payload, "section_hero")!;
+    expect(section.styleLess).toContain("background-color: rgb(0, 18, 53);");
   });
 
-  it("references shared Style Guide classes by name with empty styleLess (adopted on paste)", () => {
+  it("maps headings to heading-style-h* + a fidelity combo", () => {
     const { payload } = capturedSectionToClipboardPayload(hero());
-    expect(styleByName(payload, "heading-style-h1")?.styleLess).toBe("");
-    expect(styleByName(payload, "text-size-medium")?.styleLess).toBe("");
-    expect(styleByName(payload, "padding-global")?.styleLess).toBe("");
-  });
-});
-
-describe("captured styles ride as content-hashed combos", () => {
-  it("puts the section background on a combo, minus scaffold-owned spacing", () => {
-    const { payload } = capturedSectionToClipboardPayload(hero());
-    const sectionNode = payload.payload.nodes.find((n) =>
-      nodeClassNames(payload, n).includes("section_hero")
-    )!;
-    const comboName = nodeClassNames(payload, sectionNode).find((n) => n.startsWith("section_hero_v"));
-    expect(comboName).toBeDefined();
-    const combo = styleByName(payload, comboName!)!;
-    expect(combo.comb).toBe("&");
-    expect(combo.styleLess).toContain("background-color: rgb(0, 18, 53);");
-    // The scaffold (padding-global / padding-section-*) owns spacing — the root
-    // combo must not restate it.
-    expect(combo.styleLess).not.toContain("padding-top");
-  });
-
-  it("carries the heading's captured color as a combo on heading-style-h1", () => {
-    const { payload } = capturedSectionToClipboardPayload(hero());
-    const headingNode = payload.payload.nodes.find((n) => n.type === "Heading")!;
-    const names = nodeClassNames(payload, headingNode);
+    const h1 = payload.payload.nodes.find((n) => n.type === "Heading")!;
+    const names = nodeClassNames(payload, h1);
     expect(names).toContain("heading-style-h1");
-    const comboName = names.find((n) => n.includes("_v"))!;
-    const combo = styleByName(payload, comboName)!;
-    expect(combo.comb).toBe("&");
-    expect(combo.styleLess).toContain("color: rgb(255, 255, 255);");
-  });
-});
-
-describe("responsive variant deltas", () => {
-  it("emits only the changed declarations per breakpoint on the node combo", () => {
-    const input = hero({
-      breakpointStyles: {
-        medium: { "0.0.0": { "font-size": "44px", color: "rgb(255, 255, 255)" } },
-        small: { "0.0.0": { "font-size": "32px", color: "rgb(255, 255, 255)" } },
-        tiny: {}
-      },
-      breakpointKeys: BP_KEYS
-    });
-    const { payload, stats } = capturedSectionToClipboardPayload(input);
-    const headingNode = payload.payload.nodes.find((n) => n.type === "Heading")!;
-    const comboName = nodeClassNames(payload, headingNode).find((n) => n.includes("_v"))!;
-    const combo = styleByName(payload, comboName)!;
-    expect((combo.variants.medium as { styleLess: string }).styleLess).toContain("font-size: 44px;");
-    expect((combo.variants.small as { styleLess: string }).styleLess).toContain("font-size: 32px;");
-    // Color never changes → never restated in a variant.
-    expect(JSON.stringify(combo.variants)).not.toContain("color");
-    expect(stats.responsiveClassCount).toBeGreaterThan(0);
-  });
-
-  it("keeps variants empty when no breakpoint data is supplied", () => {
-    const { payload } = capturedSectionToClipboardPayload(hero());
-    for (const style of payload.payload.styles) {
-      expect(style.variants).toEqual({});
-    }
-  });
-});
-
-describe("chrome mode (navbar / footer)", () => {
-  const navbar: SectionCaptureInput = {
-    html:
-      '<nav data-pw-key="0" class="navbar"><a data-pw-key="0.0" href="/">Home</a></nav>',
-    baseStylesByKey: {
-      "0": { display: "flex", "background-color": "rgb(255, 255, 255)" }
-    },
-    sectionId: "chrome-0",
-    sectionName: "Navbar",
-    chrome: true,
-    label: "Navbar"
-  };
-
-  it("skips the section scaffold and keeps a {key}_component root", () => {
-    const { payload } = capturedSectionToClipboardPayload(navbar);
-    const names = classNames(payload);
-    expect(names).not.toContain("padding-global");
-    expect(names.some((name) => name.endsWith("_component"))).toBe(true);
-  });
-
-  it("keeps the chrome root's own background (spacing not stripped)", () => {
-    const { payload } = capturedSectionToClipboardPayload(navbar);
+    expect(styleByName(payload, "heading-style-h1")!.styleLess).toBe(""); // adopts Style Guide
     const combo = payload.payload.styles.find(
-      (s) => s.comb === "&" && s.styleLess.includes("background-color: rgb(255, 255, 255);")
+      (s) => s.comb === "&" && s.styleLess.includes("color: rgb(255, 255, 255);")
     );
     expect(combo).toBeDefined();
   });
+
+  it("maps paragraphs to the nearest text-size and buttons to button", () => {
+    const { payload } = capturedSectionToClipboardPayload(hero());
+    const names = classNames(payload);
+    expect(names).toContain("text-size-medium"); // 18px → medium
+    expect(names).toContain("button");
+  });
 });
 
-describe("combineSections (multi-select paste)", () => {
-  it("wraps sections under one labeled 'unwrap me' root", () => {
-    const { payload } = combineSections([navbarInput(), hero()], {});
+describe("container + section-padding size matching", () => {
+  it("adopts the nearest standard container by measured max-width", () => {
+    const { payload } = capturedSectionToClipboardPayload(hero()); // 1280 → container-large
+    const names = classNames(payload);
+    expect(names).toContain("container-large");
+    expect(names).not.toContain("container-small");
+    // Bare reference — adopts the project's width.
+    expect(styleByName(payload, "container-large")!.styleLess).toBe("");
+  });
+
+  it("mints a custom container when no standard size fits", () => {
+    const wide = hero();
+    (wide.tree.children[0].styles as Record<string, string>)["max-width"] = "1500px";
+    const { payload } = capturedSectionToClipboardPayload(wide);
+    const names = classNames(payload);
+    expect(names.some((n) => n === "container-hero")).toBe(true);
+    expect(styleByName(payload, "container-hero")!.styleLess).toContain("max-width: 1500px;");
+    expect(names).not.toContain("container-large");
+  });
+});
+
+describe("full-bleed images → CSS background-image", () => {
+  it("converts an absolute/cover <img> to a div with background-image", () => {
+    const input: SectionCaptureInput = {
+      tree: el({
+        tag: "section",
+        key: "0",
+        styles: { position: "relative" },
+        children: [
+          el({
+            tag: "img",
+            key: "0.0",
+            attrs: { src: "https://cdn.example.com/brain.jpg", alt: "brain" },
+            styles: { position: "absolute", "object-fit": "cover", width: "1630px", height: "917px" }
+          })
+        ]
+      }),
+      sectionName: "Hero"
+    };
+    const { payload, stats } = capturedSectionToClipboardPayload(input);
+    expect(stats.backgroundImages).toBe(1);
+    const bg = payload.payload.styles.find((s) => s.styleLess.includes("background-image"));
+    expect(bg?.styleLess).toContain('url("https://cdn.example.com/brain.jpg")');
+    expect(bg?.styleLess).toContain("background-size: cover;");
+    // No Image node — it became a div.
+    expect(payload.payload.nodes.some((n) => n.type === "Image")).toBe(false);
+  });
+});
+
+describe("responsive variants", () => {
+  it("emits per-breakpoint deltas on the node combo", () => {
+    const input = hero({
+      breakpointStyles: {
+        medium: { "0.0.0": { "font-size": "40px", color: "rgb(255, 255, 255)" } },
+        small: { "0.0.0": { "font-size": "32px", color: "rgb(255, 255, 255)" } }
+      },
+      breakpointKeys: ["medium", "small", "tiny"]
+    });
+    const { payload } = capturedSectionToClipboardPayload(input);
+    const h1 = payload.payload.nodes.find((n) => n.type === "Heading")!;
+    const comboName = nodeClassNames(payload, h1).find((n) => n.includes("_v"))!;
+    const combo = styleByName(payload, comboName)!;
+    expect((combo.variants.medium as { styleLess: string }).styleLess).toContain("font-size: 40px;");
+    expect((combo.variants.small as { styleLess: string }).styleLess).toContain("font-size: 32px;");
+  });
+});
+
+describe("combineSections wraps in main-wrapper", () => {
+  it("wraps multiple sections in a main-wrapper root", () => {
+    const { payload } = combineSections([hero(), hero({ sectionName: "Philosophy" })]);
     const root = payload.payload.nodes.at(-1)!;
-    expect((root.data as { displayName?: string })?.displayName).toBe("Pasted sections — unwrap me");
+    expect(nodeClassNames(payload, root)).toContain("main-wrapper");
+    expect((root.data as { displayName?: string })?.displayName).toBe("main-wrapper");
     expect(root.children?.length).toBe(2);
   });
 
-  it("dedupes shared classes and identical combos across sections", () => {
-    const { payload } = combineSections([hero(), hero({ sectionId: "section-1" })], {});
-    // Both heroes reference the same shared class → one style entry.
+  it("dedupes shared classes across sections", () => {
+    const { payload } = combineSections([hero(), hero({ sectionName: "Hero" })]);
     expect(payload.payload.styles.filter((s) => s.name === "heading-style-h1")).toHaveLength(1);
-    // Identical captured heading color → one shared combo.
-    const whiteCombos = payload.payload.styles.filter(
-      (s) => s.comb === "&" && s.styleLess.includes("color: rgb(255, 255, 255);")
-    );
-    expect(whiteCombos).toHaveLength(1);
   });
 
-  it("a single section still combines into a valid wrapped payload", () => {
-    const { payload } = combineSections([hero()], {});
-    expect(payload.type).toBe("@webflow/XscpData");
-    expect(payload.payload.nodes.length).toBeGreaterThan(0);
+  it("a single section pastes bare (drop into main-wrapper yourself)", () => {
+    const { payload } = capturedSectionToClipboardPayload(hero());
+    const root = payload.payload.nodes.at(-1)!;
+    expect((root.data as { displayName?: string })?.displayName).toBe("Hero");
+    expect(nodeClassNames(payload, root)).toContain("section_hero");
   });
 });
-
-function navbarInput(): SectionCaptureInput {
-  return {
-    html: '<nav data-pw-key="0" class="navbar"><a data-pw-key="0.0" href="/">Home</a></nav>',
-    baseStylesByKey: { "0": { display: "flex", "background-color": "rgb(255, 255, 255)" } },
-    sectionId: "chrome-0",
-    sectionName: "Navbar",
-    chrome: true,
-    label: "Navbar"
-  };
-}
