@@ -5,11 +5,10 @@ const sample = {
   version: 1,
   source: { url: "https://example.com", name: "Example" },
   variables: {
-    "--color-primary": { value: "#FF9902", type: "color", label: "Primary warm accent" },
-    "--color-neutral-darkest": { value: "#0D0800", type: "color", label: "Neutral Darkest" },
-    "--font-heading": { value: "Lato, sans-serif", type: "font", label: "Font / Heading" },
-    "--weight-bold": { value: "700", type: "number" },
-    "--radius-medium": { value: "6px", type: "size", label: "Radius / Medium" }
+    "--color-primary": { value: "#FF9902", type: "color", collection: "Primitives", group: "Colors", name: "Primary" },
+    "--color-neutral-darkest": { value: "#0D0800", type: "color", collection: "Primitives", group: "Colors", name: "Neutral Darkest" },
+    "--font-heading": { value: "Lato", type: "font", collection: "Typography", group: "Font Styles", name: "Heading" },
+    "--radius-medium": { value: "6px", type: "size", collection: "UI Styles", group: "Radius", name: "Medium" }
   },
   classes: {
     "heading-style-h1": {

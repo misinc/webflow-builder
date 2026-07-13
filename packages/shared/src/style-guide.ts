@@ -17,16 +17,30 @@ import { z } from "zod";
  */
 
 /** A CSS property → value map. Values may be literals (`#FF9902`, `1.5rem`) or
- *  variable references (`var(--color-primary)`). */
-export const declMapSchema = z.record(z.string(), z.string());
+ *  variable references (`var(--color-primary)`). Numeric CSS values (font-weight,
+ *  line-height, opacity, …) are accepted as numbers and coerced to strings. */
+export const declMapSchema = z.record(
+  z.string(),
+  z.union([z.string(), z.number()]).transform((value) => String(value))
+);
 export type DeclMap = z.infer<typeof declMapSchema>;
 
 export const styleGuideVariableSchema = z.object({
-  /** Resolved literal value, e.g. "#FF9902", "1.5rem", "Lato, sans-serif". */
+  /** Resolved literal value: hex ("#8EC441"), a bare font family ("Sora"), or a
+   *  size ("24px"). Only colors, fonts, radius, and stroke are variables —
+   *  Relume keeps sizes/weights/spacing as literals on the classes. */
   value: z.string().min(1),
   type: z.enum(["color", "size", "font", "number", "other"]),
-  /** Human name for matching to a destination Webflow variable (e.g. "Primary
-   *  warm accent", "Neutral Darkest"). Match by name first, value as fallback. */
+  /** Webflow variable collection, matching Relume: "Primitives" | "Color Schemes"
+   *  | "Typography" | "UI Styles". */
+  collection: z.string().min(1),
+  /** Group within the collection (e.g. "Colors", "Opacity", "Font Styles",
+   *  "Radius", "Stroke"). Cosmetic — may not be settable via the Designer API. */
+  group: z.string().optional(),
+  /** Relume-style display name for the variable, e.g. "Primary", "Heading",
+   *  "Large". Updated in place when a variable of this name already exists. */
+  name: z.string().min(1),
+  /** Optional note (where it's used). */
   label: z.string().optional()
 });
 export type StyleGuideVariable = z.infer<typeof styleGuideVariableSchema>;
@@ -86,9 +100,12 @@ export type StyleGuideBreakpoint = "medium" | "small" | "tiny";
 
 export interface StyleGuideVariableOp {
   kind: "variable";
-  /** The CSS-var token, e.g. "--color-primary". */
+  /** The CSS-var token classes bind to, e.g. "--color-primary". */
   token: string;
-  /** The Webflow variable name to create/update (token slug, e.g. "color-primary"). */
+  /** Webflow collection to place it in ("Primitives", "Typography", …). */
+  collection: string;
+  group?: string;
+  /** Relume-style variable name to create/update ("Primary", "Heading"). */
   name: string;
   type: StyleGuideVariable["type"];
   value: string;
@@ -112,10 +129,6 @@ export interface StyleGuideApplyPlan {
 }
 
 const STYLE_GUIDE_BREAKPOINTS: StyleGuideBreakpoint[] = ["medium", "small", "tiny"];
-
-function tokenSlug(token: string): string {
-  return token.replace(/^--/, "");
-}
 
 function splitDeclarations(map: DeclMap): {
   literals: Record<string, string>;
@@ -145,7 +158,9 @@ export function planStyleGuideApply(spec: StyleGuideSpec): StyleGuideApplyPlan {
     ([token, variable]) => ({
       kind: "variable",
       token,
-      name: tokenSlug(token),
+      collection: variable.collection,
+      group: variable.group,
+      name: variable.name,
       type: variable.type,
       value: variable.value,
       label: variable.label

@@ -430,6 +430,13 @@ function tokenVariableName(token: RepoToken): string {
   return token.name;
 }
 
+/** "'Sora', sans-serif" → "Sora". Webflow font-family variables want the bare
+ *  primary family, not a full CSS font stack. */
+function primaryFontFamily(value: string): string {
+  const first = value.split(",")[0]?.trim() ?? value.trim();
+  return first.replace(/^['"]|['"]$/g, "");
+}
+
 function tokenDesignerValue(token: RepoToken): unknown {
   if (token.type === "size") {
     const match = /^(-?[\d.]+)(px|rem|em|vw|vh|%|ch|svh|dvh)?$/i.exec(token.value.trim());
@@ -1290,13 +1297,40 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
       number: "number",
       other: "other"
     } as const;
+    // Webflow font-family variables want the bare family name, not a CSS stack.
+    const value = op.type === "font" ? primaryFontFamily(op.value) : op.value;
     return {
-      group: "Style Guide",
+      group: op.collection,
       name: op.name,
       type: typeMap[op.type],
-      value: op.value,
+      value,
       sourceFile: "style-guide-spec"
     };
+  }
+
+  private async getVariableCollection(
+    name: string,
+    cache: Map<string, WebflowVariableCollection | null>
+  ): Promise<WebflowVariableCollection | null> {
+    const cached = cache.get(name);
+    if (cached !== undefined) {
+      return cached;
+    }
+    let collection = await this.api.getVariableCollectionByName?.(name).catch(() => null) ?? null;
+    if (!collection) {
+      const all = await this.api.getAllVariableCollections?.().catch(() => []);
+      for (const candidate of all ?? []) {
+        if ((await candidate.getName?.().catch(() => null)) === name) {
+          collection = candidate;
+          break;
+        }
+      }
+    }
+    if (!collection) {
+      collection = (await this.api.createVariableCollection?.(name).catch(() => null)) ?? null;
+    }
+    cache.set(name, collection);
+    return collection;
   }
 
   private async updateVariableValue(
@@ -1335,37 +1369,36 @@ class RealWebflowDesignerBridge implements WebflowDesignerBridge {
       warnings: []
     };
 
-    // 1. Variables — create first so class bindings can resolve.
-    const collections = await this.api.getAllVariableCollections?.().catch(() => null);
-    const collection =
-      collections?.[0] ?? (await this.api.getDefaultVariableCollection().catch(() => null));
+    // 1. Variables — into their named collection (Primitives / Typography / UI
+    //    Styles), created first so class bindings can resolve.
+    const collectionCache = new Map<string, WebflowVariableCollection | null>();
     const variableByToken = new Map<string, WebflowVariable>();
-    if (!collection) {
-      result.warnings.push(
-        "No variable collection available — variables were not created; classes fall back to literal values."
-      );
-    } else {
-      for (const op of plan.variables) {
-        try {
-          let variable = await collection.getVariableByName(op.name).catch(() => null);
-          if (variable) {
-            if (await this.updateVariableValue(variable, op)) {
-              result.variablesUpdated += 1;
-            }
-          } else {
-            variable = await this.createVariableFromToken(collection, this.styleGuideOpToToken(op));
-            if (variable) {
-              result.variablesCreated += 1;
-            }
+    for (const op of plan.variables) {
+      const collection = await this.getVariableCollection(op.collection, collectionCache);
+      if (!collection) {
+        result.variablesFailed += 1;
+        result.warnings.push(`Could not find or create the "${op.collection}" collection.`);
+        continue;
+      }
+      try {
+        let variable = await collection.getVariableByName(op.name).catch(() => null);
+        if (variable) {
+          if (await this.updateVariableValue(variable, op)) {
+            result.variablesUpdated += 1;
           }
+        } else {
+          variable = await this.createVariableFromToken(collection, this.styleGuideOpToToken(op));
           if (variable) {
-            variableByToken.set(op.token, variable);
-          } else {
-            result.variablesFailed += 1;
+            result.variablesCreated += 1;
           }
-        } catch {
+        }
+        if (variable) {
+          variableByToken.set(op.token, variable);
+        } else {
           result.variablesFailed += 1;
         }
+      } catch {
+        result.variablesFailed += 1;
       }
     }
 

@@ -6,7 +6,7 @@ import "./v2/index.css";
 
 // Bump on every bundle rebuild so you can confirm which bundle Webflow loaded
 // (open the Designer dev console). Backend fixes deploy separately via git.
-const BUNDLE_VERSION = "2026-07-13a · Apply Style Guide spec (debug screen): create variables + update classes";
+const BUNDLE_VERSION = "2026-07-13c · Style Guide apply: accept numeric CSS values (font-weight/line-height)";
 // eslint-disable-next-line no-console
 console.log(`%c[Webflow Builder] bundle ${BUNDLE_VERSION}`, "color:#00d09c;font-weight:bold");
 
