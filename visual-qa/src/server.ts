@@ -421,7 +421,10 @@ const playgroundExtractBatchSchema = z.object({
     )
     .min(1)
     .max(30),
-  styleGuideMode: z.boolean().optional()
+  styleGuideMode: z.boolean().optional(),
+  existingStyles: z
+    .array(z.object({ className: z.string(), styleId: z.string() }))
+    .optional()
 });
 
 app.post("/playground/extract-batch", async (request, response) => {
@@ -469,10 +472,11 @@ app.post("/playground/extract-batch", async (request, response) => {
         perSection.push({ selector: section.selector, screenshot, warnings: capture.warnings });
       }
 
+      const existingStyles = input.existingStyles ?? [];
       const result =
         captured.length === 1
-          ? capturedSectionToClipboardPayload(captured[0])
-          : combineSections(captured, {});
+          ? capturedSectionToClipboardPayload(captured[0], existingStyles)
+          : combineSections(captured, { existingStyles });
 
       response.json({
         payloadJson: JSON.stringify(result.payload),

@@ -18,6 +18,13 @@ const capture = new VisualQaClient();
 const backend = new BackendClient();
 const bridge = getWebflowBridge();
 
+// Shared client-first classes the project owns — bind these to their real style
+// ids on paste so Webflow reuses them instead of forking to "name 2". Section-
+// scoped classes (e.g. hero_group) are intentionally excluded: they should paste
+// fresh (and re-paste to update) rather than adopt a stale project version.
+const SHARED_CLIENT_FIRST_CLASS =
+  /^(heading-style-|text-size-|text-weight-|text-style-|text-color-|container|padding-global$|padding-section-|page-wrapper$|main-wrapper$|page-padding$|spacer-|margin-|max-width-|background-color-|button$|button-)/;
+
 export type NotificationTone = "info" | "success" | "error";
 
 export interface Notification {
@@ -248,10 +255,22 @@ export function MigrationProvider({ children }: { children: ReactNode }) {
     setPreparedPayload(null);
     notify(`Capturing ${chosen.length} part${chosen.length === 1 ? "" : "s"}…`);
     try {
+      // Bind the project's shared client-first classes to their real style ids so
+      // the paste reuses them (no "text-size-medium 2" forks to clean up after).
+      let existingStyles: Array<{ className: string; styleId: string }> = [];
+      try {
+        const styles = await bridge.listStyleIds();
+        existingStyles = styles
+          .filter((s) => SHARED_CLIENT_FIRST_CLASS.test(s.name))
+          .map((s) => ({ className: s.name, styleId: s.id }));
+      } catch {
+        /* no Designer context / styles — paste falls back to name-only reuse */
+      }
       const result = await capture.extractSections({
         url: sourceUrl.trim(),
         sections: chosen.map((c) => ({ selector: c.selector, label: c.label, kind: c.kind })),
-        styleGuideMode: true
+        styleGuideMode: true,
+        existingStyles
       });
       setPreparedPayload(result.payloadJson);
       setPreparedCount(chosen.length);

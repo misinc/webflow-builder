@@ -920,15 +920,20 @@ function buildSection(input: SectionCaptureInput): SectionBuild {
   return { elementTree, styleDefinitions, stats, warnings: [...warnings] };
 }
 
+/** Project's shared client-first classes → real style ids, so pasted shared
+ *  classes bind by identity instead of forking to "name 2" (webflow-clipboard). */
+type ExistingStyles = Array<{ className: string; styleId: string }>;
+
 /** Single captured section → a complete, standalone clipboard payload. */
 export function capturedSectionToClipboardPayload(
-  input: SectionCaptureInput
+  input: SectionCaptureInput,
+  existingStyles: ExistingStyles = []
 ): PlaygroundPayloadResult {
   const built = buildSection(input);
   const payload = buildWebflowClipboardPayload({
     elementTree: built.elementTree,
     styleDefinitions: built.styleDefinitions,
-    existingStyles: []
+    existingStyles
   });
   return { payload, stats: built.stats, warnings: built.warnings };
 }
@@ -941,7 +946,7 @@ export function capturedSectionToClipboardPayload(
  */
 export function combineSections(
   sections: SectionCaptureInput[],
-  _opts: { wrapperLabel?: string } = {}
+  opts: { wrapperLabel?: string; existingStyles?: ExistingStyles } = {}
 ): PlaygroundPayloadResult {
   const builds = sections.map((section) => buildSection(section));
 
@@ -966,7 +971,7 @@ export function combineSections(
   const payload = buildWebflowClipboardPayload({
     elementTree: wrapper,
     styleDefinitions: [...stylesByName.values()],
-    existingStyles: []
+    existingStyles: opts.existingStyles ?? []
   });
 
   const stats = {

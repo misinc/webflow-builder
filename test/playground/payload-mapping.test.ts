@@ -320,6 +320,37 @@ describe("responsive variants", () => {
   });
 });
 
+describe("existingStyles binding (no name-2 forks on paste)", () => {
+  const project = [
+    { className: "text-size-medium", styleId: "proj-tsm" },
+    { className: "heading-style-h1", styleId: "proj-h1" },
+    { className: "padding-global", styleId: "proj-pg" },
+    { className: "container-large", styleId: "proj-cl" },
+    { className: "button", styleId: "proj-btn" }
+  ];
+
+  it("references the project's real style id for shared classes (empty styleLess)", () => {
+    const { payload } = capturedSectionToClipboardPayload(hero(), project);
+    for (const { className, styleId } of project) {
+      const style = styleByName(payload, className);
+      expect(style, className).toBeDefined();
+      expect(style!._id).toBe(styleId); // real project id, not a synthetic hash → Webflow reuses it
+      expect(style!.styleLess).toBe(""); // shared class is referenced, never restyled
+    }
+    // The per-node fidelity combo is still a fresh class (not a project id).
+    const combo = classNames(payload).find((n) => n.startsWith("heading-style-h1_v"));
+    expect(combo).toBeDefined();
+    expect(styleByName(payload, combo!)!._id).not.toBe("proj-h1");
+  });
+
+  it("combineSections forwards existingStyles to every section", () => {
+    const { payload } = combineSections([hero(), hero({ sectionName: "Two" })], {
+      existingStyles: project
+    });
+    expect(styleByName(payload, "text-size-medium")!._id).toBe("proj-tsm");
+  });
+});
+
 describe("section-wide background image (issue #3)", () => {
   it("hoists a full-bleed backdrop onto the section root, not an inner div", () => {
     const input: SectionCaptureInput = {

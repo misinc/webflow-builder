@@ -174,7 +174,12 @@ export const captureExtractRequestSchema = z.object({
     )
     .min(1)
     .max(30),
-  styleGuideMode: z.boolean().optional()
+  styleGuideMode: z.boolean().optional(),
+  /** Project's shared client-first classes as { className, styleId }, so pasted
+   *  shared classes bind to the project's real classes instead of forking to "name 2". */
+  existingStyles: z
+    .array(z.object({ className: z.string(), styleId: z.string() }))
+    .optional()
 });
 
 export const captureExtractResponseSchema = z.object({
