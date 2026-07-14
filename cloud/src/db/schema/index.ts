@@ -159,6 +159,14 @@ export const sharedStyleContextsTable = sqliteTable("shared_style_contexts", {
   updatedAt: text("updated_at").notNull()
 });
 
+// URL-first migration progress per Webflow site (step 1/2 done, source URL,
+// scanned sections, built parts) — so the extension remembers across restarts.
+export const migrationStatesTable = sqliteTable("migration_states", {
+  siteId: text("site_id").primaryKey(),
+  stateJson: text("state_json").notNull(),
+  updatedAt: text("updated_at").notNull()
+});
+
 export const siteStylePlansTable = sqliteTable(
   "site_style_plans",
   {

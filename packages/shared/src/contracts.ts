@@ -186,6 +186,27 @@ export const captureExtractResponseSchema = z.object({
   )
 });
 
+// Per-Webflow-site migration progress, persisted in D1 so the extension
+// remembers step 1/2 completion, the source URL, the scanned sections, and
+// which parts are built across restarts.
+export const migrationStateSchema = z.object({
+  styleGuideComplete: z.boolean().default(false),
+  sourceUrl: z.string().default(""),
+  scannedCandidates: z.array(captureCandidateSchema).default([]),
+  builtSelectors: z.array(z.string()).default([])
+});
+export type MigrationState = z.infer<typeof migrationStateSchema>;
+
+export const migrationStateGetResponseSchema = z.object({
+  siteId: z.string(),
+  state: migrationStateSchema.nullable()
+});
+
+export const migrationStateSaveRequestSchema = z.object({
+  webflowSiteId: z.string().min(1),
+  state: migrationStateSchema
+});
+
 export const sharedStyleContextSchema = z.object({
   siteId: z.string().min(1),
   capturedAt: z.string().datetime(),

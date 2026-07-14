@@ -6,6 +6,7 @@ import {
   completeBuildJobInputSchema,
   debugSkeletonJobTriggerSchema,
   debugSkeletonRequestSchema,
+  migrationStateSaveRequestSchema,
   pageMappingsUpsertInputSchema,
   repoConnectionInputSchema,
   siteStylePlanRequestSchema,
@@ -232,6 +233,15 @@ async function handleGet(request: Request, locals: App.Locals, pathname: string)
     );
   }
 
+  if (pathname === "/api/workflow/migration-state") {
+    const webflowSiteId = url.searchParams.get("webflowSiteId");
+    if (!webflowSiteId) {
+      throw new Error("Missing webflowSiteId query parameter.");
+    }
+    const state = await services.repository.getMigrationState(webflowSiteId);
+    return json({ siteId: webflowSiteId, state });
+  }
+
   if (pathname === "/api/workflow/debug/generate-skeleton/status") {
     const jobId = url.searchParams.get("jobId");
     if (!jobId) {
@@ -315,6 +325,12 @@ async function handlePost(request: Request, locals: App.Locals, pathname: string
     return json({
       mappings: await services.workflowService.upsertPageMappings(input)
     });
+  }
+
+  if (pathname === "/api/workflow/migration-state") {
+    const input = await parseBody(request, migrationStateSaveRequestSchema);
+    await services.repository.saveMigrationState(input.webflowSiteId, input.state);
+    return json({ ok: true });
   }
 
   if (pathname === "/api/workflow/site-style-plan/rebuild") {

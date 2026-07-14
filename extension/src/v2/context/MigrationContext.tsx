@@ -8,13 +8,14 @@ import {
   useState,
   type ReactNode
 } from "react";
-import { VisualQaClient } from "../../api/client.js";
+import { BackendClient, VisualQaClient } from "../../api/client.js";
 import { getWebflowBridge } from "../../webflow/bridge.js";
 import { copyWebflowPayloadToClipboard } from "../../webflow/clipboard.js";
 import { styleGuideSpecSchema } from "@wfb/shared/style-guide.js";
-import type { CaptureCandidate } from "@wfb/shared/contracts.js";
+import type { CaptureCandidate, MigrationState } from "@wfb/shared/contracts.js";
 
 const capture = new VisualQaClient();
+const backend = new BackendClient();
 const bridge = getWebflowBridge();
 
 export type NotificationTone = "info" | "success" | "error";
@@ -31,6 +32,7 @@ interface MigrationContextValue {
   setSourceUrl: (url: string) => void;
 
   // Scan
+  hydrated: boolean;
   candidates: CaptureCandidate[];
   scanning: boolean;
   scan: () => Promise<void>;
@@ -77,61 +79,99 @@ export function MigrationProvider({ children }: { children: ReactNode }) {
   const [preparedPayload, setPreparedPayload] = useState<string | null>(null);
   const [preparedCount, setPreparedCount] = useState(0);
   const [notification, setNotification] = useState<Notification | null>(null);
-  // The Style Guide flag and the source URL persist per Webflow site (keyed by
-  // siteId) across restarts. Falls back to a global key when no site id is known.
   const [styleGuideComplete, setStyleGuideCompleteState] = useState(false);
-  const siteSuffixRef = useRef<string>("");
-  const keyFor = (name: string) => `wfb:${name}${siteSuffixRef.current}`;
+  // Becomes true once persisted state has loaded — the Sections screen waits for
+  // this before deciding whether to auto-scan (so it won't scan over saved parts).
+  const [hydrated, setHydrated] = useState(false);
+
+  // Migration progress persists per Webflow site in D1 (source of truth), with a
+  // localStorage cache as an offline/dev fallback. `stateRef` mirrors the
+  // persistable fields so any mutation can save the whole record.
+  const siteIdRef = useRef<string | null>(null);
+  const stateRef = useRef<MigrationState>({
+    styleGuideComplete: false,
+    sourceUrl: "",
+    scannedCandidates: [],
+    builtSelectors: []
+  });
+  const cacheKey = () => `wfb:migrationState${siteIdRef.current ? `:${siteIdRef.current}` : ""}`;
+
+  const persist = useCallback((next: Partial<MigrationState>) => {
+    const merged = { ...stateRef.current, ...next };
+    stateRef.current = merged;
+    try {
+      localStorage.setItem(cacheKey(), JSON.stringify(merged));
+    } catch {
+      /* localStorage unavailable */
+    }
+    const siteId = siteIdRef.current;
+    if (siteId) {
+      void backend.saveMigrationState(siteId, merged).catch(() => {
+        /* backend unreachable — the cache still holds it */
+      });
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      let suffix = "";
+      let siteId: string | null = null;
       try {
         const wf = (window as unknown as {
           webflow?: { getSiteInfo?: () => Promise<{ siteId?: string }> };
         }).webflow;
-        const info = await wf?.getSiteInfo?.();
-        if (info?.siteId) suffix = `:${info.siteId}`;
+        siteId = (await wf?.getSiteInfo?.())?.siteId ?? null;
       } catch {
-        /* no site context — use global keys */
+        /* no site context */
       }
-      siteSuffixRef.current = suffix;
-      try {
-        if (cancelled) return;
-        setStyleGuideCompleteState(localStorage.getItem(`wfb:styleGuideComplete${suffix}`) === "1");
-        const savedUrl = localStorage.getItem(`wfb:sourceUrl${suffix}`);
-        if (savedUrl) setSourceUrlState(savedUrl);
-      } catch {
-        /* localStorage unavailable */
+      siteIdRef.current = siteId;
+
+      let state: MigrationState | null = null;
+      if (siteId) {
+        try {
+          state = await backend.getMigrationState(siteId);
+        } catch {
+          /* backend unreachable — fall back to the local cache */
+        }
       }
+      if (!state) {
+        try {
+          const cached = localStorage.getItem(cacheKey());
+          if (cached) state = JSON.parse(cached) as MigrationState;
+        } catch {
+          /* ignore */
+        }
+      }
+      if (cancelled) return;
+      if (state) {
+        stateRef.current = state;
+        setStyleGuideCompleteState(Boolean(state.styleGuideComplete));
+        if (state.sourceUrl) setSourceUrlState(state.sourceUrl);
+        if (state.scannedCandidates?.length) setCandidates(state.scannedCandidates);
+        if (state.builtSelectors?.length) setBuilt(new Set(state.builtSelectors));
+      }
+      setHydrated(true);
     })();
     return () => {
       cancelled = true;
     };
   }, []);
 
-  const setSourceUrl = useCallback((url: string) => {
-    setSourceUrlState(url);
-    try {
-      localStorage.setItem(keyFor("sourceUrl"), url);
-    } catch {
-      /* localStorage unavailable — session-only */
-    }
-  }, []);
+  const setSourceUrl = useCallback(
+    (url: string) => {
+      setSourceUrlState(url);
+      persist({ sourceUrl: url });
+    },
+    [persist]
+  );
 
-  const setStyleGuideComplete = useCallback((done: boolean) => {
-    setStyleGuideCompleteState(done);
-    try {
-      if (done) {
-        localStorage.setItem(keyFor("styleGuideComplete"), "1");
-      } else {
-        localStorage.removeItem(keyFor("styleGuideComplete"));
-      }
-    } catch {
-      /* localStorage unavailable — session-only */
-    }
-  }, []);
+  const setStyleGuideComplete = useCallback(
+    (done: boolean) => {
+      setStyleGuideCompleteState(done);
+      persist({ styleGuideComplete: done });
+    },
+    [persist]
+  );
 
   const notify = useCallback((message: string, tone: NotificationTone = "info") => {
     setNotification({ message, tone, dismissed: false });
@@ -153,6 +193,9 @@ export function MigrationProvider({ children }: { children: ReactNode }) {
     try {
       const result = await capture.scanSections(url);
       setCandidates(result.candidates);
+      // Remember the scan (and the URL) so re-opening the extension doesn't
+      // re-scan — only the Rescan button does.
+      persist({ scannedCandidates: result.candidates, sourceUrl: url });
       notify(
         result.candidates.length
           ? `Found ${result.candidates.length} parts — select what to build.`
@@ -164,7 +207,7 @@ export function MigrationProvider({ children }: { children: ReactNode }) {
     } finally {
       setScanning(false);
     }
-  }, [sourceUrl, notify]);
+  }, [sourceUrl, notify, persist]);
 
   const toggleSelected = useCallback((selector: string) => {
     setSelected((prev) => {
@@ -241,11 +284,12 @@ export function MigrationProvider({ children }: { children: ReactNode }) {
       for (const selector of selected) {
         next.add(selector);
       }
+      persist({ builtSelectors: [...next] });
       return next;
     });
     setSelected(new Set());
     setPreparedPayload(null);
-  }, [selected]);
+  }, [selected, persist]);
 
   const applyStyleGuide = useCallback(
     async (json: string) => {
@@ -292,6 +336,7 @@ export function MigrationProvider({ children }: { children: ReactNode }) {
       captureConfigured: capture.isConfigured(),
       sourceUrl,
       setSourceUrl,
+      hydrated,
       candidates,
       scanning,
       scan,
@@ -316,6 +361,7 @@ export function MigrationProvider({ children }: { children: ReactNode }) {
     }),
     [
       sourceUrl,
+      hydrated,
       candidates,
       scanning,
       scan,

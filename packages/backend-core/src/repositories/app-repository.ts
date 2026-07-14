@@ -10,6 +10,7 @@ import {
   RepoRecord,
   RepoSectionRecord,
   RepoSyncRecord,
+  MigrationState,
   SectionRunRecord,
   SectionWorkflowState,
   SharedStyleContext,
@@ -49,6 +50,8 @@ export interface AppRepository {
   getSiteBinding(repoId: string, userId: string): Promise<WebflowSiteBinding | null>;
   saveSharedStyleContext(siteId: string, sharedStyleContext: SharedStyleContext): Promise<void>;
   getSharedStyleContext(siteId: string): Promise<SharedStyleContext | null>;
+  saveMigrationState(siteId: string, state: MigrationState): Promise<void>;
+  getMigrationState(siteId: string): Promise<MigrationState | null>;
   saveSiteStylePlan(plan: SiteStylePlan): Promise<void>;
   getSiteStylePlan(repoId: string, webflowSiteId: string): Promise<SiteStylePlan | null>;
   upsertPageMappings(input: PageMappingsUpsertInput): Promise<PageMapping[]>;

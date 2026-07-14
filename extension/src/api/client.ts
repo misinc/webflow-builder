@@ -41,6 +41,9 @@ import {
   CaptureExtractResponse,
   captureExtractRequestSchema,
   captureExtractResponseSchema,
+  MigrationState,
+  migrationStateGetResponseSchema,
+  migrationStateSchema,
   workflowClipboardResponseSchema,
   WorkflowClipboardRequest,
   WorkflowClipboardResponse,
@@ -182,6 +185,7 @@ const cloudRouteMap: Record<string, string> = {
   "workflow-page-mappings-get": "/workflow/page-mappings",
   "workflow-page-mappings-post": "/workflow/page-mappings",
   "workflow-repo-tokens": "/workflow/repo-tokens",
+  "workflow-migration-state": "/workflow/migration-state",
   "workflow-site-style-plan": "/workflow/site-style-plan",
   "workflow-site-style-plan-rebuild": "/workflow/site-style-plan/rebuild",
   "workflow-site-style-plan-confirm": "/workflow/site-style-plan/confirm",
@@ -229,6 +233,22 @@ export class BackendClient {
       { method: "GET" }
     );
     return v2BootstrapResponseSchema.parse(response);
+  }
+
+  /** Per-site migration progress (step 1/2, source URL, scanned + built parts). */
+  async getMigrationState(webflowSiteId: string): Promise<MigrationState | null> {
+    const response = await request<unknown>(
+      withQuery(this.functionUrl("workflow-migration-state"), { webflowSiteId }),
+      { method: "GET" }
+    );
+    return migrationStateGetResponseSchema.parse(response).state;
+  }
+
+  async saveMigrationState(webflowSiteId: string, state: MigrationState): Promise<void> {
+    await request<{ ok: boolean }>(this.functionUrl("workflow-migration-state"), {
+      method: "POST",
+      body: JSON.stringify({ webflowSiteId, state: migrationStateSchema.parse(state) })
+    });
   }
 
   async getDebugEnvStatus(): Promise<DebugEnvStatus> {

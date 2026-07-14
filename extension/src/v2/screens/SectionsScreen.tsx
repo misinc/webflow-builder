@@ -8,6 +8,7 @@ import type { CaptureCandidate } from "@wfb/shared/contracts.js";
 export function SectionsScreen() {
   const { navigate } = useNavigation();
   const {
+    hydrated,
     candidates,
     scanning,
     scan,
@@ -20,12 +21,13 @@ export function SectionsScreen() {
   } = useMigration();
 
   useEffect(() => {
-    if (candidates.length === 0 && !scanning) {
+    // Only auto-scan once the saved state has loaded and there's nothing stored
+    // for this site. Otherwise the persisted sections show; Rescan is manual.
+    if (hydrated && candidates.length === 0 && !scanning) {
       void scan();
     }
-    // Run once on entry; subsequent scans are manual via Rescan.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [hydrated]);
 
   const todo = candidates.filter((c) => !built.has(c.selector));
   const builtList = candidates.filter((c) => built.has(c.selector));

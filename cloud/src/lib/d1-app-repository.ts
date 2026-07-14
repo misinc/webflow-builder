@@ -10,6 +10,7 @@ import type {
   RepoRecord,
   RepoSectionRecord,
   RepoSyncRecord,
+  MigrationState,
   SectionRunRecord,
   SectionWorkflowState,
   SharedStyleContext,
@@ -28,6 +29,7 @@ import {
   sectionWorkflowStatesTable,
   siteStylePlansTable,
   sharedStyleContextsTable,
+  migrationStatesTable,
   webflowPageMappingsTable,
   webflowSiteBindingsTable
 } from "../db/schema";
@@ -485,6 +487,32 @@ export class D1AppRepository implements AppRepository {
           classes: [],
           variables: [],
           styleIds: []
+        })
+      : null;
+  }
+
+  async saveMigrationState(siteId: string, state: MigrationState): Promise<void> {
+    const timestamp = new Date().toISOString();
+    const stateJson = JSON.stringify(state);
+    await this.db
+      .insert(migrationStatesTable)
+      .values({ siteId, stateJson, updatedAt: timestamp })
+      .onConflictDoUpdate({
+        target: migrationStatesTable.siteId,
+        set: { stateJson, updatedAt: timestamp }
+      });
+  }
+
+  async getMigrationState(siteId: string): Promise<MigrationState | null> {
+    const row = await this.db.query.migrationStatesTable.findFirst({
+      where: eq(migrationStatesTable.siteId, siteId)
+    });
+    return row
+      ? parseJson<MigrationState>(row.stateJson, {
+          styleGuideComplete: false,
+          sourceUrl: "",
+          scannedCandidates: [],
+          builtSelectors: []
         })
       : null;
   }
