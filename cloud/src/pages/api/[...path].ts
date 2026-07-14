@@ -77,7 +77,53 @@ function routeMatch(pathname: string, expression: RegExp): RegExpMatchArray | nu
   return pathname.match(expression);
 }
 
+/** Section-thumbnail object storage lives on the R2 `THUMBNAILS` binding under a
+ *  `thumbnails/` prefix; it's served through this worker (R2 has no public URLs). */
+const THUMBNAIL_ROUTE = /^\/api\/thumbnails\/([^/]+)$/;
+const thumbnailObjectKey = (key: string) => `thumbnails/${key}`;
+
+async function serveThumbnail(locals: App.Locals, key: string): Promise<Response> {
+  const bucket = locals.runtime.env.THUMBNAILS;
+  if (!bucket) {
+    return json({ error: "Object storage is not configured." }, 503);
+  }
+  const object = await bucket.get(thumbnailObjectKey(key));
+  if (!object) {
+    return new Response("Not found", { status: 404, headers: corsHeaders });
+  }
+  return new Response(object.body, {
+    headers: {
+      ...corsHeaders,
+      "content-type": object.httpMetadata?.contentType ?? "image/png",
+      "cache-control": "public, max-age=31536000, immutable"
+    }
+  });
+}
+
+async function storeThumbnail(request: Request, locals: App.Locals, key: string): Promise<Response> {
+  const env = locals.runtime.env;
+  const token = env.THUMBNAILS_TOKEN;
+  // Uploads are the capture server's job — gate them behind the shared secret.
+  if (!token || request.headers.get("authorization") !== `Bearer ${token}`) {
+    return json({ error: "Unauthorized." }, 401);
+  }
+  const bucket = env.THUMBNAILS;
+  if (!bucket) {
+    return json({ error: "Object storage is not configured." }, 503);
+  }
+  const contentType = request.headers.get("content-type") ?? "image/png";
+  const body = await request.arrayBuffer();
+  await bucket.put(thumbnailObjectKey(key), body, { httpMetadata: { contentType } });
+  return json({ ok: true, key });
+}
+
 async function handleGet(request: Request, locals: App.Locals, pathname: string) {
+  {
+    const match = routeMatch(pathname, THUMBNAIL_ROUTE);
+    if (match) {
+      return serveThumbnail(locals, decodeURIComponent(match[1] ?? ""));
+    }
+  }
   const services = getCloudServices(locals);
   const url = new URL(request.url);
 
@@ -270,6 +316,12 @@ async function handleGet(request: Request, locals: App.Locals, pathname: string)
 }
 
 async function handlePost(request: Request, locals: App.Locals, pathname: string) {
+  {
+    const match = routeMatch(pathname, THUMBNAIL_ROUTE);
+    if (match) {
+      return storeThumbnail(request, locals, decodeURIComponent(match[1] ?? ""));
+    }
+  }
   const services = getCloudServices(locals);
 
   if (pathname === "/api/repos/connect") {

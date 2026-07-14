@@ -5,6 +5,10 @@ declare namespace App {
     runtime: {
       env: {
         DB: D1Database;
+        /** Object storage for section thumbnails (survives capture-server redeploys). */
+        THUMBNAILS?: R2Bucket;
+        /** Shared secret the capture server presents to upload thumbnails. */
+        THUMBNAILS_TOKEN?: string;
         GITHUB_APP_ID?: string;
         GITHUB_APP_CLIENT_ID?: string;
         GITHUB_APP_CLIENT_SECRET?: string;

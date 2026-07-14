@@ -102,8 +102,17 @@ interface VisualQaCompareResponse {
 }
 
 const app = express();
+// Behind Render's TLS-terminating proxy, so `req.protocol` must honor
+// X-Forwarded-Proto — otherwise artifact URLs come back http:// and the HTTPS
+// Designer blocks the screenshots as mixed content.
+app.set("trust proxy", true);
 const artifactDir =
   process.env.VISUAL_QA_ARTIFACT_DIR ?? "/tmp/webflow-builder-visual-qa";
+// Section thumbnails are uploaded to Webflow Cloud object storage (R2) so they
+// survive this capture server's redeploys. When these aren't set, thumbnails
+// fall back to the ephemeral local /artifacts URL.
+const cloudApiBaseUrl = process.env.CLOUD_API_BASE_URL?.replace(/\/+$/, "");
+const thumbnailsToken = process.env.THUMBNAILS_TOKEN;
 const maxViewports = Number.parseInt(process.env.VISUAL_QA_MAX_VIEWPORTS ?? "3", 10);
 const navigationTimeoutMs = Number.parseInt(
   process.env.VISUAL_QA_NAVIGATION_TIMEOUT_MS ?? "45000",
@@ -166,11 +175,11 @@ app.post("/playground/scan", async (request, response) => {
         const filename = `candidate-${index}.png`;
         let screenshot: string | null = null;
         try {
-          await page
-            .locator(candidate.selector)
-            .first()
-            .screenshot({ path: path.join(runDir, filename), timeout: 8000 });
-          screenshot = artifactUrl(artifactBaseUrl, runId, filename);
+          const localPath = path.join(runDir, filename);
+          await page.locator(candidate.selector).first().screenshot({ path: localPath, timeout: 8000 });
+          const key = thumbnailKey(input.url, candidate.selector);
+          screenshot =
+            (await persistThumbnail(localPath, key)) ?? artifactUrl(artifactBaseUrl, runId, filename);
         } catch {
           // A candidate that cannot be screenshotted is still selectable.
         }
@@ -452,11 +461,11 @@ app.post("/playground/extract-batch", async (request, response) => {
         let screenshot: string | null = null;
         try {
           const filename = `section-${index}.png`;
-          await page
-            .locator(section.selector)
-            .first()
-            .screenshot({ path: path.join(runDir, filename), timeout: 12_000 });
-          screenshot = artifactUrl(artifactBaseUrl, runId, filename);
+          const localPath = path.join(runDir, filename);
+          await page.locator(section.selector).first().screenshot({ path: localPath, timeout: 12_000 });
+          const key = thumbnailKey(input.url, section.selector);
+          screenshot =
+            (await persistThumbnail(localPath, key)) ?? artifactUrl(artifactBaseUrl, runId, filename);
         } catch {
           // capture still proceeds without a thumbnail
         }
@@ -706,11 +715,45 @@ function getArtifactBaseUrl(request: express.Request): string {
   if (configured) {
     return configured;
   }
-  return `${request.protocol}://${request.get("host")}`;
+  const host = request.get("host") ?? "";
+  // Only localhost may be plain http; any real host must be https or the Designer
+  // (served over https) blocks the artifact as mixed content.
+  const isLocal = /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(host);
+  const proto = isLocal ? request.protocol : "https";
+  return `${proto}://${host}`;
 }
 
 function artifactUrl(baseUrl: string, runId: string, filename: string): string {
   return `${baseUrl}/artifacts/${encodeURIComponent(runId)}/${encodeURIComponent(filename)}`;
+}
+
+// A stable object key per (source URL, section) — re-scanning overwrites the same
+// thumbnail instead of accumulating orphans in the bucket.
+function thumbnailKey(url: string, selector: string): string {
+  return crypto.createHash("sha1").update(`${url}|${selector}`).digest("hex").slice(0, 24);
+}
+
+/**
+ * Upload a screenshot to Webflow Cloud object storage and return its persistent,
+ * https URL — or null when cloud storage isn't configured or the upload fails, so
+ * the caller falls back to the ephemeral local /artifacts URL.
+ */
+async function persistThumbnail(localPath: string, key: string): Promise<string | null> {
+  if (!cloudApiBaseUrl || !thumbnailsToken) {
+    return null;
+  }
+  const endpoint = `${cloudApiBaseUrl}/api/thumbnails/${encodeURIComponent(key)}`;
+  try {
+    const bytes = await fs.readFile(localPath);
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "content-type": "image/png", authorization: `Bearer ${thumbnailsToken}` },
+      body: bytes
+    });
+    return res.ok ? endpoint : null;
+  } catch {
+    return null;
+  }
 }
 
 function assertUrlAllowed(value: string): void {

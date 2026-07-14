@@ -20,5 +20,11 @@
       "database_id": "replace-after-first-webflow-cloud-deploy",
       "migrations_dir": "drizzle"
     }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "THUMBNAILS",
+      "bucket_name": "webflow-builder-thumbnails"
+    }
   ]
 }
