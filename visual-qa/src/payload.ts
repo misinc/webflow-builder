@@ -488,11 +488,17 @@ function buildSection(input: SectionCaptureInput): SectionBuild {
     return Object.keys(variants).length > 0 ? variants : undefined;
   };
 
-  // A shared client-first class referenced by name (adopts the Style Guide). We
-  // ONLY add a combo when the node carries a genuine visual delta the shared
-  // class can't express (color, transform, gradient text, button paint …) — size,
-  // line-height, weight, spacing are owned by the shared class and dropped. This
-  // keeps ordinary text as a single clean class instead of a per-node combo.
+  // A shared client-first class referenced by name (adopts the Style Guide) plus,
+  // ONLY when the node carries a genuine visual delta the shared class can't
+  // express (color, transform, gradient text, button paint …), a second class
+  // holding that delta. Size/line-height/weight/spacing are owned by the shared
+  // class and dropped, so ordinary text stays a single clean class.
+  //
+  // The delta rides a GLOBAL class (combo: false), NOT a scoped combo (comb "&").
+  // A scoped combo forces Webflow to fork the base to "text-size-medium 2" on
+  // paste (it can't attach a scoped combo to your existing shared class); a global
+  // second class attaches to the real base with no fork — this is exactly how
+  // Relume's `button is-icon` etc. paste cleanly.
   const sharedWithCombo = (
     shared: string,
     styles: Record<string, string>,
@@ -507,7 +513,7 @@ function buildSection(input: SectionCaptureInput): SectionBuild {
     if (!combo) {
       combo = `${shared}_v${fnvHash(dedupe)}`;
       comboByKey.set(dedupe, combo);
-      styleDefinitions.push({ className: combo, properties: delta, variants, combo: true });
+      styleDefinitions.push({ className: combo, properties: delta, variants, combo: false });
       if (variants) stats.responsiveClassCount += 1;
     }
     return [shared, combo];

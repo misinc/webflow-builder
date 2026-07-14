@@ -69,16 +69,18 @@ describe("fidelity-first client-first naming (captured tree → XscpData)", () =
     expect(section.styleLess).toContain("background-color: rgb(0, 18, 53);");
   });
 
-  it("maps headings to heading-style-h* + a fidelity combo", () => {
+  it("maps headings to heading-style-h* + a GLOBAL fidelity class (never a scoped combo)", () => {
     const { payload } = capturedSectionToClipboardPayload(hero());
     const h1 = payload.payload.nodes.find((n) => n.type === "Heading")!;
     const names = nodeClassNames(payload, h1);
     expect(names).toContain("heading-style-h1");
     expect(styleByName(payload, "heading-style-h1")!.styleLess).toBe(""); // adopts Style Guide
-    const combo = payload.payload.styles.find(
-      (s) => s.comb === "&" && s.styleLess.includes("color: rgb(255, 255, 255);")
-    );
-    expect(combo).toBeDefined();
+    const delta = payload.payload.styles.find((s) => s.styleLess.includes("color: rgb(255, 255, 255);"))!;
+    expect(delta).toBeDefined();
+    // Global, not a scoped combo — so Webflow attaches it to the real base (no "name 2" fork).
+    expect(delta.comb).toBe("");
+    // The shared base carries no combo children (that linkage is what forces the fork).
+    expect(styleByName(payload, "heading-style-h1")!.children ?? []).toHaveLength(0);
   });
 
   it("maps paragraphs to the nearest text-size and buttons to button", () => {
