@@ -260,6 +260,46 @@ describe("clean Style-Guide adoption (no duplicate combos)", () => {
     expect(nodeClassNames(payload, p)).toEqual(["text-size-medium"]);
   });
 
+  it("stays bare for default ink + sub-pixel tracking, combos only real color", () => {
+    const input: SectionCaptureInput = {
+      tree: el({
+        tag: "section",
+        key: "0",
+        styles: { "padding-top": "80px", "padding-bottom": "80px" },
+        children: [
+          el({
+            tag: "div",
+            key: "0.0",
+            styles: { "max-width": "1280px", "margin-left": "auto", "margin-right": "auto" },
+            children: [
+              // Green eyebrow → a real color delta.
+              el({ tag: "p", key: "0.0.0", styles: { "font-size": "18px", color: "rgb(118, 160, 54)", "letter-spacing": "2px" }, text: "Eyebrow" }),
+              // Default dark heading + sub-pixel tracking → no delta → bare.
+              el({ tag: "h2", key: "0.0.1", styles: { "font-size": "40px", color: "rgb(0, 12, 35)", "letter-spacing": "0.15px" }, text: "Title" }),
+              // Default dark body → bare.
+              el({ tag: "p", key: "0.0.2", styles: { "font-size": "18px", color: "rgb(12, 12, 35)", "letter-spacing": "0.15px" }, text: "Body" })
+            ]
+          })
+        ]
+      }),
+      sectionName: "Copy"
+    };
+    const { payload } = capturedSectionToClipboardPayload(input);
+    // Default-ink heading + sub-pixel tracking → bare, no combo.
+    const heading = payload.payload.nodes.find((n) => n.type === "Heading")!;
+    expect(nodeClassNames(payload, heading)).toEqual(["heading-style-h2"]);
+    // Two paragraphs: default dark body → bare; green eyebrow → base + one combo.
+    const paras = payload.payload.nodes
+      .filter((n) => n.type === "Paragraph")
+      .map((n) => nodeClassNames(payload, n));
+    const bare = paras.find((c) => c.length === 1);
+    const combo = paras.find((c) => c.length === 2);
+    expect(bare).toEqual(["text-size-medium"]);
+    expect(combo?.[0]).toBe("text-size-medium");
+    expect(styleByName(payload, combo![1])!.styleLess).toContain("color: rgb(118, 160, 54);");
+    expect(styleByName(payload, combo![1])!.styleLess).toContain("letter-spacing: 2px;"); // real tracking kept
+  });
+
   it("keeps exactly one combo for a genuine delta and never a numbered duplicate", () => {
     const { payload } = capturedSectionToClipboardPayload(hero());
     const h1 = payload.payload.nodes.find((n) => n.type === "Heading")!;

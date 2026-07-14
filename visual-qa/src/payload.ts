@@ -155,6 +155,25 @@ const BUTTON_DELTA_PROPS = new Set([
   "border-right-width"
 ]);
 
+// A near-black color is the site's default body ink — NOT a per-node delta the
+// shared class needs to override, so it's dropped (a light or brand color on a
+// dark section still counts and is kept). Prevents a redundant combo on every
+// paragraph/heading of a light section (which was forking to "text-size-medium 2").
+function isDefaultInk(color: string): boolean {
+  const m = color.match(/rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)/i);
+  if (!m) return false;
+  const [r, g, b] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  return r <= 60 && g <= 60 && b <= 60;
+}
+
+// Sub-pixel letter-spacing (e.g. 0.15px) is a browser-rounding artifact, not a
+// design decision — dropping it keeps text bare instead of minting a combo.
+function isNegligibleTracking(value: string): boolean {
+  if (value === "normal") return true;
+  const px = parseFloat(value);
+  return Number.isFinite(px) && Math.abs(px) < 0.5;
+}
+
 /** Keep only the properties a shared class does not already own (its combo delta). */
 function styleGuideDelta(shared: string, styles: Record<string, string>): Record<string, string> {
   const family = familyOf(shared);
@@ -163,7 +182,14 @@ function styleGuideDelta(shared: string, styles: Record<string, string>): Record
   if (!allow) return {}; // layout shared classes (container/padding-*) adopt fully.
   const delta: Record<string, string> = {};
   for (const [prop, value] of Object.entries(styles)) {
-    if (allow.has(prop)) delta[prop] = value;
+    if (!allow.has(prop)) continue;
+    // Typography: drop values that just restate the defaults, so plain text stays
+    // a bare shared class (no combo → nothing for Webflow to fork).
+    if (family === "typography") {
+      if (prop === "color" && isDefaultInk(value)) continue;
+      if (prop === "letter-spacing" && isNegligibleTracking(value)) continue;
+    }
+    delta[prop] = value;
   }
   return delta;
 }
