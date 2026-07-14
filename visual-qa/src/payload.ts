@@ -85,10 +85,9 @@ interface SectionBuild {
 const TEXT_ONLY_TAGS = new Set(["h1", "h2", "h3", "h4", "h5", "h6", "p", "blockquote"]);
 const CHROME_KINDS = /^(navbar|header|footer|bar)$/i;
 
-// Canonical client-first sizes (px) used to pick the nearest named class. The
-// project's own values may differ slightly — a bare reference adopts them; only
-// when nothing is within tolerance do we mint a custom class carrying the exact
-// measured value.
+// Canonical client-first sizes (px). A measured wrapper snaps to the nearest of
+// these (small / medium / large) and references it bare, adopting the project's
+// own values. The section's content width decides the size — not a fixed default.
 const CONTAINERS: Array<{ name: string; px: number }> = [
   { name: "container-small", px: 768 },
   { name: "container-medium", px: 1024 },
@@ -100,8 +99,6 @@ const SECTION_PADDINGS: Array<{ name: string; px: number }> = [
   { name: "padding-section-large", px: 128 },
   { name: "padding-section-xlarge", px: 192 }
 ];
-const CONTAINER_TOLERANCE = 0.12;
-const PADDING_TOLERANCE = 0.2;
 
 // text-size-* by font size (px). Bare reference adopts the project's scale; the
 // exact size still rides in the combo.
@@ -113,6 +110,62 @@ function textSizeFor(styles: Record<string, string>): string {
   if (px < 17.5) return "text-size-regular";
   if (px <= 20.5) return "text-size-medium";
   return "text-size-large";
+}
+
+// Which client-first family a shared class belongs to — decides which captured
+// properties are a genuine per-node delta vs. owned by the Style-Guide class.
+function familyOf(shared: string): "typography" | "button" | "layout" {
+  if (shared.startsWith("heading-style-") || shared.startsWith("text-size-")) return "typography";
+  if (shared === "button" || shared.startsWith("button-")) return "button";
+  return "layout";
+}
+
+// Properties the shared class does NOT own, so they ride in a combo on top. Font
+// size/line-height/weight/family, margins, and sizing are OWNED by the shared
+// typography class (adopt the project's scale) and dropped — only real visual
+// deltas the base can't carry survive. Empty result ⇒ reference the base bare.
+const TYPOGRAPHY_DELTA_PROPS = new Set([
+  "color",
+  "text-transform",
+  "letter-spacing",
+  "text-align",
+  "text-decoration",
+  "text-decoration-line",
+  "text-decoration-color",
+  "font-style",
+  // Gradient / clipped text (kept so gradient headings survive).
+  "background-image",
+  "background-clip",
+  "-webkit-background-clip",
+  "-webkit-text-fill-color"
+]);
+// A button's shape (padding, radius, font) is owned by the shared `button` class;
+// only the paint distinguishes primary / secondary / ghost variants.
+const BUTTON_DELTA_PROPS = new Set([
+  "background-color",
+  "background-image",
+  "color",
+  "border",
+  "border-color",
+  "border-style",
+  "border-width",
+  "border-top-width",
+  "border-bottom-width",
+  "border-left-width",
+  "border-right-width"
+]);
+
+/** Keep only the properties a shared class does not already own (its combo delta). */
+function styleGuideDelta(shared: string, styles: Record<string, string>): Record<string, string> {
+  const family = familyOf(shared);
+  const allow =
+    family === "typography" ? TYPOGRAPHY_DELTA_PROPS : family === "button" ? BUTTON_DELTA_PROPS : null;
+  if (!allow) return {}; // layout shared classes (container/padding-*) adopt fully.
+  const delta: Record<string, string> = {};
+  for (const [prop, value] of Object.entries(styles)) {
+    if (allow.has(prop)) delta[prop] = value;
+  }
+  return delta;
 }
 
 function fnvHash(seed: string): string {
@@ -135,20 +188,16 @@ function px(value: string | undefined): number {
   return Number.isFinite(n) ? n : NaN;
 }
 
-/** Nearest named size within tolerance, else null (→ mint a custom class). */
-function nearest(
-  value: number,
-  scale: Array<{ name: string; px: number }>,
-  tolerance: number
-): string | null {
-  let best: { name: string; diff: number } | null = null;
+// Nearest named size to a measured px value. Always snaps to the closest step
+// (small / medium / large, …) — we adopt the project's scale, so there's no
+// "doesn't fit" case; a narrow content column becomes container-small, a wide
+// one container-large, never everything forced to large.
+function nearest(value: number, scale: Array<{ name: string; px: number }>): string {
+  let best = scale[0];
   for (const step of scale) {
-    const diff = Math.abs(value - step.px) / step.px;
-    if (diff <= tolerance && (!best || diff < best.diff)) {
-      best = { name: step.name, diff };
-    }
+    if (Math.abs(value - step.px) < Math.abs(value - best.px)) best = step;
   }
-  return best?.name ?? null;
+  return best.name;
 }
 
 function collectText(node: CapturedNode): string {
@@ -255,16 +304,76 @@ function buildParentMap(root: CapturedNode): Map<CapturedNode, CapturedNode> {
   return parent;
 }
 
-// A "special" section — a full-bleed image backdrop or an absolutely-positioned
-// layout (heroes, overlays). These don't use the client-first container/padding
-// scaffold, so we skip container/padding-section naming and preserve them exactly.
-function isSpecialLayout(node: CapturedNode, depth = 0): boolean {
-  if (isFullBleedImage(node)) return true;
-  if (depth > 0) {
-    const position = node.styles["position"];
-    if (position === "absolute" || position === "fixed") return true;
-  }
-  return node.children.some((child) => isSpecialLayout(child, depth + 1));
+// A "special" section — one whose CONTENT is absolutely positioned (overlapping
+// layers, a custom hero), which the client-first scaffold would break. These skip
+// the scaffold and are preserved 1:1. A full-bleed background image alone does
+// NOT make a section special: it's hoisted to the section background and the rest
+// still gets the standard scaffold. Only genuine absolute/fixed CONTENT counts,
+// and only at the top of the section (a decorative absolute badge deep inside a
+// normal section must not strip its scaffold).
+function isSpecialLayout(node: CapturedNode): boolean {
+  const rootPos = node.styles["position"];
+  if (rootPos === "absolute" || rootPos === "fixed") return true;
+  return node.children.some((child) => {
+    if (isFullBleedImage(child)) return false; // a backdrop image — hoisted, not "special"
+    const pos = child.styles["position"];
+    return pos === "absolute" || pos === "fixed";
+  });
+}
+
+// Layout the injected scaffold (padding-global / container / padding-section)
+// owns — stripped from the section_ root, and the only props a source wrapper may
+// carry to still count as a pure structural wrapper we can peel.
+const SCAFFOLD_OWNED_ROOT_KEYS = new Set([
+  "max-width",
+  "margin",
+  "margin-left",
+  "margin-right",
+  "padding",
+  "padding-top",
+  "padding-right",
+  "padding-bottom",
+  "padding-left",
+  "display",
+  "flex-direction",
+  "justify-content",
+  "align-items",
+  "align-content",
+  "justify-items",
+  "gap",
+  "row-gap",
+  "column-gap",
+  "grid-row-gap",
+  "grid-column-gap",
+  "grid-template-columns",
+  "grid-template-rows"
+]);
+const PEELABLE_EXTRA_KEYS = new Set(["width", "box-sizing", "align-self"]);
+
+/** True when every authored style is scaffold-owned layout (no paint/border/content). */
+function isPureLayout(styles: Record<string, string>): boolean {
+  return Object.keys(styles).every(
+    (key) => SCAFFOLD_OWNED_ROOT_KEYS.has(key) || PEELABLE_EXTRA_KEYS.has(key)
+  );
+}
+
+/** A single-child structural wrapper (source padding-global / container / padding-section). */
+function isLayoutOnlyWrapper(node: CapturedNode): boolean {
+  return (
+    node.tag === "div" &&
+    !node.text &&
+    !node.embedHtml &&
+    node.children.length === 1 &&
+    isPureLayout(node.styles)
+  );
+}
+
+/** A max-width wrapper that holds the content directly — absorbed as the container. */
+function isContainerWrapper(node: CapturedNode): boolean {
+  if (node.tag !== "div" || node.text || node.embedHtml) return false;
+  const maxW = parseFloat(node.styles["max-width"] ?? "");
+  if (!Number.isFinite(maxW) || maxW < 560 || maxW > 1700) return false;
+  return isPureLayout(node.styles);
 }
 
 function buildSection(input: SectionCaptureInput): SectionBuild {
@@ -274,15 +383,14 @@ function buildSection(input: SectionCaptureInput): SectionBuild {
   const chrome = CHROME_KINDS.test(input.kind ?? "");
   const rawKey = slugify(input.sectionName ?? "section") || "section";
   const sectionKey = rawKey.split("-").slice(0, 3).join("-") || "section";
-  // Special sections (hero backdrops, absolute layouts) skip the container /
-  // padding-section scaffold naming — kept as pure fidelity.
-  const scaffoldNaming = !chrome && !isSpecialLayout(input.tree);
+  // A "special" section (hero backdrop / absolute layout) is preserved 1:1; every
+  // other non-chrome section gets the canonical client-first scaffold injected.
+  const special = !chrome && isSpecialLayout(input.tree);
 
   const styleDefinitions: StyleDefinitionInput[] = [];
   const classNameByKey = new Map<string, string>(); // dedup unique classes by style
   const comboByKey = new Map<string, string>(); // dedup combos by base+style
   const roleCounts = new Map<string, number>();
-  let containerAssigned = false;
 
   const stats = {
     nodeCount: 0,
@@ -335,22 +443,45 @@ function buildSection(input: SectionCaptureInput): SectionBuild {
     return [shared];
   };
 
-  // A shared client-first class (referenced by name, adopts the Style Guide) with
-  // a content-hashed combo carrying this node's captured fidelity on top.
+  // Per-breakpoint deltas of a shared class's combo — filtered to the same
+  // delta-worthy props so the project's responsive type scale still owns size.
+  const deltaVariantsFor = (
+    shared: string,
+    nodeKey: string | undefined,
+    baseDelta: Record<string, string>
+  ) => {
+    if (!nodeKey || breakpointKeys.length === 0) return undefined;
+    const effective = { ...baseDelta };
+    const variants: Record<string, Record<string, string>> = {};
+    for (const key of breakpointKeys) {
+      const atWidth = breakpointStyles[key]?.[nodeKey];
+      if (!atWidth) continue;
+      const delta = breakpointDelta(effective, styleGuideDelta(shared, atWidth));
+      if (Object.keys(delta).length > 0) variants[key] = delta;
+    }
+    return Object.keys(variants).length > 0 ? variants : undefined;
+  };
+
+  // A shared client-first class referenced by name (adopts the Style Guide). We
+  // ONLY add a combo when the node carries a genuine visual delta the shared
+  // class can't express (color, transform, gradient text, button paint …) — size,
+  // line-height, weight, spacing are owned by the shared class and dropped. This
+  // keeps ordinary text as a single clean class instead of a per-node combo.
   const sharedWithCombo = (
     shared: string,
     styles: Record<string, string>,
     nodeKey: string | undefined
   ): string[] => {
     stats.styleGuideRefs += 1;
-    if (Object.keys(styles).length === 0) return [shared];
-    const variants = variantsFor(nodeKey, styles);
-    const dedupe = `${shared}|${styleKey(styles)}|${variants ? JSON.stringify(variants) : ""}`;
+    const delta = styleGuideDelta(shared, styles);
+    if (Object.keys(delta).length === 0) return [shared];
+    const variants = deltaVariantsFor(shared, nodeKey, delta);
+    const dedupe = `${shared}|${styleKey(delta)}|${variants ? JSON.stringify(variants) : ""}`;
     let combo = comboByKey.get(dedupe);
     if (!combo) {
       combo = `${shared}_v${fnvHash(dedupe)}`;
       comboByKey.set(dedupe, combo);
-      styleDefinitions.push({ className: combo, properties: styles, variants, combo: true });
+      styleDefinitions.push({ className: combo, properties: delta, variants, combo: true });
       if (variants) stats.responsiveClassCount += 1;
     }
     return [shared, combo];
@@ -384,36 +515,6 @@ function buildSection(input: SectionCaptureInput): SectionBuild {
     }
     if (looksLikeButton(node)) {
       return sharedWithCombo("button", styles, node.key);
-    }
-
-    // Container: the first max-width wrapper in the section.
-    const maxW = px(styles["max-width"]);
-    if (scaffoldNaming && !containerAssigned && Number.isFinite(maxW) && maxW >= 560 && maxW <= 1700) {
-      containerAssigned = true;
-      const match = nearest(maxW, CONTAINERS, CONTAINER_TOLERANCE);
-      if (match) {
-        // Adopt the project container width; keep any other styles as a combo.
-        const rest = { ...styles };
-        delete rest["max-width"];
-        delete rest["margin-left"];
-        delete rest["margin-right"];
-        return Object.keys(rest).length > 0 ? sharedWithCombo(match, rest, node.key) : sharedBare(match);
-      }
-      // Nothing fits → a custom container carrying the exact width.
-      return [uniqueClass(`container-${sectionKey}`, styles, node.key)];
-    }
-
-    // Section padding: a wrapper carrying substantial symmetric vertical padding.
-    const padTop = px(styles["padding-top"]);
-    const padBottom = px(styles["padding-bottom"]);
-    if (scaffoldNaming && Number.isFinite(padTop) && padTop >= 40 && Math.abs(padTop - (padBottom || padTop)) < 8) {
-      const match = nearest(padTop, SECTION_PADDINGS, PADDING_TOLERANCE);
-      if (match) {
-        const rest = { ...styles };
-        delete rest["padding-top"];
-        delete rest["padding-bottom"];
-        return Object.keys(rest).length > 0 ? sharedWithCombo(match, rest, node.key) : sharedBare(match);
-      }
     }
 
     if (Object.keys(styles).length === 0) return [];
@@ -709,7 +810,95 @@ function buildSection(input: SectionCaptureInput): SectionBuild {
   };
 
   const isNavbar = /navbar|header/i.test(input.kind ?? "");
-  const elementTree = (isNavbar && buildNavbarTree()) || toBuildNode(input.tree, "0", true);
+
+  // Build the section root explicitly so we can hoist a section-wide backdrop onto
+  // it and inject the client-first scaffold, instead of preserving every source
+  // wrapper (which produced the numbered-class mess).
+  const buildChildren = (children: CapturedNode[], base: string): BuildNode[] =>
+    children.map((child, index) => toBuildNode(child, `${base}.${index}`, false));
+
+  const sectionRoot = (className: string, children: BuildNode[]): BuildNode => {
+    stats.nodeCount += 1;
+    const node: BuildNode = {
+      id: "pw0",
+      type: "element",
+      tag: input.tree.tag,
+      classNames: [className],
+      children
+    };
+    if (input.label) node.label = input.label;
+    return node;
+  };
+
+  const buildSectionTree = (): BuildNode => {
+    // A section-wide backdrop (a full-bleed <img> DIRECT child) becomes a CSS
+    // background on the section itself — not an inner div (issue #3).
+    const rootStyles: Record<string, string> = { ...input.tree.styles };
+    const backdrop = input.tree.children.find((child) => isFullBleedImage(child));
+    if (backdrop?.attrs.src) {
+      rootStyles["background-image"] = `url("${backdrop.attrs.src}")`;
+      rootStyles["background-size"] = "cover";
+      rootStyles["background-position"] = "50% 50%";
+      rootStyles["background-repeat"] = "no-repeat";
+      stats.backgroundImages += 1;
+    }
+    const topChildren = input.tree.children.filter((child) => child !== backdrop);
+
+    // Special (hero / absolute) sections: preserve the source structure 1:1.
+    if (special) {
+      return sectionRoot(uniqueClass(`section_${sectionKey}`, rootStyles, input.tree.key), buildChildren(topChildren, "0"));
+    }
+
+    // Standard sections: peel the source's own padding/container wrappers (their
+    // measured sizes pick the nearest client-first size) and inject the canonical
+    // scaffold so every non-special section shares the same clean structure.
+    // A measured wrapper snaps to the nearest client-first size (small / medium /
+    // large); large is only the fallback when the section has no measurable width.
+    let containerName = "container-large";
+    let paddingName = "padding-section-large";
+    const measure = (styles: Record<string, string>): void => {
+      const mw = px(styles["max-width"]);
+      if (Number.isFinite(mw) && mw >= 560 && mw <= 1700) {
+        containerName = nearest(mw, CONTAINERS);
+      }
+      const pt = px(styles["padding-top"]);
+      if (Number.isFinite(pt) && pt >= 40) {
+        paddingName = nearest(pt, SECTION_PADDINGS);
+      }
+    };
+    measure(rootStyles);
+
+    let content = topChildren;
+    while (content.length === 1 && isLayoutOnlyWrapper(content[0])) {
+      measure(content[0].styles);
+      content = content[0].children;
+    }
+    if (content.length === 1 && isContainerWrapper(content[0])) {
+      measure(content[0].styles);
+      content = content[0].children;
+    }
+
+    const scaffoldRootStyles = { ...rootStyles };
+    for (const key of SCAFFOLD_OWNED_ROOT_KEYS) delete scaffoldRootStyles[key];
+
+    const wrap = (cls: string, children: BuildNode[], id: string): BuildNode => {
+      stats.nodeCount += 1;
+      return { id: `pw-${id}`, type: "element", tag: "div", classNames: sharedBare(cls), children };
+    };
+    const paddingSection = wrap(paddingName, buildChildren(content, "0.c"), "padsec");
+    const container = wrap(containerName, [paddingSection], "container");
+    const paddingGlobal = wrap("padding-global", [container], "padglobal");
+    return sectionRoot(uniqueClass(`section_${sectionKey}`, scaffoldRootStyles, input.tree.key), [paddingGlobal]);
+  };
+
+  let elementTree: BuildNode;
+  if (isNavbar) {
+    elementTree = buildNavbarTree() ?? toBuildNode(input.tree, "0", true);
+  } else if (chrome) {
+    elementTree = toBuildNode(input.tree, "0", true);
+  } else {
+    elementTree = buildSectionTree();
+  }
   stats.classCount = styleDefinitions.length;
 
   if (stats.backgroundImages > 0) {

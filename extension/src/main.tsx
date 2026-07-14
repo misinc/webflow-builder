@@ -6,7 +6,7 @@ import "./v2/index.css";
 
 // Bump on every bundle rebuild so you can confirm which bundle Webflow loaded
 // (open the Designer dev console). Backend fixes deploy separately via git.
-const BUNDLE_VERSION = "2026-07-15a · migration state (scanned sections, built, step 1/2, URL) persists per site in D1 — no re-scan on open, Rescan is manual";
+const BUNDLE_VERSION = "2026-07-15b · rename sections inline (name drives section_{key}); cleaner output: standard scaffold on normal sections, single clean class per node (no duplicate combos), section-wide backgrounds on the section";
 // eslint-disable-next-line no-console
 console.log(`%c[Webflow Builder] bundle ${BUNDLE_VERSION}`, "color:#00d09c;font-weight:bold");
 

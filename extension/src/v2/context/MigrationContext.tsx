@@ -36,6 +36,8 @@ interface MigrationContextValue {
   candidates: CaptureCandidate[];
   scanning: boolean;
   scan: () => Promise<void>;
+  /** Rename a section — becomes its section_{key} class and Navigator name. */
+  renameCandidate: (selector: string, label: string) => void;
 
   // Selection
   selected: Set<string>;
@@ -209,6 +211,18 @@ export function MigrationProvider({ children }: { children: ReactNode }) {
     }
   }, [sourceUrl, notify, persist]);
 
+  const renameCandidate = useCallback(
+    (selector: string, label: string) => {
+      const trimmed = label.slice(0, 120);
+      setCandidates((prev) => {
+        const next = prev.map((c) => (c.selector === selector ? { ...c, label: trimmed } : c));
+        persist({ scannedCandidates: next });
+        return next;
+      });
+    },
+    [persist]
+  );
+
   const toggleSelected = useCallback((selector: string) => {
     setSelected((prev) => {
       const next = new Set(prev);
@@ -340,6 +354,7 @@ export function MigrationProvider({ children }: { children: ReactNode }) {
       candidates,
       scanning,
       scan,
+      renameCandidate,
       selected,
       toggleSelected,
       setAllSelected,
@@ -365,6 +380,7 @@ export function MigrationProvider({ children }: { children: ReactNode }) {
       candidates,
       scanning,
       scan,
+      renameCandidate,
       selected,
       toggleSelected,
       setAllSelected,

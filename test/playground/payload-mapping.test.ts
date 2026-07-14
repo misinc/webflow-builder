@@ -124,14 +124,152 @@ describe("container + section-padding size matching", () => {
     expect(names).toContain("heading-style-h1");
   });
 
-  it("mints a custom container when no standard size fits", () => {
-    const wide = hero();
-    (wide.tree.children[0].styles as Record<string, string>)["max-width"] = "1500px";
-    const { payload } = capturedSectionToClipboardPayload(wide);
+  it("snaps the measured width to the nearest size (small / medium / large)", () => {
+    const widthToContainer: Array<[string, string]> = [
+      ["720px", "container-small"],
+      ["1000px", "container-medium"],
+      ["1280px", "container-large"],
+      ["1500px", "container-large"] // still snaps to the nearest — never a custom class
+    ];
+    for (const [maxWidth, expected] of widthToContainer) {
+      const s = hero();
+      (s.tree.children[0].styles as Record<string, string>)["max-width"] = maxWidth;
+      const names = classNames(capturedSectionToClipboardPayload(s).payload);
+      expect(names).toContain(expected);
+      expect(names.filter((n) => n.startsWith("container-"))).toEqual([expected]); // exactly one container
+      expect(names.some((n) => n.startsWith("container-hero"))).toBe(false); // no custom container
+    }
+  });
+
+  it("snaps the measured vertical padding to the nearest section-padding size", () => {
+    const padToClass: Array<[string, string]> = [
+      ["48px", "padding-section-small"],
+      ["100px", "padding-section-medium"],
+      ["128px", "padding-section-large"],
+      ["200px", "padding-section-xlarge"]
+    ];
+    for (const [pad, expected] of padToClass) {
+      const s = hero();
+      (s.tree.styles as Record<string, string>)["padding-top"] = pad;
+      (s.tree.styles as Record<string, string>)["padding-bottom"] = pad;
+      const names = classNames(capturedSectionToClipboardPayload(s).payload);
+      expect(names).toContain(expected);
+      expect(names.filter((n) => n.startsWith("padding-section-"))).toEqual([expected]); // exactly one
+    }
+  });
+
+  it("falls back to container-large only when there is no measurable width", () => {
+    const input: SectionCaptureInput = {
+      tree: el({
+        tag: "section",
+        key: "0",
+        styles: { "padding-top": "80px", "padding-bottom": "80px" },
+        children: [
+          // A flex group with no max-width — nothing to measure.
+          el({
+            tag: "div",
+            key: "0.0",
+            styles: { display: "flex", "flex-direction": "column" },
+            children: [el({ tag: "h2", key: "0.0.0", styles: { "font-size": "40px" }, text: "Full width" })]
+          })
+        ]
+      }),
+      sectionName: "Fullwidth"
+    };
+    const names = classNames(capturedSectionToClipboardPayload(input).payload);
+    expect(names).toContain("container-large");
+  });
+});
+
+/** id → node lookup, for walking the built element tree. */
+const byId = (p: Payload) => new Map(p.payload.nodes.map((n) => [n._id, n]));
+const firstChild = (p: Payload, node: Node): Node => byId(p).get(node.children![0])!;
+const nodeWithClass = (p: Payload, cls: string): Node =>
+  p.payload.nodes.find((n) => nodeClassNames(p, n).includes(cls))!;
+
+describe("client-first scaffold injection (non-special sections)", () => {
+  it("wraps a normal section in section_ > padding-global > container > padding-section", () => {
+    const { payload } = capturedSectionToClipboardPayload(hero());
+    const section = nodeWithClass(payload, "section_hero");
+    const pg = firstChild(payload, section);
+    expect(nodeClassNames(payload, pg)).toEqual(["padding-global"]);
+    const container = firstChild(payload, pg);
+    expect(nodeClassNames(payload, container)).toEqual(["container-large"]);
+    const padSec = firstChild(payload, container);
+    expect(nodeClassNames(payload, padSec)).toEqual(["padding-section-medium"]); // 80px → medium
+    // The scaffold wrappers are bare references (adopt the project).
+    expect(styleByName(payload, "padding-global")!.styleLess).toBe("");
+    // The redundant source max-width wrapper was absorbed — content sits directly inside.
+    const heading = payload.payload.nodes.find((n) => n.type === "Heading")!;
+    expect(padSec.children).toContain(heading._id);
+  });
+
+  it("keeps a special (absolute/backdrop) section free of the scaffold", () => {
+    const input: SectionCaptureInput = {
+      tree: el({
+        tag: "section",
+        key: "0",
+        styles: { position: "relative" },
+        children: [
+          el({
+            tag: "div",
+            key: "0.0",
+            styles: { position: "absolute", inset: "0px" },
+            children: [el({ tag: "h1", key: "0.0.0", styles: { "font-size": "56px" }, text: "Hero" })]
+          })
+        ]
+      }),
+      sectionName: "Hero"
+    };
+    const { payload } = capturedSectionToClipboardPayload(input);
     const names = classNames(payload);
-    expect(names.some((n) => n === "container-hero")).toBe(true);
-    expect(styleByName(payload, "container-hero")!.styleLess).toContain("max-width: 1500px;");
-    expect(names).not.toContain("container-large");
+    expect(names).not.toContain("padding-global");
+    expect(names.some((n) => n.startsWith("container"))).toBe(false);
+    expect(names).toContain("heading-style-h1");
+  });
+});
+
+describe("clean Style-Guide adoption (no duplicate combos)", () => {
+  it("references shared typography bare when there is no visual delta", () => {
+    const input: SectionCaptureInput = {
+      tree: el({
+        tag: "section",
+        key: "0",
+        styles: { "padding-top": "80px", "padding-bottom": "80px" },
+        children: [
+          el({
+            tag: "div",
+            key: "0.0",
+            styles: { "max-width": "1280px", "margin-left": "auto", "margin-right": "auto" },
+            children: [
+              el({
+                tag: "p",
+                key: "0.0.0",
+                styles: { "font-size": "18px", "line-height": "1.5", "font-weight": "400", margin: "0px" },
+                text: "Body copy"
+              })
+            ]
+          })
+        ]
+      }),
+      sectionName: "Body"
+    };
+    const { payload } = capturedSectionToClipboardPayload(input);
+    const p = payload.payload.nodes.find((n) => n.type === "Paragraph")!;
+    // Size/line-height/weight are owned by text-size-medium → bare, single class.
+    expect(nodeClassNames(payload, p)).toEqual(["text-size-medium"]);
+  });
+
+  it("keeps exactly one combo for a genuine delta and never a numbered duplicate", () => {
+    const { payload } = capturedSectionToClipboardPayload(hero());
+    const h1 = payload.payload.nodes.find((n) => n.type === "Heading")!;
+    const names = nodeClassNames(payload, h1);
+    expect(names[0]).toBe("heading-style-h1");
+    expect(names).toHaveLength(2);
+    expect(names[1]).toMatch(/^heading-style-h1_v/);
+    // The combo carries only the color delta, not font-size/line-height.
+    expect(styleByName(payload, names[1])!.styleLess).toBe("color: rgb(255, 255, 255);");
+    expect(names.some((n) => / \d+$/.test(n))).toBe(false);
   });
 });
 
@@ -164,11 +302,11 @@ describe("full-bleed images → CSS background-image", () => {
 });
 
 describe("responsive variants", () => {
-  it("emits per-breakpoint deltas on the node combo", () => {
+  it("keeps responsive deltas for real visual props but drops shared-owned size", () => {
     const input = hero({
       breakpointStyles: {
-        medium: { "0.0.0": { "font-size": "40px", color: "rgb(255, 255, 255)" } },
-        small: { "0.0.0": { "font-size": "32px", color: "rgb(255, 255, 255)" } }
+        // font-size shrinks (owned by the project scale) and color changes (a real delta).
+        medium: { "0.0.0": { "font-size": "40px", color: "rgb(142, 196, 65)" } }
       },
       breakpointKeys: ["medium", "small", "tiny"]
     });
@@ -176,8 +314,43 @@ describe("responsive variants", () => {
     const h1 = payload.payload.nodes.find((n) => n.type === "Heading")!;
     const comboName = nodeClassNames(payload, h1).find((n) => n.includes("_v"))!;
     const combo = styleByName(payload, comboName)!;
-    expect((combo.variants.medium as { styleLess: string }).styleLess).toContain("font-size: 40px;");
-    expect((combo.variants.small as { styleLess: string }).styleLess).toContain("font-size: 32px;");
+    const medium = (combo.variants.medium as { styleLess: string }).styleLess;
+    expect(medium).toContain("color: rgb(142, 196, 65);"); // real delta rides the combo
+    expect(medium).not.toContain("font-size"); // heading-style-h1 owns the responsive size
+  });
+});
+
+describe("section-wide background image (issue #3)", () => {
+  it("hoists a full-bleed backdrop onto the section root, not an inner div", () => {
+    const input: SectionCaptureInput = {
+      tree: el({
+        tag: "section",
+        key: "0",
+        styles: { position: "relative" },
+        children: [
+          el({
+            tag: "img",
+            key: "0.0",
+            attrs: { src: "https://cdn.example.com/bg.jpg", alt: "bg" },
+            styles: { position: "absolute", "object-fit": "cover" }
+          }),
+          el({
+            tag: "div",
+            key: "0.1",
+            styles: { "max-width": "1280px", "margin-left": "auto", "margin-right": "auto" },
+            children: [el({ tag: "h2", key: "0.1.0", styles: { "font-size": "40px" }, text: "Overlaid" })]
+          })
+        ]
+      }),
+      sectionName: "Backdrop"
+    };
+    const { payload, stats } = capturedSectionToClipboardPayload(input);
+    expect(stats.backgroundImages).toBe(1);
+    const section = styleByName(payload, "section_backdrop")!;
+    expect(section.styleLess).toContain('background-image: url("https://cdn.example.com/bg.jpg")');
+    expect(section.styleLess).toContain("background-size: cover;");
+    // Backdrop is a CSS background — no standalone Image node / bg div.
+    expect(payload.payload.nodes.some((n) => n.type === "Image")).toBe(false);
   });
 });
 

@@ -1,9 +1,119 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Panel } from "../components/Panel";
 import { Button } from "../components/Button";
 import { useNavigation } from "../context/NavigationContext";
 import { useMigration } from "../context/MigrationContext";
 import type { CaptureCandidate } from "@wfb/shared/contracts.js";
+
+/**
+ * One detected part. The title is editable (non-built): the name becomes the
+ * section_{key} class and the Webflow Navigator name, so shortening it here
+ * shortens every generated class. Extracted to a stable component so the input
+ * keeps focus + local draft across parent re-renders.
+ */
+function SectionCard({
+  c,
+  isBuilt,
+  isSelected,
+  onToggle,
+  onRename
+}: {
+  c: CaptureCandidate;
+  isBuilt: boolean;
+  isSelected: boolean;
+  onToggle: () => void;
+  onRename: (label: string) => void;
+}) {
+  const [draft, setDraft] = useState(c.label);
+
+  // Keep the local draft in sync when the stored label changes elsewhere (rescan).
+  useEffect(() => {
+    setDraft(c.label);
+  }, [c.label]);
+
+  const commit = () => {
+    const next = draft.trim();
+    if (next && next !== c.label) onRename(next);
+    else if (!next) setDraft(c.label); // don't allow an empty name
+  };
+
+  return (
+    <div
+      role="button"
+      tabIndex={isBuilt ? -1 : 0}
+      onClick={isBuilt ? undefined : onToggle}
+      onKeyDown={(e) => {
+        if (!isBuilt && (e.key === "Enter" || e.key === " ") && e.target === e.currentTarget) {
+          e.preventDefault();
+          onToggle();
+        }
+      }}
+      className={`relative text-left rounded-lg border overflow-hidden transition-colors ${
+        isBuilt
+          ? "border-[rgba(52,211,153,0.35)] cursor-default"
+          : isSelected
+            ? "border-wb-accent"
+            : "border-white/[0.09] hover:border-white/[0.2]"
+      }`}
+    >
+      <div
+        className="h-28 bg-black/30 bg-center bg-cover border-b border-white/[0.06]"
+        style={{
+          ...(c.screenshot ? { backgroundImage: `url(${JSON.stringify(c.screenshot)})` } : {}),
+          ...(isBuilt ? { opacity: 0.55 } : {})
+        }}
+      />
+      {isBuilt ? (
+        <div
+          className="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center"
+          style={{ background: "rgba(16,20,26,0.85)", color: "#34d399" }}
+          aria-label="built"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 6 9 17l-5-5" />
+          </svg>
+        </div>
+      ) : null}
+      <div className="p-2.5 flex items-start gap-2">
+        {isBuilt ? (
+          <span className="mt-0.5 text-[13px] leading-none" style={{ color: "#34d399" }}>✓</span>
+        ) : (
+          <input type="checkbox" checked={isSelected} readOnly className="mt-0.5" />
+        )}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] uppercase tracking-wide text-wb-text-tertiary">{c.kind}</span>
+            {isBuilt ? (
+              <span className="text-[10px] font-medium" style={{ color: "#34d399" }}>Built</span>
+            ) : null}
+          </div>
+          {isBuilt ? (
+            <div className="text-[12px] text-wb-text-primary truncate">{c.label}</div>
+          ) : (
+            <input
+              type="text"
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => {
+                e.stopPropagation();
+                if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                if (e.key === "Escape") {
+                  setDraft(c.label);
+                  (e.target as HTMLInputElement).blur();
+                }
+              }}
+              onBlur={commit}
+              spellCheck={false}
+              aria-label="Section name"
+              className="w-full bg-transparent text-[12px] text-wb-text-primary rounded px-1 -mx-1 py-0.5 border border-transparent hover:border-white/[0.12] focus:border-wb-accent focus:bg-black/20 outline-none"
+            />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function SectionsScreen() {
   const { navigate } = useNavigation();
@@ -12,6 +122,7 @@ export function SectionsScreen() {
     candidates,
     scanning,
     scan,
+    renameCandidate,
     selected,
     toggleSelected,
     setAllSelected,
@@ -38,58 +149,6 @@ export function SectionsScreen() {
     if (ok) {
       navigate("build");
     }
-  };
-
-  const Card = ({ c, isBuilt }: { c: CaptureCandidate; isBuilt: boolean }) => {
-    const isSelected = selected.has(c.selector);
-    return (
-      <button
-        type="button"
-        onClick={() => (isBuilt ? undefined : toggleSelected(c.selector))}
-        className={`relative text-left rounded-lg border overflow-hidden transition-colors ${
-          isBuilt
-            ? "border-[rgba(52,211,153,0.35)] cursor-default"
-            : isSelected
-              ? "border-wb-accent"
-              : "border-white/[0.09] hover:border-white/[0.2]"
-        }`}
-      >
-        <div
-          className="h-28 bg-black/30 bg-center bg-cover border-b border-white/[0.06]"
-          style={{
-            ...(c.screenshot ? { backgroundImage: `url(${JSON.stringify(c.screenshot)})` } : {}),
-            ...(isBuilt ? { opacity: 0.55 } : {})
-          }}
-        />
-        {isBuilt ? (
-          <div
-            className="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center"
-            style={{ background: "rgba(16,20,26,0.85)", color: "#34d399" }}
-            aria-label="built"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M20 6 9 17l-5-5" />
-            </svg>
-          </div>
-        ) : null}
-        <div className="p-2.5 flex items-start gap-2">
-          {isBuilt ? (
-            <span className="mt-0.5 text-[13px] leading-none" style={{ color: "#34d399" }}>✓</span>
-          ) : (
-            <input type="checkbox" checked={isSelected} readOnly className="mt-0.5" />
-          )}
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] uppercase tracking-wide text-wb-text-tertiary">{c.kind}</span>
-              {isBuilt ? (
-                <span className="text-[10px] font-medium" style={{ color: "#34d399" }}>Built</span>
-              ) : null}
-            </div>
-            <div className="text-[12px] text-wb-text-primary truncate">{c.label}</div>
-          </div>
-        </div>
-      </button>
-    );
   };
 
   return (
@@ -154,7 +213,14 @@ export function SectionsScreen() {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     {todo.map((c) => (
-                      <Card key={c.selector} c={c} isBuilt={false} />
+                      <SectionCard
+                        key={c.selector}
+                        c={c}
+                        isBuilt={false}
+                        isSelected={selected.has(c.selector)}
+                        onToggle={() => toggleSelected(c.selector)}
+                        onRename={(label) => renameCandidate(c.selector, label)}
+                      />
                     ))}
                   </div>
                 </div>
@@ -171,7 +237,14 @@ export function SectionsScreen() {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     {builtList.map((c) => (
-                      <Card key={c.selector} c={c} isBuilt />
+                      <SectionCard
+                        key={c.selector}
+                        c={c}
+                        isBuilt
+                        isSelected={false}
+                        onToggle={() => undefined}
+                        onRename={() => undefined}
+                      />
                     ))}
                   </div>
                 </div>
