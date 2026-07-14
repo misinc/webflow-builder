@@ -742,7 +742,10 @@ async function persistThumbnail(localPath: string, key: string): Promise<string 
   if (!cloudApiBaseUrl || !thumbnailsToken) {
     return null;
   }
-  const endpoint = `${cloudApiBaseUrl}/api/thumbnails/${encodeURIComponent(key)}`;
+  // Tolerate CLOUD_API_BASE_URL set with or without a trailing "/api" (the
+  // extension's VITE_API_BASE_URL includes it) — always target /api/thumbnails.
+  const base = cloudApiBaseUrl.replace(/\/api$/, "");
+  const endpoint = `${base}/api/thumbnails/${encodeURIComponent(key)}`;
   try {
     const bytes = await fs.readFile(localPath);
     const res = await fetch(endpoint, {
