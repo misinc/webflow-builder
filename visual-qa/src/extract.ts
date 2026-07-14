@@ -361,6 +361,27 @@ export async function captureElement(page: Page, selector: string): Promise<Resp
         return text || undefined;
       };
 
+      // All descendant text in DOCUMENT order (so styled <span>s and <br>s inside
+      // a heading don't get reordered when the element is flattened to text-only).
+      // <br> becomes a space so line-broken words stay separated.
+      const orderedText = (el: Element): string | undefined => {
+        let out = "";
+        const walkText = (node: Node): void => {
+          for (const child of node.childNodes) {
+            if (child.nodeType === Node.TEXT_NODE) {
+              out += child.textContent ?? "";
+            } else if (child.nodeName === "BR") {
+              out += " ";
+            } else if (child.nodeType === Node.ELEMENT_NODE) {
+              walkText(child);
+            }
+          }
+        };
+        walkText(el);
+        const text = out.replace(/\s+/g, " ").trim();
+        return text || undefined;
+      };
+
       const noteSkipped = (el: HTMLElement) => {
         const cs = getComputedStyle(el);
         for (const prop of SKIPPED_VISIBLE) {
@@ -433,6 +454,14 @@ export async function captureElement(page: Page, selector: string): Promise<Resp
         }
         if (tag === "a") {
           node.attrs.href = (el as HTMLAnchorElement).href || undefined;
+        }
+
+        // Text-only elements (headings/paragraphs) flatten to a single string.
+        // Capture it in document order so interleaved styled spans and <br>s keep
+        // their reading order (Webflow text elements can't hold children anyway).
+        if (/^(h[1-6]|p|blockquote)$/.test(tag)) {
+          node.text = orderedText(el);
+          return node;
         }
 
         node.text = directText(el);
