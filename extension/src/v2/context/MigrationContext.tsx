@@ -68,7 +68,7 @@ interface MigrationContextValue {
 const MigrationContext = createContext<MigrationContextValue | null>(null);
 
 export function MigrationProvider({ children }: { children: ReactNode }) {
-  const [sourceUrl, setSourceUrl] = useState("");
+  const [sourceUrl, setSourceUrlState] = useState("");
   const [candidates, setCandidates] = useState<CaptureCandidate[]>([]);
   const [scanning, setScanning] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -77,27 +77,31 @@ export function MigrationProvider({ children }: { children: ReactNode }) {
   const [preparedPayload, setPreparedPayload] = useState<string | null>(null);
   const [preparedCount, setPreparedCount] = useState(0);
   const [notification, setNotification] = useState<Notification | null>(null);
-  // Style Guide completion persists per Webflow site (keyed by siteId) across
-  // restarts. Falls back to a global key when the site id isn't available.
+  // The Style Guide flag and the source URL persist per Webflow site (keyed by
+  // siteId) across restarts. Falls back to a global key when no site id is known.
   const [styleGuideComplete, setStyleGuideCompleteState] = useState(false);
-  const sgKeyRef = useRef<string>("wfb:styleGuideComplete");
+  const siteSuffixRef = useRef<string>("");
+  const keyFor = (name: string) => `wfb:${name}${siteSuffixRef.current}`;
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      let key = "wfb:styleGuideComplete";
+      let suffix = "";
       try {
         const wf = (window as unknown as {
           webflow?: { getSiteInfo?: () => Promise<{ siteId?: string }> };
         }).webflow;
         const info = await wf?.getSiteInfo?.();
-        if (info?.siteId) key = `wfb:styleGuideComplete:${info.siteId}`;
+        if (info?.siteId) suffix = `:${info.siteId}`;
       } catch {
-        /* no site context — use the global key */
+        /* no site context — use global keys */
       }
-      sgKeyRef.current = key;
+      siteSuffixRef.current = suffix;
       try {
-        if (!cancelled) setStyleGuideCompleteState(localStorage.getItem(key) === "1");
+        if (cancelled) return;
+        setStyleGuideCompleteState(localStorage.getItem(`wfb:styleGuideComplete${suffix}`) === "1");
+        const savedUrl = localStorage.getItem(`wfb:sourceUrl${suffix}`);
+        if (savedUrl) setSourceUrlState(savedUrl);
       } catch {
         /* localStorage unavailable */
       }
@@ -107,13 +111,22 @@ export function MigrationProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  const setSourceUrl = useCallback((url: string) => {
+    setSourceUrlState(url);
+    try {
+      localStorage.setItem(keyFor("sourceUrl"), url);
+    } catch {
+      /* localStorage unavailable — session-only */
+    }
+  }, []);
+
   const setStyleGuideComplete = useCallback((done: boolean) => {
     setStyleGuideCompleteState(done);
     try {
       if (done) {
-        localStorage.setItem(sgKeyRef.current, "1");
+        localStorage.setItem(keyFor("styleGuideComplete"), "1");
       } else {
-        localStorage.removeItem(sgKeyRef.current);
+        localStorage.removeItem(keyFor("styleGuideComplete"));
       }
     } catch {
       /* localStorage unavailable — session-only */
