@@ -605,33 +605,50 @@ function buildSection(input: SectionCaptureInput): SectionBuild {
       }
 
       const dropdownLinkClass = defineClass("navbar_dropdown-link", {});
+      // A chevron/icon inside a nav link marks a dropdown toggle even when the
+      // submenu wasn't built in the source (designed but unimplemented).
+      const hasChevron = (a: CapturedNode): boolean =>
+        collectNodes(a, (x) => Boolean(x.embedHtml) || x.tag === "svg" || x.tag === "img").length > 0;
+
+      const makeDropdown = (toggleLabel: string, submenuLabels: string[]): BuildNode => {
+        const toggleNode = native(
+          "div",
+          "DropdownToggle",
+          DROPDOWN_TOGGLE_DATA,
+          [defineClass("navbar_dropdown-toggle", { display: "flex", "align-items": "center", "grid-column-gap": "6px" })],
+          [
+            { id: nid(), type: "element", tag: "div", classNames: [defineClass("navbar_dropdown-label", {})], textContent: toggleLabel, children: [] },
+            { id: nid(), type: "embed", tag: "div", classNames: [defineClass("dropdown-chevron", {})], embedHtml: CHEVRON_SVG, children: [] }
+          ]
+        );
+        const listNode = native(
+          "nav",
+          "DropdownList",
+          DROPDOWN_LIST_DATA,
+          [defineClass("navbar_dropdown-list", {})],
+          submenuLabels.map((label) => ({
+            ...native("a", "DropdownLink", DROPDOWN_LINK_DATA, [dropdownLinkClass], []),
+            textContent: label
+          }))
+        );
+        return native("div", "DropdownWrapper", DROPDOWN_WRAPPER_DATA, [defineClass("navbar_menu-dropdown", {})], [toggleNode, listNode]);
+      };
+
       return items.map((item) => {
         const group = byItem.get(item)!;
         const directAnchor = group.find((a) => parent.get(a) === item);
         const submenu = directAnchor ? group.filter((a) => a !== directAnchor) : group.slice(1);
         const toggle = directAnchor ?? group[0];
         if (submenu.length >= 1 && directAnchor) {
-          const toggleNode = native(
-            "div",
-            "DropdownToggle",
-            DROPDOWN_TOGGLE_DATA,
-            [defineClass("navbar_dropdown-toggle", { display: "flex", "align-items": "center", "grid-column-gap": "6px" })],
-            [
-              { id: nid(), type: "element", tag: "div", classNames: [defineClass("navbar_dropdown-label", {})], textContent: collectText(toggle), children: [] },
-              { id: nid(), type: "embed", tag: "div", classNames: [defineClass("dropdown-chevron", {})], embedHtml: CHEVRON_SVG, children: [] }
-            ]
+          return makeDropdown(collectText(toggle), submenu.map((a) => collectText(a)));
+        }
+        // Toggle with a chevron but no captured submenu → emit an empty dropdown
+        // (designed-but-unimplemented, e.g. bАI "Services") for the user to fill in.
+        if (group.length === 1 && hasChevron(toggle)) {
+          warnings.add(
+            'A nav item has a dropdown chevron but no submenu items in the source — added an empty dropdown ("Menu item"); add its links in Webflow.'
           );
-          const listNode = native(
-            "nav",
-            "DropdownList",
-            DROPDOWN_LIST_DATA,
-            [defineClass("navbar_dropdown-list", {})],
-            submenu.map((a) => ({
-              ...native("a", "DropdownLink", DROPDOWN_LINK_DATA, [dropdownLinkClass], []),
-              textContent: collectText(a)
-            }))
-          );
-          return native("div", "DropdownWrapper", DROPDOWN_WRAPPER_DATA, [defineClass("navbar_menu-dropdown", {})], [toggleNode, listNode]);
+          return makeDropdown(collectText(toggle), ["Menu item"]);
         }
         return navLink(toggle);
       });

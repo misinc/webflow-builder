@@ -86,6 +86,8 @@ a link with a submenu → `navbar_menu-dropdown` (toggle + `navbar_dropdown-list
 types**, the responsive menu button and dropdown open/close work on paste with no
 manual interaction wiring. Source dropdowns are detected (a nav item with a toggle
 link + a nested list of ≥2 links → native `DropdownWrapper/Toggle/List/Link` with
-`navbar_menu-dropdown` / `navbar_dropdown-*` classes). Caveat: hover menus hidden
-with `display:none` aren't captured (skipped by the extractor), so only visible/
-captured dropdown structure is mapped.
+`navbar_menu-dropdown` / `navbar_dropdown-*` classes). A nav link carrying a
+**chevron/icon but no submenu** (designed-but-unimplemented, e.g. bАI "Services")
+becomes an empty dropdown with a "Menu item" placeholder + a warning, so the
+structure is ready to fill in. Caveat: hover menus hidden with `display:none`
+aren't captured (skipped by the extractor), so their items aren't mapped.

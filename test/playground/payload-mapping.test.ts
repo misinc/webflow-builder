@@ -281,6 +281,37 @@ describe("navbar → native Webflow Navbar element", () => {
     expect(texts).toEqual(expect.arrayContaining(["Home", "Products", "Product One", "Product Two"]));
   });
 
+  it("treats a nav link with a chevron but no submenu as an empty dropdown", () => {
+    const withChevron: SectionCaptureInput = {
+      tree: el({
+        tag: "header",
+        key: "0",
+        children: [
+          el({
+            tag: "nav",
+            key: "0.0",
+            children: [
+              el({ tag: "a", key: "0.0.0", attrs: { href: "/" }, children: [el({ tag: "div", key: "0.0.0.0", embedHtml: "<svg></svg>" })] }),
+              el({ tag: "a", key: "0.0.1", attrs: { href: "/home" }, text: "Home" }),
+              el({ tag: "a", key: "0.0.2", attrs: { href: "/services" }, text: "Services", children: [el({ tag: "div", key: "0.0.2.0", embedHtml: "<svg></svg>" })] }),
+              el({ tag: "a", key: "0.0.3", attrs: { href: "/about" }, text: "About" })
+            ]
+          })
+        ]
+      }),
+      sectionName: "Navbar",
+      kind: "Header",
+      label: "Navbar"
+    };
+    const { payload, warnings } = capturedSectionToClipboardPayload(withChevron);
+    expect(payload.payload.nodes.some((n) => n.type === "DropdownWrapper")).toBe(true);
+    const texts = payload.payload.nodes.filter((n) => n.text).map((n) => n.v);
+    expect(texts).toContain("Services"); // toggle label
+    expect(texts).toContain("Menu item"); // placeholder submenu link
+    expect(texts).toContain("Home"); // plain link, not a dropdown
+    expect(warnings.some((w) => w.includes("dropdown chevron"))).toBe(true);
+  });
+
   it("uses generic navbar_* classes with source styling and the hamburger", () => {
     const { payload } = capturedSectionToClipboardPayload(navbar());
     const names = classNames(payload);
