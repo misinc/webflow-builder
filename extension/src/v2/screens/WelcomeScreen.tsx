@@ -63,6 +63,7 @@ export function WelcomeScreen() {
     setSourceUrl,
     captureConfigured,
     styleGuideComplete,
+    setStyleGuideComplete,
     notify
   } = useMigration();
 
@@ -101,10 +102,30 @@ export function WelcomeScreen() {
             Paste the source's Style Guide spec once — it creates/updates this
             project's variables and client-first classes so pasted sections adopt
             the right look.
-            <div className="pt-3">
+            <div className="pt-3 flex items-center gap-3">
               <Button variant={styleGuideComplete ? "ghost" : "primary"} onClick={() => navigate("style-guide")}>
                 {styleGuideComplete ? "Review / set up again" : "Set up Style Guide"}
               </Button>
+              {styleGuideComplete ? (
+                <button
+                  type="button"
+                  onClick={() => setStyleGuideComplete(false)}
+                  className="text-[12px] text-wb-text-tertiary hover:text-wb-text-secondary"
+                >
+                  Mark not done
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStyleGuideComplete(true);
+                    notify("Marked the Style Guide as already set up for this site.", "success");
+                  }}
+                  className="text-[12px] text-wb-text-tertiary hover:text-wb-text-secondary"
+                >
+                  Already set up? Mark done
+                </button>
+              )}
             </div>
           </Step>
 

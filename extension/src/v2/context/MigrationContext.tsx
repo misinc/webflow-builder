@@ -2,7 +2,9 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode
 } from "react";
@@ -75,21 +77,43 @@ export function MigrationProvider({ children }: { children: ReactNode }) {
   const [preparedPayload, setPreparedPayload] = useState<string | null>(null);
   const [preparedCount, setPreparedCount] = useState(0);
   const [notification, setNotification] = useState<Notification | null>(null);
-  const [styleGuideComplete, setStyleGuideCompleteState] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem("wfb:styleGuideComplete") === "1";
-    } catch {
-      return false;
-    }
-  });
+  // Style Guide completion persists per Webflow site (keyed by siteId) across
+  // restarts. Falls back to a global key when the site id isn't available.
+  const [styleGuideComplete, setStyleGuideCompleteState] = useState(false);
+  const sgKeyRef = useRef<string>("wfb:styleGuideComplete");
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      let key = "wfb:styleGuideComplete";
+      try {
+        const wf = (window as unknown as {
+          webflow?: { getSiteInfo?: () => Promise<{ siteId?: string }> };
+        }).webflow;
+        const info = await wf?.getSiteInfo?.();
+        if (info?.siteId) key = `wfb:styleGuideComplete:${info.siteId}`;
+      } catch {
+        /* no site context — use the global key */
+      }
+      sgKeyRef.current = key;
+      try {
+        if (!cancelled) setStyleGuideCompleteState(localStorage.getItem(key) === "1");
+      } catch {
+        /* localStorage unavailable */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const setStyleGuideComplete = useCallback((done: boolean) => {
     setStyleGuideCompleteState(done);
     try {
       if (done) {
-        localStorage.setItem("wfb:styleGuideComplete", "1");
+        localStorage.setItem(sgKeyRef.current, "1");
       } else {
-        localStorage.removeItem("wfb:styleGuideComplete");
+        localStorage.removeItem(sgKeyRef.current);
       }
     } catch {
       /* localStorage unavailable — session-only */

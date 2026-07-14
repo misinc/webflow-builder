@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { Panel } from "../components/Panel";
 import { Button } from "../components/Button";
 import { useNavigation } from "../context/NavigationContext";
@@ -6,6 +7,19 @@ import { useMigration } from "../context/MigrationContext";
 export function BuildScreen() {
   const { navigate } = useNavigation();
   const { preparedCount, preparedPayload, copyPrepared, cleanupPaste, markBuilt } = useMigration();
+  const [copied, setCopied] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (timer.current) clearTimeout(timer.current);
+  }, []);
+
+  const onCopy = () => {
+    copyPrepared();
+    setCopied(true);
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => setCopied(false), 2200);
+  };
 
   const done = () => {
     markBuilt();
@@ -23,8 +37,13 @@ export function BuildScreen() {
           <Button variant="ghost" onClick={() => void cleanupPaste()}>
             Clean up paste
           </Button>
-          <Button variant="primary" onClick={copyPrepared} disabled={!preparedPayload}>
-            Copy for Webflow
+          <Button
+            variant={copied ? "default" : "primary"}
+            onClick={onCopy}
+            disabled={!preparedPayload}
+            style={copied ? { background: "rgba(52,211,153,0.15)", color: "#34d399", borderColor: "rgba(52,211,153,0.4)" } : undefined}
+          >
+            {copied ? "✓ Copied — now paste (Cmd+V)" : "Copy for Webflow"}
           </Button>
         </>
       }
