@@ -91,6 +91,58 @@ describe("fidelity-first client-first naming (captured tree → XscpData)", () =
   });
 });
 
+describe("button variants → Style Guide modifiers (no per-instance combo)", () => {
+  it("maps solid→primary, transparent→is-secondary, icon→is-icon", () => {
+    const icon = { tag: "div", key: "i", embedHtml: "<svg></svg>", attrs: {}, styles: {}, children: [] };
+    const input: SectionCaptureInput = {
+      tree: el({
+        tag: "section",
+        key: "0",
+        styles: { "padding-top": "80px", "padding-bottom": "80px" },
+        children: [
+          el({
+            tag: "div",
+            key: "0.0",
+            styles: { "max-width": "1280px", "margin-left": "auto", "margin-right": "auto" },
+            children: [
+              // Primary: solid fill + arrow icon → button is-icon
+              el({
+                tag: "a",
+                key: "0.0.0",
+                attrs: { href: "#" },
+                styles: { "background-color": "rgb(142, 196, 65)", "padding-top": "10px", "border-top-left-radius": "8px" },
+                text: "Meet",
+                children: [{ ...icon, key: "0.0.0.0" }]
+              }),
+              // Secondary: transparent fill + border + arrow → button is-secondary is-icon
+              el({
+                tag: "a",
+                key: "0.0.1",
+                attrs: { href: "#" },
+                styles: { "background-color": "rgba(0, 0, 0, 0)", "border-top-width": "1px", "padding-top": "10px", "border-top-left-radius": "8px" },
+                text: "Explore",
+                children: [{ ...icon, key: "0.0.1.0" }]
+              })
+            ]
+          })
+        ]
+      }),
+      sectionName: "CTAs"
+    };
+    const { payload } = capturedSectionToClipboardPayload(input);
+    const chains = payload.payload.nodes
+      .filter((n) => n.type === "Link")
+      .map((n) => nodeClassNames(payload, n));
+    expect(chains).toContainEqual(["button", "is-icon"]);
+    expect(chains).toContainEqual(["button", "is-secondary", "is-icon"]);
+    // No per-instance combo class on buttons anymore.
+    expect(classNames(payload).some((n) => n.startsWith("button_v"))).toBe(false);
+    // The modifiers are bare references (adopt the project's Style Guide styles).
+    expect(styleByName(payload, "is-secondary")!.styleLess).toBe("");
+    expect(styleByName(payload, "is-icon")!.styleLess).toBe("");
+  });
+});
+
 describe("container + section-padding size matching", () => {
   it("adopts the nearest standard container by measured max-width", () => {
     const { payload } = capturedSectionToClipboardPayload(hero()); // 1280 → container-large

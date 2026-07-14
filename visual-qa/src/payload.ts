@@ -251,6 +251,32 @@ function looksLikeButton(node: CapturedNode): boolean {
   return (hasBg && (hasPad || hasRadius)) || (hasPad && hasRadius);
 }
 
+// True when the color/background is fully transparent (or absent) — an outline
+// button rather than a solid fill.
+function isTransparentFill(value: string | undefined): boolean {
+  return !value || value === "transparent" || /,\s*0(?:\.0+)?\s*\)$/.test(value);
+}
+
+/**
+ * Map a captured button to the project's SHARED button variant classes
+ * (client-first / Relume: `is-secondary` for an outline fill, `is-icon` when it
+ * carries an icon) instead of a per-instance `button_v…` combo — so pasted
+ * buttons adopt the Style Guide's button styles. A solid-fill button with no icon
+ * is just `button` (the primary). Order matches the Style Guide: base → variants.
+ */
+function buttonVariantClasses(node: CapturedNode): string[] {
+  const classes = ["button"];
+  if (isTransparentFill(node.styles["background-color"])) {
+    classes.push("is-secondary");
+  }
+  const hasIcon = collectNodes(
+    node,
+    (n) => Boolean(n.embedHtml) || n.tag === "svg" || n.tag === "img"
+  ).length > 0;
+  if (hasIcon) classes.push("is-icon");
+  return classes;
+}
+
 // A full-bleed image (a hero backdrop) pastes as a blank placeholder because
 // assets don't ride the clipboard. Rendered as a CSS background-image (hotlinked
 // from the source) it shows immediately — the user swaps it for an uploaded
@@ -546,7 +572,9 @@ function buildSection(input: SectionCaptureInput): SectionBuild {
       return sharedWithCombo(textSizeFor(styles), styles, node.key);
     }
     if (looksLikeButton(node)) {
-      return sharedWithCombo("button", styles, node.key);
+      const classes = buttonVariantClasses(node);
+      stats.styleGuideRefs += classes.length;
+      return classes;
     }
 
     if (Object.keys(styles).length === 0) return [];
@@ -792,7 +820,8 @@ function buildSection(input: SectionCaptureInput): SectionBuild {
       id: nid(),
       type: "element",
       tag: "a",
-      classNames: sharedWithCombo("button", a.styles, a.key),
+      // Navbar buttons are flattened to text-only, so no is-icon — just the fill variant.
+      classNames: isTransparentFill(a.styles["background-color"]) ? ["button", "is-secondary"] : ["button"],
       textContent: collectText(a),
       children: []
     } as BuildNode));
